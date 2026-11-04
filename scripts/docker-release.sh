@@ -118,16 +118,18 @@ else
 fi
 
 if [[ "$engine" == podman ]]; then
-  manifest="${DOCKER_REPO}:${tags[0]}"
+  # podman names an image without a registry "localhost/..."; docker.io/ keeps it as the Docker Hub name
+  registry_repo="docker.io/${DOCKER_REPO}"
+  manifest="${registry_repo}:${tags[0]}"
   podman manifest rm "$manifest" >/dev/null 2>&1 || true
   podman build --platform "$PLATFORMS" --manifest "$manifest" "${build_args[@]}" .
   for t in "${tags[@]:1}"; do
-    podman tag "$manifest" "${DOCKER_REPO}:${t}"
+    podman tag "$manifest" "${registry_repo}:${t}"
   done
   if [[ "$cmd" == build ]]; then exit 0; fi
   # push: login is expected beforehand (docker login / podman login docker.io)
   for t in "${tags[@]}"; do
-    podman manifest push --all "$manifest" "docker://docker.io/${DOCKER_REPO}:${t}"
+    podman manifest push --all "$manifest" "docker://${registry_repo}:${t}"
   done
 else
   tag_args=(); for t in "${tags[@]}"; do tag_args+=(-t "${DOCKER_REPO}:${t}"); done
