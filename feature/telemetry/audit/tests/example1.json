@@ -1,0 +1,519 @@
+{
+  "$schema": "https://www.inkgate.io/schema/inkgate.json",
+  "version": 3,
+  "debug_endpoint": true,
+  "echo_endpoint": true,
+  "use_h2c": true,
+  "extra_config": {
+    "inkgate/feature/telemetry/influx":{
+      "address":"http://influxdb:8086",
+      "ttl":"25s",
+      "buffer_size":0,
+      "db": "inkgate",
+      "username": "your-influxdb-user",
+      "password": "your-influxdb-password"
+    },
+    "inkgate/feature/auth/bloomfilter": {
+      "N": 10000000,
+      "P": 0.0000001,
+      "hash_name": "optimal",
+      "TTL": 1500,
+      "port": 1234,
+      "token_keys": ["jti", "sub"]
+    },
+    "modifier/response-headers": {
+      "add": {
+        "X-Hello": [
+          "World"
+        ]
+      },
+      "replace": {
+        "Cache-Control": [
+          "no-store"
+        ],
+        "Vary": [
+          "foo",
+          "bar",
+          "foobar"
+        ]
+      },
+      "delete": [
+        "Server"
+      ],
+      "rename": {
+        "X-Inkgate-Completed": "X-Completed"
+      }
+    },
+    "inkgate/feature/transform/lua/router": {
+      "pre": "some_lua_code()"
+    },
+    "qos/ratelimit/service": {
+      "max_rate": 50,
+      "client_mac_rate": 5,
+      "startegy": "ip"
+    },
+    "inkgate/engine/transport/http/server/plugin": {
+      "name": [
+        "basic-auth"
+      ]
+    },
+    "inkgate/engine/router": {
+      "use_h2c": true
+    },
+    "grpc": {
+      "catalog": [
+        "./grpc/definitions"
+      ],
+      "server": {
+        "services": [
+          {
+            "name": "flight_finder.Flights",
+            "methods": [
+              {
+                "name": "FindFlight",
+                "input_headers": [
+                  "*"
+                ],
+                "payload_params": {
+                  "page.cursor": "cursor"
+                },
+                "backend": [
+                  {
+                    "host": [
+                      "example.com:4242"
+                    ],
+                    "url_pattern": "/flight_finder.Flights/FindFlight",
+                    "extra_config": {
+                      "backend/grpc": {
+                        "use_request_body": true
+                      }
+                    }
+                  },
+                  {
+                    "method": "GET",
+                    "host": [
+                      "http://example.com:8000"
+                    ],
+                    "url_pattern": "/articles.json?q={cursor}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "telemetry/opentelemetry": {
+      "exporters": {
+        "otlp": [
+          {
+            "name": "newrelic",
+            "host": "example.com",
+            "disable_metrics": true
+          },
+          {
+            "name": "datadog",
+            "host": "example.com"
+          }
+        ],
+        "prometheus": [
+          {
+            "name": "default_prom"
+          }
+        ]
+      },
+      "metric_reporting_period": 50,
+      "trace_sample_rate": 1
+    },
+    "auth/api-keys": {},
+    "ai/mcp": {
+      "servers": [
+        {
+          "name": "stories-tracker",
+          "title": "Story tracker tools",
+          "version": "0.2.1",
+          "tools": [
+            {
+              "name": "stories-list",
+              "title": "Story list",
+              "description": "Get a list of open stories in tracker matching a search query",
+              "workflow": {
+                "endpoint": "/workflow-1/{param1}",
+                "backend": [
+                  {
+                    "url_pattern": "/users"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "another-tool",
+              "title": "Another list",
+              "description": "Some weird crap",
+              "workflow": {
+                "endpoint": "/workflow-1/{param1}",
+                "backend": [
+                  {
+                    "url_pattern": "/crap"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "stories-tracker-2",
+          "title": "Story tracker tools 2",
+          "version": "0.2.2",
+          "tools": [
+            {
+              "name": "stories-list-2",
+              "title": "Story list 2",
+              "description": "Get a list of open stories in tracker matching a search query",
+              "workflow": {
+                "endpoint": "/workflow-2/{param1}",
+                "backend": [
+                  {
+                    "url_pattern": "/users-2"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "tls": {
+    "public_key": "/path/to/cert.pem",
+    "private_key": "/path/to/key.pem",
+    "disabled": true
+  },
+  "disable_rest": true,
+  "allow_insecure_connections": true,
+  "endpoints": [
+    {
+      "endpoint": "/protected/resource",
+      "timeout": "140s",
+      "extra_config": {
+        "inkgate/feature/auth/jose/validator": {
+          "alg": "RS256",
+          "audience": [
+            "http://api.example.com"
+          ],
+          "roles_key": "http://api.example.com/custom/roles",
+          "roles": [
+            "user",
+            "admin"
+          ],
+          "jwk_url": "https://albert-test.auth0.com/.well-known/jwks.json",
+          "cache": true
+        },
+        "inkgate/feature/transform/lua/proxy": {
+          "pre": "some_lua_code()",
+          "post": "some_more_lua_code()"
+        },
+        "validation/response-json-schema": {
+          "schema": {
+            "type": "integer"
+          },
+          "error": {
+            "body": "error: meh, try again",
+            "status": 400,
+            "content_type": "application/x-yaml"
+          }
+        },
+        "modifier/response-body": {
+          "modifiers": [
+            {
+              "regexp": {
+                "field": "data.credit_card",
+                "find": "(^\\d{4})(.*)",
+                "replace": "${1}-XXXX"
+              }
+            },
+            {
+              "regexp": {
+                "field": "surname",
+                "find": "(.*)",
+                "replace": "Anonymous"
+              }
+            },
+            {
+              "upper": {
+                "field": "surname"
+              }
+            },
+            {
+              "lower": {
+                "field": "quiet"
+              }
+            },
+            {
+              "trim": {
+                "field": "surname",
+                "find": "A"
+              }
+            }
+          ]
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/",
+          "extra_config": {
+            "inkgate/feature/transform/lua/proxy/backend": {
+              "post": "some_lua_code()"
+            },
+            "inkgate/feature/traffic/httpcache": {}
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/wildcarded/resource/*",
+      "timeout": "10s",
+      "input_query_strings": [
+        "*"
+      ],
+      "input_headers": [
+        "*"
+      ],
+      "extra_config": {
+        "inkgate/engine/transport/http/client/plugin": {
+          "name": "no-redirect"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/",
+          "extra_config": {
+            "backend/http/client": {
+              "client_tls": {
+                "allow_insecure_connections": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/ws",
+      "backend": [
+        {
+          "url_pattern": "/"
+        }
+      ],
+      "extra_config": {
+        "websocket": {
+          "input_headers": [
+            "Cookie",
+            "Authorization"
+          ],
+          "disable_otel_metrics": true,
+          "enable_direct_communication": true,
+          "return_error_details": false,
+          "connect_event": true,
+          "disconnect_event": true,
+          "read_buffer_size": 4096,
+          "write_buffer_size": 4096,
+          "message_buffer_size": 4096,
+          "max_message_size": 3200000,
+          "max_retries": 0,
+          "write_wait": "10s",
+          "pong_wait": "60s",
+          "ping_period": "54s",
+          "timeout": "300s",
+          "backoff_strategy": "exponential",
+          "subprotocols": [
+            "streamlit"
+          ]
+        }
+      }
+    },
+    {
+      "endpoint": "/cached",
+      "backend": [
+        {
+          "url_pattern": "/",
+          "extra_config": {
+            "inkgate/feature/traffic/httpcache": {
+              "shared": true,
+              "max_items": 100,
+              "max_size": 10000
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/gemini-default",
+      "method": "POST",
+      "backend": [
+        {
+          "host": [
+            "https://generativelanguage.googleapis.com"
+          ],
+          "url_pattern": "/v1beta/models/gemini-2.5-flash:generateContent",
+          "method": "POST",
+          "extra_config": {
+            "ai/llm": {
+              "gemini": {
+                "v1beta": {
+                  "credentials": "xxx"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/openai-custom-in",
+      "method": "POST",
+      "backend": [
+        {
+          "host": [
+            "https://api.openai.com"
+          ],
+          "url_pattern": "/v1/responses",
+          "method": "POST",
+          "extra_config": {
+            "ai/llm": {
+              "openai": {
+                "v1": {
+                  "credentials": "xxx",
+                  "input_template": "xxx"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/mistral-custom-out",
+      "method": "POST",
+      "backend": [
+        {
+          "host": [
+            "https://api.mistral.ai"
+          ],
+          "url_pattern": "/v1/chat/completions",
+          "method": "POST",
+          "extra_config": {
+            "ai/llm": {
+              "mistral": {
+                "v1": {
+                  "credentials": "xxx",
+                  "output_template": "xxx"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/anthropic-custom-in-out",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/v1/messages",
+          "host": [
+            "https://api.anthropic.com"
+          ],
+          "extra_config": {
+            "ai/llm": {
+              "anthropic": {
+                "v1": {
+                  "input_template": "xxx",
+                  "output_template": "xxx",
+                  "credentials": "xxx"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "/mcp1",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/ignored"
+        }
+      ],
+      "extra_config": {
+        "ai/mcp": {
+          "server_name": "stories-tracker"
+        }
+      }
+    },
+    {
+      "endpoint": "/mcp1",
+      "method": "GET",
+      "backend": [
+        {
+          "url_pattern": "/ignored"
+        }
+      ],
+      "extra_config": {
+        "ai/mcp": {
+          "server_name": "stories-tracker"
+        }
+      }
+    },
+    {
+      "endpoint": "/mcp1",
+      "method": "DELETE",
+      "backend": [
+        {
+          "url_pattern": "/ignored"
+        }
+      ],
+      "extra_config": {
+        "ai/mcp": {
+          "server_name": "stories-tracker"
+        }
+      }
+    },
+    {
+      "endpoint": "/mcp2",
+      "method": "POST",
+      "backend": [
+        {
+          "url_pattern": "/ignored"
+        }
+      ],
+      "extra_config": {
+        "ai/mcp": {
+          "server_name": "stories-tracker-2"
+        }
+      }
+    },
+    {
+      "endpoint": "/__catchall",
+      "timeout": "10s",
+      "extra_config": {
+        "inkgate/engine/proxy": {
+          "sequential": true
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/"
+        },
+        {
+          "method": "POST",
+          "url_pattern": "example.com/foo"
+        },
+        {
+          "method": "POST",
+          "url_pattern": "example.com/bar"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+version = 3.0
+name = "My lovely gateway"
+port = 8080.0
+cache_ttl = 3600.0
+timeout = "3s"
+
+[[endpoints]]
+endpoint = "/github"
+method = "GET"
+
+[endpoints.extra_config]
+user = "test"
+hits = 6.0
+parents = [
+"gomez",
+"morticia"
+]
+
+[endpoints.extra_config.nested_data.data]
+status = "OK"
+
+[[endpoints.backend]]
+host = [
+"https://api.github.com"
+]
+url_pattern = "/"
+allow = [
+"authorizations_url",
+"code_search_url"
+]
+
+[endpoints.backend.extra_config]
+user = "test"
+hits = 6.0
+parents = [
+	"gomez",
+	"morticia"
+]
+
+[[endpoints]]
+endpoint = "/supu"
+method = "GET"
+concurrent_calls = 3.0
+
+[[endpoints.backend]]
+host = [
+"http://127.0.0.1:8080"
+]
+url_pattern = "/__debug/supu"
+
+[[endpoints]]
+endpoint = "/combination/{id}"
+method = "GET"
+
+[[endpoints.backend]]
+group = "first_post"
+host = [
+"https://jsonplaceholder.typicode.com"
+]
+url_pattern = "/posts/{id}"
+deny = [
+"userId"
+]
+
+[[endpoints.backend]]
+host = [
+"https://jsonplaceholder.typicode.com"
+]
+url_pattern = "/users/{id}"
+
+[endpoints.backend.mapping]
+email = "personal_email"

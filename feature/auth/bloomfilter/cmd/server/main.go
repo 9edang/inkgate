@@ -1,0 +1,53 @@
+// Server application that registers a bloomfilter by means of an rpc.
+package main
+
+import (
+	"flag"
+	"github.com/9edang/inkgate/context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/9edang/inkgate/feature/auth/bloomfilter"
+	"github.com/9edang/inkgate/feature/auth/bloomfilter/rotate"
+	"github.com/9edang/inkgate/feature/auth/bloomfilter/rpc"
+	"github.com/9edang/inkgate/feature/auth/bloomfilter/rpc/server"
+)
+
+func main() {
+	port := flag.Int("p", 1234, "the port to listen on")
+	flag.Parse()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	cfg := rpc.Config{
+		Config: rotate.Config{
+			Config: bloomfilter.Config{
+				N:        10000000,
+				P:        0.0000001,
+				HashName: "optimal",
+			},
+			TTL: 1000,
+		},
+		Port: *port,
+	}
+	bf := server.New(ctx, cfg)
+	for {
+		select {
+		case sig := <-sigs:
+			log.Println("Signal intercepted:", sig)
+			cancel()
+			return
+		case <-ctx.Done():
+		case <-time.After(5 * time.Second):
+			d, _ := bf.Bloomfilter().MarshalBinary()
+			log.Println("Current size of the marshalled BF:", len(d))
+		}
+	}
+}

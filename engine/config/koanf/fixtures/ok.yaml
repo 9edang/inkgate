@@ -1,0 +1,51 @@
+version: 3
+name: My lovely gateway
+port: 8080
+cache_ttl: 3600
+timeout: 3s
+endpoints:
+  - endpoint: /github
+    method: GET
+    extra_config:
+      user: test
+      hits: 6
+      parents:
+        - gomez
+        - morticia
+      nested_data:
+        data:
+          status: OK
+    backend:
+      - host:
+          - 'https://api.github.com'
+        url_pattern: /
+        allow:
+          - authorizations_url
+          - code_search_url
+        extra_config:
+          user: test
+          hits: 6
+          parents:
+            - gomez
+            - morticia
+  - endpoint: /supu
+    method: GET
+    concurrent_calls: 3
+    backend:
+      - host:
+          - 'http://127.0.0.1:8080'
+        url_pattern: /__debug/supu
+  - endpoint: '/combination/{id}'
+    method: GET
+    backend:
+      - group: first_post
+        host:
+          - 'https://jsonplaceholder.typicode.com'
+        url_pattern: '/posts/{id}'
+        deny:
+          - userId
+      - host:
+          - 'https://jsonplaceholder.typicode.com'
+        url_pattern: '/users/{id}'
+        mapping:
+          email: personal_email

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://inkgate.io/schema/inkgate.json",
+  "version": 3,
+  "host": ["http://localhost:8080"],
+  "extra_config": {
+    "inkgate/feature/auth/bloomfilter": {
+      "hash_name": "optimal",
+      "N": 10000000,
+      "P": 1e-7,
+      "port": 1234,
+      "token_keys": [
+        "sub"
+      ],
+      "TTL": 1500,
+      "revoke_server_ping_url": "http://revoke-server:8081/instances",
+      "revoke_server_ping_interval": "30s",
+      "revoke_server_api_key": "1234",
+      "revoke_server_max_workers": 5
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/",
+      "backend": [
+        {
+          "url_pattern": "/__echo/"
+        }
+      ]
+    }
+  ]
+}

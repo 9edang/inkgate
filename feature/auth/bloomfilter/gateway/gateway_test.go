@@ -1,0 +1,97 @@
+package gateway
+
+import (
+	"github.com/9edang/inkgate/context"
+	"testing"
+
+	"github.com/9edang/inkgate/engine/config"
+	"github.com/9edang/inkgate/feature/auth/bloomfilter"
+	"github.com/9edang/inkgate/feature/auth/bloomfilter/rotate"
+	"github.com/9edang/inkgate/feature/auth/bloomfilter/rpc"
+	gologging "github.com/9edang/inkgate/feature/telemetry/gologging"
+)
+
+func TestRegister_ok(t *testing.T) {
+	ctx := context.Background()
+	cfgBloomFilter := Config{
+		Config: rpc.Config{
+			Config: rotate.Config{
+				Config: bloomfilter.Config{
+					N:        10000000,
+					P:        0.0000001,
+					HashName: "optimal",
+				},
+				TTL: 1500,
+			},
+			Port: 1234,
+		},
+	}
+
+	serviceConf := config.ServiceConfig{
+		ExtraConfig: map[string]any{
+			"inkgate/feature/auth/bloomfilter": cfgBloomFilter,
+		},
+	}
+
+	logger, err := gologging.NewLogger(config.ExtraConfig{
+		gologging.Namespace: map[string]any{
+			"level":  "DEBUG",
+			"stdout": true,
+		},
+	})
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	registered := false
+
+	if _, err := Register(ctx, "bloomfilter-test", serviceConf, logger, func(name string, port int) {
+		registered = true
+	}); err != nil {
+		t.Errorf("got error when registering: %s", err.Error())
+	}
+
+	if !registered {
+		t.Error("register function not called")
+	}
+}
+
+func TestRegister_koNamespace(t *testing.T) {
+	ctx := context.Background()
+	cfgBloomFilter := Config{
+		Config: rpc.Config{
+			Config: rotate.Config{
+				Config: bloomfilter.Config{
+					N:        10000000,
+					P:        0.0000001,
+					HashName: "optimal",
+				},
+				TTL: 1500,
+			},
+			Port: 1234,
+		},
+	}
+	serviceConf := config.ServiceConfig{
+		ExtraConfig: config.ExtraConfig{
+			"wrongnamespace": cfgBloomFilter,
+		},
+	}
+	logger, err := gologging.NewLogger(config.ExtraConfig{
+		gologging.Namespace: map[string]any{
+			"level":  "DEBUG",
+			"stdout": true,
+		},
+	})
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	if _, err := Register(ctx, "bloomfilter-test", serviceConf, logger, func(name string, port int) {
+		t.Error("this error should never been called")
+	}); err != ErrNoConfig {
+		t.Errorf("didn't get error %s", ErrNoConfig)
+	}
+
+}

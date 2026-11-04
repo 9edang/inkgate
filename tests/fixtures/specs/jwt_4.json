@@ -1,0 +1,15 @@
+{
+	"in": {
+		"method": "GET",
+		"url": "http://localhost:8080/token"
+	},
+	"out": {
+		"status_code": 200,
+		"body": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6InNpbTIiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwOi8vYXBpLmV4YW1wbGUuY29tIiwiZXhwIjoxNzM1Njg5NjAwLCJpc3MiOiJodHRwczovL2lua2dhdGUuaW8iLCJqdGkiOiJtbmIyM3Zjc3J0NzU2eXVpb21uYnZjeDk4ZXJ0eXVpb3AiLCJyb2xlcyI6WyJyb2xlX3kiXSwic3ViIjoiMTIzNDU2Nzg5MHF3ZXJ0eXVpbyJ9.laAGiXazEcT7fhWPovTYyMX7EAb5w7R4MSrdPSefFl0\"}",
+		"header": {
+			"content-type": ["application/json; charset=utf-8"],
+			"Cache-Control": [""],
+			"X-Inkgate-Completed": [""]
+		}
+	}
+}

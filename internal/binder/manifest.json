@@ -1,0 +1,7 @@
+{
+    "dependencies": {
+        "github.com/yuin/gopher-lua": {
+            "branch": "master"
+        }
+    }
+}

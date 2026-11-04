@@ -1,0 +1,17 @@
+{
+	"in": {
+		"method": "GET",
+		"url": "http://localhost:8080/static",
+		"header": {
+			"X-Request-Id": "flow-test-0001"
+		}
+	},
+	"out": {
+		"status_code": 200,
+		"body": "{\"bar\":\"foobar\",\"foo\":42}",
+		"header": {
+			"X-Request-Id": ["flow-test-0001"],
+			"X-Inkgate-Completed": ["true"]
+		}
+	}
+}

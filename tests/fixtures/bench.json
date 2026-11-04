@@ -1,0 +1,17 @@
+{
+    "version":3,
+    "host":["http://localhost:8080"],
+    "read_header_timeout":"200ms",
+    "extra_config": {
+        "inkgate/feature/telemetry/gologging": {
+            "level": "CRITICAL",
+            "prefix": "[INKGATE]"
+        }
+    },
+    "endpoints": [{
+        "endpoint": "/test",
+        "backend": [{
+            "url_pattern": "/__health"
+        }]
+    }]
+}

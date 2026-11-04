@@ -1,0 +1,125 @@
+# engine/router — routing
+
+**Code:** [engine/router](../../engine/router) (contract) · [engine/router/mux](../../engine/router/mux) (gorilla/mux implementation)
+
+The contract package holds what the rest of the gateway needs from a router:
+
+| Name | Meaning |
+|---|---|
+| `Router`, `Factory` | `Run(cfg)` registers endpoints and serves; `NewWithContext(ctx)` builds one |
+| `RunServerFunc` | `func(ctx, cfg, http.Handler) error` — starts the server; CORS, OTel and plugins wrap it |
+| `Namespace` | `inkgate/engine/router`, alias `router` — the router options in the service `extra_config` |
+| `IsValidSequentialEndpoint` | hook for validating non-GET multi-backend endpoints; currently always true |
+
+The gorilla/mux router turns the endpoint list into routes. Each route gets a pipeline (stage 4) and a handler (stage 3):
+
+```mermaid
+sequenceDiagram
+    participant S as entry.Serve
+    participant F as mux.NewFactory
+    participant R as router.Run
+    participant E as engine
+    S->>F: Engine, ProxyFactory, HandlerFactory, RunServer
+    F->>R: NewWithContext(ctx).Run(cfg)
+    R->>E: /__debug, /__echo (if enabled), /__health
+    loop every endpoint
+        R->>R: proxy := ProxyFactory.New(endpoint)
+        R->>R: handler := HandlerFactory(endpoint, proxy)
+        R->>E: register method + path → handler
+    end
+    R->>R: RunServer(ctx, cfg, engine)
+```
+
+## Implementation (`engine/router/mux`)
+
+| | |
+|---|---|
+| routes | `router.go` — `GorillaEngine.Handle(pattern, method)`: one gorilla route per endpoint and method |
+| engine + options | `engine.go`, `options.go` — errors, health, redirects |
+| endpoint handler | `endpoint.go` `CustomEndpointHandlerWithHTTPError`, `params.go` (gorilla `Vars` → params, `WithParams`, `ClientIP`) |
+| renders | `render.go`, `negotiate.go` |
+| debug / echo | `debug.go`, `echo.go` |
+
+Full details: [../engines/mux.md](../engines/mux.md).
+
+## Path syntax
+
+Endpoints use `{param}` (`/users/{id}`). `cmd/inkgate` sets `config.RoutingPattern = BracketsRouterPatternBuilder`, so endpoints keep `{param}`
+and are registered as gorilla/mux route templates (`{id}`, `{id:[0-9]+}`); values come from `mux.Vars`. Parameters go to backends through `url_pattern`
+(`/api/users/{id}`). A path must start with `/`, may only use `*` as its last character, and cannot use the reserved
+`/__debug`, `/__echo` or `/__health` prefixes (`invalidPattern` in `engine/config/config.go`).
+
+## Streaming: Server-Sent Events and WebSocket
+
+An endpoint with `router/stream` in its `extra_config` streams instead of answering with one buffered response.
+`mode` chooses how:
+
+| `mode` | For | What the gateway does |
+|---|---|---|
+| `event` (default) | Server-Sent Events, chunked and long-lived responses | copies the backend body to the client and flushes after every chunk |
+| `socket` | WebSocket | upgrades the client, opens a WebSocket to the backend and relays the messages both ways |
+
+Common to both modes:
+
+- `timeout` only bounds the wait for the backend (the response headers, or the WebSocket handshake). Once the
+  stream is open it lives until the backend ends it or the client disconnects (the backend side is then closed)
+- the server `write_timeout` is lifted for this response, other endpoints keep it
+- use `"concurrent_calls": 1` and a single backend; response modifiers and merging need the whole body
+- `max_shutdown_wait_time` applies to open `event` streams on SIGTERM; open sockets are dropped when the process exits
+- `"enabled": false` in the section turns it off without removing it. An unknown `mode` or a bad option value stops
+  the gateway at startup
+
+### `mode: "event"` (SSE)
+
+```json
+{
+  "endpoint": "/events",
+  "method": "GET",
+  "timeout": "3s",
+  "output_encoding": "no-op",
+  "concurrent_calls": 1,
+  "input_headers": ["Accept", "Last-Event-ID"],
+  "extra_config": { "router/stream": { "mode": "event" } },
+  "backend": [{ "url_pattern": "/sse", "host": ["http://events:9000"], "encoding": "no-op" }]
+}
+```
+
+- the backend must use `"encoding": "no-op"`; with another encoding the body is decoded as a whole and nothing can
+  stream (the endpoint then answers as a normal one)
+- for `text/event-stream` it adds `Cache-Control: no-cache` (when the backend sets none) and `X-Accel-Buffering: no`
+  so a reverse proxy such as nginx does not buffer it
+- pass `Accept` and `Last-Event-ID` in `input_headers` so the backend can resume a stream
+
+### `mode: "socket"` (WebSocket)
+
+```json
+{
+  "endpoint": "/chat/{room}",
+  "method": "GET",
+  "timeout": "3s",
+  "concurrent_calls": 1,
+  "input_headers": ["Authorization"],
+  "input_query_strings": ["lang"],
+  "extra_config": { "router/stream": { "mode": "socket", "idle_timeout": "60s", "max_message_size": 1048576 } },
+  "backend": [{ "url_pattern": "/room/{room}", "host": ["http://chat:9100"] }]
+}
+```
+
+**Code:** [engine/transport/http/socket](../../engine/transport/http/socket), built on `gorilla/websocket`.
+
+- the request goes through the whole pipeline first (JWT validation, rate limit, bot detection, CORS, circuit breaker,
+  host load balancing and service discovery), so a socket endpoint is protected like any other
+- the gateway connects to the backend **first**. Only when the backend accepts, the client is upgraded and gets the
+  subprotocol the backend picked. If the backend refuses (401, 403, 404...), its status, headers and body go to the client
+  unchanged. A backend that does not answer within `timeout`, or cannot be reached, gives a 500
+- text and binary messages keep their type; **ping, pong and close are forwarded** end to end, and a close keeps its code
+  and reason, so both sides see each other's keep-alive and shutdown. A lost connection on one side closes the other
+  with 1001
+- a request that is not a WebSocket upgrade gets **426** with `Upgrade: websocket`
+- `Authorization`, other `input_headers`, the query string and `Origin` are sent to the backend. The Origin check is the
+  backend's job (the gateway accepts any Origin; use `security/cors` and the request stage to restrict it)
+- options: `idle_timeout` closes the socket when nothing moves in either direction for that long (the client should ping
+  more often); `max_message_size` (bytes) closes the connection on a larger message. Both default to no limit
+- permessage-deflate is not negotiated: messages cross the gateway uncompressed
+- needs HTTP/1.1 for the client: a WebSocket over HTTP/2 (RFC 8441) is not supported and gets 501
+- the connection to a `wss` backend uses the system CA pool

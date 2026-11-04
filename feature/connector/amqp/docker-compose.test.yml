@@ -1,0 +1,8 @@
+services:
+  amqp:
+    container_name: test_inkgate_amqp
+    image: rabbitmq:3-management
+    hostname: amqp
+    ports: 
+      - "0.0.0.0:5672:5672"
+      - "0.0.0.0:15672:15672"
