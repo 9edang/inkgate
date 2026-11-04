@@ -1,0 +1,70 @@
+# golangci-lint v2 configuration. Run with `make lint`.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  # errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  enable:
+    - bodyclose    # HTTP response bodies must be closed
+    - unconvert
+    - nilerr       # returning nil when an err was just checked
+  settings:
+    errcheck:
+      check-type-assertions: false
+      exclude-functions:
+        # errors from these are not actionable
+        - (io.Closer).Close
+        - (*os.File).Close
+        - (*net/http.Response).Body.Close
+        - (net/http.ResponseWriter).Write
+        - (*net/http.Server).Shutdown
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - os.Remove
+        - os.RemoveAll
+    govet:
+      disable:
+        - inline  # reports ioutil calls as "declared using go1.27" when the toolchain is newer than go.mod
+    staticcheck:
+      checks:
+        - all
+        - -ST1000  # package comments
+        - -ST1003  # naming style (acronyms in existing public names)
+        - -ST1005  # capitalized error strings kept for compatibility
+        - -ST1016  # receiver names
+        - -ST1020  # doc comment form
+        - -ST1021
+        - -ST1022
+        - -QF1001  # De Morgan suggestions
+        - -QF1003
+        - -QF1008  # embedded field selectors
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      # tests may ignore errors and use fixtures freely
+      - path: _test\.go
+        linters:
+          - errcheck
+          - bodyclose
+          - nilerr
+      # plugin fixtures and the integration harness are examples, not product code
+      - path: (/tests?/|tests/)
+        linters:
+          - errcheck
+          - unused
+
+formatters:
+  enable:
+    - gofmt
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

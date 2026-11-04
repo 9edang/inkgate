@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+.vscode
+bin/
+docs/
+tests/fixtures/
+*.so
+*.md
+!LICENSE
+!NOTICE
+Dockerfile
+.dockerignore
