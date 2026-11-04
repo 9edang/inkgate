@@ -23,7 +23,7 @@ correct config today.
 with the metadata of several backends before choosing which status a merged response reports.
 
 **Done when**: a test with `resp_metadata_status == 200` passes on a decoded backend, and the merge rule is written in
-[../engine/proxy.md](../engine/proxy.md). Also in inkgate-gin (shared code).
+[../engine/proxy.md](../engine/proxy.md).
 
 ## 1.2 CORS preflight refused with `allow_headers`
 
@@ -32,7 +32,7 @@ with the metadata of several backends before choosing which status a merged resp
 blocks the real request. The CORS debug log says `Preflight aborted: headers '[Content-Type]' not allowed`.
 
 **Cause**: reproduced with `rs/cors` v1.11.1 alone, outside the gateway: only `AllowedHeaders: ["*"]` passes. The
-gateway's config parsing is correct. The same happens in inkgate-gin and KrakenD CE, which use the same library.
+gateway's config parsing is correct. The same happens in KrakenD CE, which uses the same library.
 
 **Fix**: first look for the upstream issue or a newer release. If none, normalize the list before passing it on
 (lower case, trimmed), and add a preflight test with an explicit header list. Until then, document it in

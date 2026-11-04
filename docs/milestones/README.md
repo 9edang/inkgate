@@ -15,7 +15,7 @@ M1 and the quick items of M2 can start at once; M3 to M5 can run in parallel aft
 
 ## The baseline the milestones are measured against
 
-From the benchmark harness in `../benchmark` (a sibling directory of this repository), final run of 4 November 2026:
+From the benchmark harness (a sibling directory of this repository), final run of 4 November 2026:
 inkgate on **one CPU core and 2 GB of RAM**, 128 connections, median of 3 runs. "% of base" compares with the
 plainest job, forwarding a 1 KB JSON document.
 
@@ -34,8 +34,7 @@ plainest job, forwarding a 1 KB JSON document.
 | 200 WebSocket connections | 60,124 round trips/s (the backend alone: 427,880) | | 15.4 per message | 39 |
 
 Compared with KrakenD CE 2.13.11 on the same core: inkgate is 1.45× faster on average and uses 68% of its CPU per
-request. inkgate-gin is level with KrakenD (0.98×). Most of the optimizations below apply to the shared code, so
-they would also help inkgate-gin.
+request.
 
 ## How an item is done
 
@@ -44,5 +43,3 @@ they would also help inkgate-gin.
   about where time goes.
 - **Behavior change written down**: anything that changes a response or a default goes into the feature's page in
   [../feature](../feature) and into [../known-issues.md](../known-issues.md) when relevant.
-- **Both builds**: say for each item whether it also applies to inkgate-gin (the shared `engine/` and `feature/`
-  code usually does; `engine/router/mux` and `engine/transport/http/socket` do not).

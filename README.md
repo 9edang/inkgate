@@ -9,8 +9,6 @@ Inspired by [KrakenD](https://www.krakend.io) ([krakend-ce](https://github.com/k
 feature set, and adds what they leave out (Server-Sent Events and WebSocket proxying, a leaner request path). Their
 copyright notices are kept in [NOTICE](NOTICE), as the Apache-2.0 license requires.
 
-The sibling project `inkgate-gin` is the same gateway on the gin router; both read the same `inkgate.json`.
-
 ## Get it
 
 ```sh

@@ -4,7 +4,7 @@ This project runs the inkgate gateway on the [gorilla/mux](https://github.com/go
 
 ## What is router-specific
 
-Only the HTTP side touches gorilla/mux. Everything else is router-agnostic and identical in `inkgate-gin`.
+Only the HTTP side touches gorilla/mux. Everything else is router-agnostic.
 
 ```mermaid
 flowchart TB

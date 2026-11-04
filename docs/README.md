@@ -16,6 +16,7 @@ Diagrams are [Mermaid](https://mermaid.js.org); they render on GitHub, GitLab an
 | changing a capability (JWT, rate limit, Lua...) | the matching page in [feature/](feature) |
 | touching config, the core pipeline or HTTP transport | [engine/](engine) |
 | adding something | [guides/add-a-feature.md](guides/add-a-feature.md) |
+| writing a custom plugin (.so) | [guides/custom-plugins.md](guides/custom-plugins.md) |
 | writing an `inkgate.json` | [guides/config-reference.md](guides/config-reference.md) |
 | planning the next work | [milestones/](milestones/README.md) |
 
