@@ -5,13 +5,6 @@ calls one or more backends, merges their answers and returns one response.
 
 > **Pre-release.** Configuration keys and behavior can still change before 0.1.0.
 
-## Features
-- Routing to one or more backends, with merged responses
-- Server-Sent Events and WebSocket proxying
-- Go plugins: `plugin/http-server`, `plugin/http-client` (chainable), `plugin/req-resp-modifier`
-- Commands: `run`, `check`, `check-plugin`, `test-plugin`, `audit`, `version`
-- Runs as a non-root user (uid 10001)
-
 ## Tags
 | Tag | Meaning |
 |---|---|
