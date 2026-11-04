@@ -18,7 +18,7 @@
 #
 # Environment:
 #   DOCKER_REPO   image name on Docker Hub        (default: 120200/inkgate)
-#   PLATFORMS     comma list for buildx            (default: the local platform only)
+#   PLATFORMS     comma list of target platforms   (default: linux/amd64,linux/arm64/v8)
 #   GO_VERSION    Go version of the builder image  (default: the Dockerfile's)
 #   NO_GIT_TAG=1  push without creating/pushing the git tag
 #
@@ -30,7 +30,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 DOCKER_REPO="${DOCKER_REPO:-120200/inkgate}"
-PLATFORMS="${PLATFORMS:-}"
+PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64/v8}"
 
 die() { echo "error: $*" >&2; exit 1; }
 
@@ -102,24 +102,41 @@ fi
 revision="$(git rev-parse HEAD)"
 created="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-args=(--build-arg "VERSION=${version}" --build-arg "REVISION=${revision}" --build-arg "CREATED=${created}")
-[[ -z "${GO_VERSION:-}" ]] || args+=(--build-arg "GO_VERSION=${GO_VERSION}")
-while read -r t; do args+=(-t "${DOCKER_REPO}:${t}"); done < <(tags_for "$version")
+build_args=(--build-arg "VERSION=${version}" --build-arg "REVISION=${revision}" --build-arg "CREATED=${created}")
+[[ -z "${GO_VERSION:-}" ]] || build_args+=(--build-arg "GO_VERSION=${GO_VERSION}")
+mapfile -t tags < <(tags_for "$version")
 
-echo ">> version ${version}"
-tags_for "$version" | sed "s#^#   ${DOCKER_REPO}:#"
+echo ">> version ${version}  platforms ${PLATFORMS}"
+printf '   %s\n' "${tags[@]/#/${DOCKER_REPO}:}"
 
-if [[ "$cmd" == build ]]; then
-  docker build "${args[@]}" .
-  exit 0
+# podman builds a multi-arch image as a manifest list; docker needs buildx for that
+docker_version="$(docker --version 2>&1 || true)"   # not piped into grep -q: pipefail would see SIGPIPE
+if [[ "$docker_version" == *podman* ]] || { command -v podman >/dev/null && ! docker buildx version >/dev/null 2>&1; }; then
+  engine=podman
+else
+  engine=buildx
 fi
 
-# push: login is expected beforehand (docker login)
-if [[ -n "$PLATFORMS" ]]; then
-  docker buildx build --platform "$PLATFORMS" "${args[@]}" --push .
+if [[ "$engine" == podman ]]; then
+  manifest="${DOCKER_REPO}:${tags[0]}"
+  podman manifest rm "$manifest" >/dev/null 2>&1 || true
+  podman build --platform "$PLATFORMS" --manifest "$manifest" "${build_args[@]}" .
+  for t in "${tags[@]:1}"; do
+    podman tag "$manifest" "${DOCKER_REPO}:${t}"
+  done
+  if [[ "$cmd" == build ]]; then exit 0; fi
+  # push: login is expected beforehand (docker login / podman login docker.io)
+  for t in "${tags[@]}"; do
+    podman manifest push --all "$manifest" "docker://docker.io/${DOCKER_REPO}:${t}"
+  done
 else
-  docker build "${args[@]}" .
-  while read -r t; do docker push "${DOCKER_REPO}:${t}"; done < <(tags_for "$version")
+  tag_args=(); for t in "${tags[@]}"; do tag_args+=(-t "${DOCKER_REPO}:${t}"); done
+  if [[ "$cmd" == build ]]; then
+    # a multi-platform result cannot be loaded into the local engine; build for this machine only
+    docker buildx build --load "${tag_args[@]}" "${build_args[@]}" .
+    exit 0
+  fi
+  docker buildx build --platform "$PLATFORMS" "${tag_args[@]}" "${build_args[@]}" --push .
 fi
 
 if [[ "$version" != *-dev-* && "${NO_GIT_TAG:-}" != 1 ]]; then
