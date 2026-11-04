@@ -1,6 +1,6 @@
-# inkgate
+# Inkgate, The Plugin-Ready API Gateway
 
-API gateway on the gorilla/mux router. It receives an HTTP request, applies security and traffic rules,
+Inkgate is an API gateway on the gorilla/mux router. It receives an HTTP request, applies security and traffic rules,
 calls one or more backends, merges their answers and returns one response.
 
 > **Pre-release.** Configuration keys and behavior can still change before 0.1.0.

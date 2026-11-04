@@ -1,1 +1,1 @@
-API gateway: routing, backend aggregation, SSE and WebSocket proxy, Go plugins. amd64 and arm64.
+Inkgate, The Plugin-Ready API Gateway
