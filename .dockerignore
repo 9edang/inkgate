@@ -11,3 +11,4 @@ tests/fixtures/
 !NOTICE
 Dockerfile
 .dockerignore
+docker/
