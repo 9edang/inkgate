@@ -8,7 +8,7 @@ import (
 	"github.com/9edang/inkgate/engine/register"
 )
 
-// GetRegister returns the package register
+// GetRegister returns the package register.
 func GetRegister() *DecoderRegister {
 	return decoders
 }
@@ -19,18 +19,18 @@ type untypedRegister interface {
 	Clone() map[string]any
 }
 
-// DecoderRegister is the struct responsible of registering the decoder factories
+// DecoderRegister is the struct responsible of registering the decoder factories.
 type DecoderRegister struct {
 	data untypedRegister
 }
 
-// Register adds a decoder factory to the register
+// Register adds a decoder factory to the register.
 func (r *DecoderRegister) Register(name string, dec func(bool) func(io.Reader, *map[string]any) error) error {
 	r.data.Register(name, dec)
 	return nil
 }
 
-// Get returns a decoder factory from the register by name. If no factory is found, it returns a JSON decoder factory
+// Get returns a decoder factory from the register by name. If no factory is found, it returns a JSON decoder factory.
 func (r *DecoderRegister) Get(name string) func(bool) func(io.Reader, *map[string]any) error {
 	for _, n := range []string{name, JSON} {
 		if v, ok := r.data.Get(n); ok {
@@ -39,6 +39,7 @@ func (r *DecoderRegister) Get(name string) func(bool) func(io.Reader, *map[strin
 			}
 		}
 	}
+
 	return NewJSONDecoder
 }
 
@@ -55,7 +56,9 @@ var (
 func initDecoderRegister() *DecoderRegister {
 	r := &DecoderRegister{data: register.NewUntyped()}
 	for k, v := range defaultDecoders {
-		r.Register(k, v)
+		// #nosec G104 -- error is not actionable here
+		_ = r.Register(k, v)
 	}
+
 	return r
 }

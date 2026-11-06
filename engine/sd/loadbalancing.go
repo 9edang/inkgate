@@ -10,12 +10,12 @@ import (
 	"github.com/valyala/fastrand"
 )
 
-// Balancer applies a balancing stategy in order to select the backend host to be used
+// Balancer applies a balancing stategy in order to select the backend host to be used.
 type Balancer interface {
 	Host() (string, error)
 }
 
-// ErrNoHosts is the error the balancer must return when there are 0 hosts ready
+// ErrNoHosts is the error the balancer must return when there are 0 hosts ready.
 var ErrNoHosts = errors.New("no hosts available")
 
 // NewBalancer returns the best perfomant balancer depending on the number of available processors.
@@ -25,6 +25,7 @@ func NewBalancer(subscriber Subscriber) Balancer {
 	if p := runtime.GOMAXPROCS(-1); p == 1 {
 		return NewRoundRobinLB(subscriber)
 	}
+
 	return NewRandomLB(subscriber)
 }
 
@@ -37,9 +38,11 @@ func NewRoundRobinLB(subscriber Subscriber) Balancer {
 		if l := len(s); l == 1 {
 			return nopBalancer(s[0])
 		} else if l > 1 {
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			start = uint64(fastrand.Uint32n(uint32(l)))
 		}
 	}
+
 	return &roundRobinLB{
 		balancer: balancer{subscriber: subscriber},
 		counter:  start,
@@ -51,21 +54,23 @@ type roundRobinLB struct {
 	counter uint64
 }
 
-// Host implements the balancer interface
+// Host implements the balancer interface.
 func (r *roundRobinLB) Host() (string, error) {
 	hosts, err := r.hosts()
 	if err != nil {
 		return "", err
 	}
 	offset := (atomic.AddUint64(&r.counter, 1) - 1) % uint64(len(hosts))
+
 	return hosts[offset], nil
 }
 
-// NewRandomLB returns a new balancer using a fastrand pseudorandom generator
+// NewRandomLB returns a new balancer using a fastrand pseudorandom generator.
 func NewRandomLB(subscriber Subscriber) Balancer {
 	if s, ok := subscriber.(FixedSubscriber); ok && len(s) == 1 {
 		return nopBalancer(s[0])
 	}
+
 	return &randomLB{
 		balancer: balancer{subscriber: subscriber},
 		rand:     fastrand.Uint32n,
@@ -77,12 +82,13 @@ type randomLB struct {
 	rand func(uint32) uint32
 }
 
-// Host implements the balancer interface
+// Host implements the balancer interface.
 func (r *randomLB) Host() (string, error) {
 	hosts, err := r.hosts()
 	if err != nil {
 		return "", err
 	}
+	// #nosec G115 -- numeric value from the operator config, far below the overflow range
 	return hosts[int(r.rand(uint32(len(hosts))))], nil
 }
 
@@ -95,9 +101,10 @@ func (b *balancer) hosts() ([]string, error) {
 	if err != nil {
 		return hs, err
 	}
-	if len(hs) <= 0 {
+	if len(hs) == 0 {
 		return hs, ErrNoHosts
 	}
+
 	return hs, nil
 }
 

@@ -6,6 +6,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 func TestFrom_survivesDerivedContexts(t *testing.T) {
@@ -80,7 +82,7 @@ func TestConcurrentUse(t *testing.T) {
 
 func TestMiddleware_requestID(t *testing.T) {
 	var seen *Flow
-	h := Middleware(ParseOptions(nil))(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+	h := Middleware(ParseOptions(map[string]any{Namespace: map[string]any{"trust_request_id": true}}))(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		seen = From(r.Context())
 	}))
 
@@ -112,14 +114,28 @@ func TestMiddleware_requestID(t *testing.T) {
 	}
 }
 
+// by default the client cannot choose the request ID
+func TestMiddleware_ignoresClientIDByDefault(t *testing.T) {
+	var seen *Flow
+	h := Middleware(ParseOptions(nil))(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		seen = From(r.Context())
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set(DefaultRequestIDHeader, "abc-123")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+	if id := seen.RequestID(); id == "" || id == "abc-123" {
+		t.Errorf("client ID was used: %q", id)
+	}
+}
+
 func TestParseOptions(t *testing.T) {
 	opts := ParseOptions(map[string]any{Namespace: map[string]any{
-		"request_id_header": "X-Correlation-Id", "trust_request_id": false, "propagate_request_id": true,
+		"request_id_header": "X-Correlation-Id", "trust_request_id": true, "propagate_request_id": false,
 	}})
-	if opts.RequestIDHeader != "X-Correlation-Id" || opts.trust() || !opts.PropagateRequestID {
+	if opts.RequestIDHeader != "X-Correlation-Id" || !opts.trust() || opts.PropagateRequestID {
 		t.Errorf("unexpected options %+v", opts)
 	}
-	if def := ParseOptions(nil); def.RequestIDHeader != DefaultRequestIDHeader || !def.trust() || def.PropagateRequestID {
+	if def := ParseOptions(nil); def.RequestIDHeader != DefaultRequestIDHeader || def.trust() || !def.PropagateRequestID {
 		t.Errorf("unexpected defaults %+v", def)
 	}
 }
@@ -144,5 +160,26 @@ func TestPluginKey(t *testing.T) {
 	}
 	if v, _ := flow.Get("plugin.seen"); v != true {
 		t.Error("a value set by the plugin must be visible to the gateway")
+	}
+}
+
+func TestNewIDIsUUIDv7(t *testing.T) {
+	id, err := uuid.Parse(newID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id.Version() != 7 {
+		t.Fatalf("version = %d, want 7", id.Version())
+	}
+}
+
+func TestNewIDSortsByTime(t *testing.T) {
+	prev := newID()
+	for i := 0; i < 1000; i++ {
+		next := newID()
+		if next <= prev {
+			t.Fatalf("%s is not after %s", next, prev)
+		}
+		prev = next
 	}
 }

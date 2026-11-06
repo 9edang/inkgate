@@ -20,7 +20,7 @@ flowchart LR
 | Namespace | `inkgate/feature/security/cors` (alias `security/cors`), service level |
 |---|---|
 | Where | `NewRunServer` in `flow/entry/server.go`, wraps the listener, so it runs before routing. The middleware itself is shared: `feature/security/cors/http.go` |
-| Adapters | `feature/security/cors/mux` |
+| Adapters | `feature/security/cors` |
 | Options | `allow_origins`, `allow_methods`, `allow_headers`, `expose_headers`, `allow_credentials`, `max_age`, `allow_private_network`, `options_passthrough`, `options_success_status`, `debug` |
 
 ## httpsecure — secure HTTP headers and host checks
@@ -28,7 +28,7 @@ flowchart LR
 | Namespace | `inkgate/feature/security/httpsecure` (alias `security/http`), service level |
 |---|---|
 | Where | service level in `flow/entry/engine.go`, the first middleware a request meets |
-| Adapters | `feature/security/httpsecure/mux` |
+| Adapters | `feature/security/httpsecure` |
 | Options | `allowed_hosts`, `allowed_hosts_are_regex`, `host_proxy_headers`, `ssl_redirect`, `ssl_host`, `ssl_proxy_headers`, `sts_seconds`, `sts_include_subdomains`, `force_sts_header`, `frame_deny`, `custom_frame_options_value`, `content_type_nosniff`, `browser_xss_filter`, `content_security_policy`, `referrer_policy`, `is_development` |
 
 Built on `unrolled/secure`. Typical use: HSTS, `X-Frame-Options`, CSP, and rejecting requests for unknown hosts.
@@ -38,7 +38,7 @@ Built on `unrolled/secure`. Typical use: HSTS, `X-Frame-Options`, CSP, and rejec
 | Namespace | `inkgate/feature/security/botdetector` (alias `security/bot-detector`) |
 |---|---|
 | Where | service level in `flow/entry/engine.go`, and/or endpoint level as step 2 in `flow/request` |
-| Adapters | `feature/security/botdetector/mux` (shared config parser: `feature/security/botdetector/gateway`) |
+| Adapters | `feature/security/botdetector/gateway` (shared config parser: `feature/security/botdetector/gateway`) |
 | Options | `allow` (exact UAs always allowed), `deny` (exact UAs always blocked), `patterns` (regexps), `cache_size` (LRU of decisions), `empty_user_agent_is_bot` |
 | Result | 403 |
 

@@ -3,10 +3,13 @@ package auth0
 import (
 	"bytes"
 	"errors"
-	"github.com/9edang/inkgate/internal/json"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/9edang/inkgate/internal/constant"
+
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/go-jose/go-jose/v3"
 )
@@ -40,7 +43,7 @@ func NewJWKClient(options JWKClientOptions, extractor RequestTokenExtractor) *JW
 
 // NewJWKClientWithCache creates a new JWKClient instance from the
 // provided options and a custom keycacher interface.
-// Passing nil to keyCacher will create a persistent key cacher
+// Passing nil to keyCacher will create a persistent key cacher.
 func NewJWKClientWithCache(options JWKClientOptions, extractor RequestTokenExtractor, keyCacher KeyCacher) *JWKClient {
 	if extractor == nil {
 		extractor = RequestTokenExtractorFunc(FromHeader)
@@ -60,20 +63,21 @@ func NewJWKClientWithCache(options JWKClientOptions, extractor RequestTokenExtra
 }
 
 // GetKey returns the key associated with the provided ID.
-func (j *JWKClient) GetKey(ID string) (jose.JSONWebKey, error) {
+func (j *JWKClient) GetKey(id string) (jose.JSONWebKey, error) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 
-	searchedKey, err := j.keyCacher.Get(ID)
+	searchedKey, err := j.keyCacher.Get(id)
 	if err != nil {
 		keys, err := j.downloadKeys()
 		if err != nil {
 			return jose.JSONWebKey{}, err
 		}
-		addedKey, err := j.keyCacher.Add(ID, keys)
+		addedKey, err := j.keyCacher.Add(id, keys)
 		if err != nil {
 			return jose.JSONWebKey{}, err
 		}
+
 		return *addedKey, nil
 	}
 
@@ -81,10 +85,13 @@ func (j *JWKClient) GetKey(ID string) (jose.JSONWebKey, error) {
 }
 
 func (j *JWKClient) downloadKeys() ([]jose.JSONWebKey, error) {
-	req, err := http.NewRequest("GET", j.options.URI, new(bytes.Buffer))
+	// #nosec G704 -- the target URL comes from the operator config
+	//nolint:noctx // no request context is available at this point
+	req, err := http.NewRequest(http.MethodGet, j.options.URI, new(bytes.Buffer))
 	if err != nil {
 		return []jose.JSONWebKey{}, err
 	}
+	// #nosec G704 -- the target URL comes from the operator config
 	resp, err := j.options.Client.Do(req)
 
 	if err != nil {
@@ -99,10 +106,10 @@ func (j *JWKClient) downloadKeys() ([]jose.JSONWebKey, error) {
 	// TODO: we could completely skip this test, and rely on the
 	// json decoder below, that would fail on invalid JSON
 	validContentTypes := []string{
-		"application/json",
+		constant.MIMEJSON,
 		"application/jwk-set+json",
 	}
-	contentH := resp.Header.Get("Content-Type")
+	contentH := resp.Header.Get(constant.HeaderContentType)
 	err = ErrInvalidContentType
 	for _, vct := range validContentTypes {
 		if strings.HasPrefix(contentH, vct) {

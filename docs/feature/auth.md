@@ -26,7 +26,7 @@ flowchart LR
 | Namespace | `inkgate/feature/auth/jose/validator` | `inkgate/feature/auth/jose/signer` |
 | Alias | `auth/validator` | `auth/signer` |
 | Where | endpoint `extra_config`, stage 3 step 5 | endpoint `extra_config`, signs fields of the response |
-| Code | shared: `feature/auth/jose` (`jose.go`, `jwk_client.go`) · adapter: `feature/auth/jose/mux` | shared: `feature/auth/jose/jws.go` · same adapters |
+| Code | shared: `feature/auth/jose` (`jose.go`, `jwk_client.go`) · adapter: `feature/auth/jose` | shared: `feature/auth/jose/jws.go` · same adapters |
 
 **Validator options:** `alg`, `jwk_url` (or `jwk_local_path` / `jwk_local_ca`), `cache`, `cache_duration`,
 `audience`, `issuer`, `roles`, `roles_key`, `roles_key_is_nested`, `scopes`, `scopes_key`, `scopes_matcher`

@@ -11,10 +11,10 @@ func TestNew_ok(t *testing.T) {
 		format string
 		path   string
 	}{
-		{"json", "./fixtures/ok.json"},
-		{"toml", "./fixtures/ok.toml"},
-		{"yaml", "./fixtures/ok.yaml"},
-		{"yml", "./fixtures/ok.yml"},
+		{"json", "../../../tests/fixtures/koanf/ok.json"},
+		{"toml", "../../../tests/fixtures/koanf/ok.toml"},
+		{"yaml", "../../../tests/fixtures/koanf/ok.yaml"},
+		{"yml", "../../../tests/fixtures/koanf/ok.yml"},
 	}
 	for _, configContent := range configContents {
 		t.Run(configContent.format, func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestNew_errorMessages(t *testing.T) {
 		},
 	} {
 		t.Run(configContent.path, func(t *testing.T) {
-			_, err := New().ParseWithoutInit("./fixtures/" + configContent.path)
+			_, err := New().ParseWithoutInit("../../../tests/fixtures/koanf/" + configContent.path)
 			if err == nil {
 				t.Errorf("%s: Expecting error", configContent.path)
 				return
@@ -152,8 +152,8 @@ func TestNew_unknownFile(t *testing.T) {
 }
 
 func TestNew_readingError(t *testing.T) {
-	wrongConfigPath := "./fixtures/reading.json"
-	expected := "'./fixtures/reading.json': invalid character 'h' looking for beginning of object key string"
+	wrongConfigPath := "../../../tests/fixtures/koanf/reading.json"
+	expected := "'../../../tests/fixtures/koanf/reading.json': invalid character 'h' looking for beginning of object key string"
 	_, err := New().ParseWithoutInit(wrongConfigPath)
 	if err == nil || err.Error() != expected {
 		t.Errorf("Error expected. Got '%s'", err)
@@ -161,9 +161,9 @@ func TestNew_readingError(t *testing.T) {
 }
 
 func TestNew_initError(t *testing.T) {
-	wrongConfigPath := "./fixtures/unmarshal.json"
+	wrongConfigPath := "../../../tests/fixtures/koanf/unmarshal.json"
 	_, err := New().Parse(wrongConfigPath)
-	if err == nil || err.Error() != "'./fixtures/unmarshal.json': unsupported version: 0 (want: 3)" {
+	if err == nil || err.Error() != "'../../../tests/fixtures/koanf/unmarshal.json': unsupported version: 0 (want: 3)" {
 		t.Error("Error expected. Got", err)
 	}
 }

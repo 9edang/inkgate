@@ -1,9 +1,10 @@
 package tree
 
 import (
-	"github.com/9edang/inkgate/internal/json"
 	"sort"
 	"strconv"
+
+	"github.com/9edang/inkgate/internal/json"
 )
 
 type edge struct {
@@ -32,14 +33,18 @@ func (n *node) Add(ks []string, v any) {
 	}
 
 	for _, e := range n.edges {
+		// #nosec G602 -- length is checked before, see the early return
 		if e.label == ks[0] {
+			// #nosec G602 -- length is checked before, see the early return
 			e.n.Add(ks[1:], v)
 			return
 		}
 	}
 
 	child := newNode(n.depth + 1)
+	// #nosec G602 -- length is checked before, see the early return
 	n.edges = append(n.edges, &edge{label: ks[0], n: child})
+	// #nosec G602 -- length is checked before, see the early return
 	child.Add(ks[1:], v)
 }
 
@@ -55,6 +60,7 @@ func (n *node) Del(ks ...string) {
 			for _, e := range n.edges {
 				e.n.Del(ks[1:]...)
 			}
+
 			return
 		}
 
@@ -62,6 +68,7 @@ func (n *node) Del(ks ...string) {
 			n.edges[i] = nil
 		}
 		n.edges = n.edges[:0]
+
 		return
 	}
 
@@ -71,9 +78,11 @@ func (n *node) Del(ks ...string) {
 				copy(n.edges[i:], n.edges[i+1:])
 				n.edges[len(n.edges)-1] = nil
 				n.edges = n.edges[:len(n.edges)-1]
+
 				return
 			}
 			e.n.Del(ks[1:]...)
+
 			return
 		}
 	}
@@ -96,6 +105,7 @@ func (n *node) Get(ks ...string) any {
 		for i, e := range n.edges {
 			res[i] = e.n.Get(ks[1:]...)
 		}
+
 		return res
 	}
 
@@ -104,6 +114,7 @@ func (n *node) Get(ks ...string) any {
 			return e.n.Get(ks[1:]...)
 		}
 	}
+
 	return nil
 }
 
@@ -141,6 +152,7 @@ func (n *node) expand() any {
 	for _, e := range n.edges {
 		res[e.label] = e.n.Get()
 	}
+
 	return res
 }
 
@@ -194,6 +206,7 @@ func (n *node) Less(i, j int) bool {
 	if n.isCollection {
 		return i < j
 	}
+
 	return n.edges[i].label < n.edges[j].label
 }
 

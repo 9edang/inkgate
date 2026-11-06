@@ -10,56 +10,61 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/9edang/inkgate/internal/constant"
+
+	"github.com/9edang/inkgate/context"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/core"
 	"github.com/9edang/inkgate/engine/logging"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 )
 
-// ToHTTPError translates an error into a HTTP status code
+// ToHTTPError translates an error into a HTTP status code.
 type ToHTTPError func(error) int
 
 // DefaultToHTTPError is a ToHTTPError transalator that always returns an
-// internal server error
+// internal server error.
 func DefaultToHTTPError(_ error) int {
 	return http.StatusInternalServerError
 }
 
 const (
 	// HeaderCompleteResponseValue is the value of the CompleteResponseHeader
-	// if the response is complete
+	// if the response is complete.
 	HeaderCompleteResponseValue = "true"
 	// HeaderIncompleteResponseValue is the value of the CompleteResponseHeader
-	// if the response is not complete
+	// if the response is not complete.
 	HeaderIncompleteResponseValue = "false"
 )
 
 var (
-	// CompleteResponseHeaderName is the header to flag incomplete responses to the client
+	// CompleteResponseHeaderName is the header to flag incomplete responses to the client.
 	CompleteResponseHeaderName = "X-Inkgate-Completed"
-	// HeadersToSend are the headers to pass from the router request to the proxy
-	HeadersToSend = []string{"Content-Type"}
-	// UserAgentHeaderValue is the value of the User-Agent header to add to the proxy request
+	// HeadersToSend are the headers to pass from the router request to the proxy.
+	HeadersToSend = []string{constant.HeaderContentType}
+	// UserAgentHeaderValue is the value of the User-Agent header to add to the proxy request.
 	UserAgentHeaderValue = []string{core.InkgateUserAgent}
 
-	// ErrInternalError is the error returned by the router when something went wrong
+	// ErrInternalError is the error returned by the router when something went wrong.
 	ErrInternalError = errors.New("internal server error")
-	// ErrPrivateKey is the error returned by the router when the private key is not defined
+	// ErrPrivateKey is the error returned by the router when the private key is not defined.
 	ErrPrivateKey = errors.New("private key not defined")
-	// ErrPublicKey is the error returned by the router when the public key is not defined
+	// ErrPublicKey is the error returned by the router when the public key is not defined.
 	ErrPublicKey = errors.New("public key not defined")
 	loggerPrefix = "[SERVICE: HTTP Server]"
 )
 
-// InitHTTPDefaultTransport ensures the default HTTP transport is configured just once per execution
+// InitHTTPDefaultTransport ensures the default HTTP transport is configured just once per execution.
 func InitHTTPDefaultTransport(cfg config.ServiceConfig) {
 	InitHTTPDefaultTransportWithLogger(cfg, nil)
 }
@@ -155,12 +160,13 @@ func RunServerWithLoggerFactory(l logging.Logger) func(context.Context, config.S
 			}
 			withTimeout, cancel := context.WithTimeout(context.Background(), cfg.MaxShutdownDuration)
 			defer cancel()
+
 			return s.Shutdown(withTimeout)
 		}
 	}
 }
 
-// NewServer returns a http.Server ready to serve the injected handler
+// NewServer returns a http.Server ready to serve the injected handler.
 func NewServer(cfg config.ServiceConfig, handler http.Handler) *http.Server {
 	return NewServerWithLogger(cfg, handler, nil)
 }
@@ -171,7 +177,7 @@ func NewServerWithLogger(cfg config.ServiceConfig, handler http.Handler, logger 
 	}
 
 	return &http.Server{
-		Addr:              net.JoinHostPort(cfg.Address, fmt.Sprintf("%d", cfg.Port)),
+		Addr:              net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)),
 		Handler:           handler,
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
@@ -182,7 +188,7 @@ func NewServerWithLogger(cfg config.ServiceConfig, handler http.Handler, logger 
 	}
 }
 
-// ParseTLSConfig creates a tls.Config from the TLS section of the service configuration
+// ParseTLSConfig creates a tls.Config from the TLS section of the service configuration.
 func ParseTLSConfig(cfg *config.TLS) *tls.Config {
 	return ParseTLSConfigWithLogger(cfg, nil)
 }
@@ -230,7 +236,9 @@ func ParseClientTLSConfigWithLogger(cfg *config.ClientTLS, logger logging.Logger
 	if cfg == nil {
 		return nil
 	}
+
 	return &tls.Config{
+		// #nosec G402 -- operator opt-in through the config (allow_insecure)
 		InsecureSkipVerify: cfg.AllowInsecureConnections,
 		RootCAs:            loadCertPool(cfg.DisableSystemCaPool, cfg.CaCerts, logger),
 		MinVersion:         parseTLSVersion(cfg.MinVersion),
@@ -252,12 +260,14 @@ func loadCertPool(disableSystemCaPool bool, caCerts []string, logger logging.Log
 	}
 
 	for _, path := range caCerts {
+		// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 		if ca, err := os.ReadFile(path); err == nil {
 			certPool.AppendCertsFromPEM(ca)
 		} else {
 			logger.Error(fmt.Sprintf("%s Cannot load certificate CA %s: %s", loggerPrefix, path, err.Error()))
 		}
 	}
+
 	return certPool
 }
 
@@ -268,6 +278,7 @@ func loadClientCerts(certFiles []config.ClientTLSCert, logger logging.Logger) []
 		if err != nil {
 			logger.Error(fmt.Sprintf("%s Cannot load client certificate %s, %s: %s",
 				loggerPrefix, certAndKey.Certificate, certAndKey.PrivateKey, err.Error()))
+
 			continue
 		}
 		certs = append(certs, cert)
@@ -280,6 +291,7 @@ func parseTLSVersion(key string) uint16 {
 	if v, ok := versions[key]; ok {
 		return v
 	}
+
 	return tls.VersionTLS13
 }
 
@@ -293,6 +305,7 @@ func parseCurveIDs(curvePreferences []uint16) []tls.CurveID {
 	for i := range curves {
 		curves[i] = tls.CurveID(curvePreferences[i])
 	}
+
 	return curves
 }
 
@@ -304,8 +317,9 @@ func parseCipherSuites(cipherSuites []uint16) []uint16 {
 
 	cs := make([]uint16, l)
 	for i := range cs {
-		cs[i] = uint16(cipherSuites[i])
+		cs[i] = cipherSuites[i]
 	}
+
 	return cs
 }
 

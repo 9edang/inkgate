@@ -1,10 +1,11 @@
 package usage
 
 import (
-	"github.com/9edang/inkgate/context"
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/catalinc/hashcash"
 )
@@ -99,7 +100,8 @@ func (r *Reporter) Report(ctx context.Context) {
 
 	for {
 		localCtx, cancel := context.WithTimeout(ctx, r.Timeout)
-		r.SingleReport(localCtx)
+		// #nosec G104 -- error is not actionable here
+		_ = r.SingleReport(localCtx)
 		cancel()
 
 		select {
@@ -140,5 +142,6 @@ func (r *Reporter) SingleReport(ctx context.Context) error {
 		Pow:   pow,
 		Data:  ud,
 	})
+
 	return err
 }

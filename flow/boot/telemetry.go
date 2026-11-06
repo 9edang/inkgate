@@ -1,11 +1,12 @@
 package boot
 
 import (
-	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/env"
+	"errors"
 	"net/http"
 	"time"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/env"
 
 	"github.com/go-contrib/uuid"
 
@@ -30,7 +31,7 @@ import (
 // The returned func releases them on shutdown.
 func registerTelemetry(ctx context.Context, cfg config.ServiceConfig, l logging.Logger, metricCollector *metrics.Metrics) func() {
 	if err := influxdb.New(ctx, cfg.ExtraConfig, metricCollector, l); err != nil {
-		if err != influxdb.ErrNoConfig {
+		if !errors.Is(err, influxdb.ErrNoConfig) {
 			l.Warning("[SERVICE: InfluxDB]", err.Error())
 		}
 	} else {
@@ -38,7 +39,7 @@ func registerTelemetry(ctx context.Context, cfg config.ServiceConfig, l logging.
 	}
 
 	if err := opencensus.Register(ctx, cfg, opencensus.DefaultViews...); err != nil {
-		if err != opencensus.ErrNoConfig {
+		if !errors.Is(err, opencensus.ErrNoConfig) {
 			l.Warning("[SERVICE: OpenCensus]", err.Error())
 		}
 	} else {
@@ -49,23 +50,25 @@ func registerTelemetry(ctx context.Context, cfg config.ServiceConfig, l logging.
 	if fn, err := kotel.Register(ctx, l, cfg); err == nil {
 		shutdown = fn
 	} else {
-		l.Error(fmt.Sprintf("[SERVICE: OpenTelemetry] cannot register exporters: %s", err.Error()))
+		l.Error("[SERVICE: OpenTelemetry] cannot register exporters: " + err.Error())
 	}
+
 	return shutdown
 }
 
 // newTokenRejecter sets up the JWK cache and the JWT revocation checks
 // (bloom filter and CEL rules).
 func newTokenRejecter(ctx context.Context, cfg config.ServiceConfig, l logging.Logger) jose.ChainedRejecterFactory {
-	if err := jose.SetGlobalCacher(l, cfg.ExtraConfig); err != nil && err != jose.ErrNoValidatorCfg {
+	if err := jose.SetGlobalCacher(l, cfg.ExtraConfig); err != nil && !errors.Is(err, jose.ErrNoValidatorCfg) {
 		l.Error("[SERVICE: JOSE]", err.Error())
 	}
 
-	dnssrv.Register()
+	// #nosec G104 -- error is not actionable here
+	_ = dnssrv.Register()
 	registerService := func(name string, port int) {}
 
 	rejecter, err := revoker.Register(ctx, "inkgate-bf", cfg, l, registerService)
-	if err != nil && err != revoker.ErrNoConfig {
+	if err != nil && !errors.Is(err, revoker.ErrNoConfig) {
 		l.Warning("[SERVICE: Bloomfilter]", err.Error())
 	}
 
@@ -77,6 +80,7 @@ func newTokenRejecter(ctx context.Context, cfg config.ServiceConfig, l logging.L
 			if r := cel.NewRejecter(l, cfg); r != nil {
 				return r
 			}
+
 			return jose.FixedRejecter(false)
 		}),
 	})

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/9edang/inkgate/feature/auth/bloomfilter"
-	"github.com/9edang/inkgate/feature/auth/bloomfilter/testutils"
+	"github.com/9edang/inkgate/tests/testutils"
 )
 
 func TestBloomfilter(t *testing.T) {

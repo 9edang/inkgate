@@ -4,6 +4,7 @@ package endpoint
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -43,8 +44,8 @@ func NewFactory(logger logging.Logger, backendFactory proxy.BackendFactory, metr
 	// 8. the core pipeline (engine/proxy): static data > Go req/resp modifier plugins >
 	// call every backend concurrently > merge their responses (+ flatmap).
 	f := proxy.NewDefaultFactory(backendFactory, logger)
-	for i := len(steps) - 1; i >= 0; i-- {
-		f = steps[i](f)
+	for _, step := range slices.Backward(steps) {
+		f = step(f)
 	}
 
 	return proxy.FactoryFunc(func(cfg *config.EndpointConfig) (proxy.Proxy, error) {

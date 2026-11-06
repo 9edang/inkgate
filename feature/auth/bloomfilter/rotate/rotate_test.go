@@ -13,7 +13,7 @@ import (
 
 	"github.com/9edang/inkgate/feature/auth/bloomfilter"
 	bbloomfilter "github.com/9edang/inkgate/feature/auth/bloomfilter/bloomfilter"
-	"github.com/9edang/inkgate/feature/auth/bloomfilter/testutils"
+	"github.com/9edang/inkgate/tests/testutils"
 )
 
 func TestRotate_Union_ok(t *testing.T) {

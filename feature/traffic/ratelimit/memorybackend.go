@@ -2,9 +2,10 @@
 package ratelimit
 
 import (
-	"github.com/9edang/inkgate/context"
 	"sync"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 )
 
 func MemoryBackendBuilder(ctx context.Context, ttl, cleanupRate time.Duration,
@@ -37,6 +38,7 @@ func MemoryBackendBuilder(ctx context.Context, ttl, cleanupRate time.Duration,
 
 	from := 0
 	for i := uint64(1); i <= cleanUpThreads; i++ {
+		// #nosec G115 -- numeric value from the operator config, far below the overflow range
 		to := int((i * amount) / cleanUpThreads)
 		go manageEvictions(ctx, ttl, cleanupRate, backends[from:to])
 		from = to
@@ -59,7 +61,7 @@ func NewMemoryBackend(ctx context.Context, ttl time.Duration) *MemoryBackend {
 	return &(backends[0])
 }
 
-// MemoryBackend implements the backend interface by wrapping a sync.Map
+// MemoryBackend implements the backend interface by wrapping a sync.Map.
 type MemoryBackend struct {
 	data       map[string]any
 	lastAccess map[string]time.Time
@@ -112,6 +114,7 @@ func (m *MemoryBackend) Load(key string, f func() any) any {
 			m.lastAccess[key] = n
 			m.mu.Unlock()
 		}
+
 		return v
 	}
 
@@ -127,14 +130,16 @@ func (m *MemoryBackend) Load(key string, f func() any) any {
 	m.lastAccess[key] = n
 	m.data[key] = newData
 	m.mu.Unlock()
+
 	return newData
 }
 
-// Store implements the Backend interface
+// Store implements the Backend interface.
 func (m *MemoryBackend) Store(key string, v any) error {
 	m.mu.Lock()
 	m.lastAccess[key] = now()
 	m.data[key] = v
 	m.mu.Unlock()
+
 	return nil
 }

@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"math"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -37,9 +38,10 @@ func (f backendFactory) initConsumer(ctx context.Context, remote *config.Backend
 	logPrefix := "[BACKEND: " + remote.URLPattern + "][AMQP]"
 	cfg, err := getConsumerConfig(remote)
 	if err != nil {
-		if err != errNoConsumerCfgDefined {
+		if !errors.Is(err, errNoConsumerCfgDefined) {
 			f.logger.Debug(logPrefix, fmt.Sprintf("%s: %s", dns, err.Error()))
 		}
+
 		return proxy.NoopProxy, err
 	}
 	cfg.LogPrefix = logPrefix
@@ -57,10 +59,12 @@ func (f backendFactory) initConsumer(ctx context.Context, remote *config.Backend
 	f.logger.Debug(logPrefix, "Consumer attached")
 	go func() {
 		<-ctx.Done()
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		connHandler.conn.Close()
 	}()
 
 	ef := proxy.NewEntityFormatter(remote)
+
 	return func(ctx context.Context, _ *proxy.Request) (*proxy.Response, error) {
 		select {
 		case <-ctx.Done():
@@ -78,22 +82,27 @@ func (f backendFactory) initConsumer(ctx context.Context, remote *config.Backend
 						}
 					}()
 				}
-				return nil, fmt.Errorf("connection not available, trying to reconnect")
+
+				return nil, errors.New("connection not available, trying to reconnect")
 			}
 			var data map[string]any
 			err := remote.Decoder(bytes.NewBuffer(msg.Body), &data)
-			if err != nil && err != io.EOF {
-				msg.Nack(false, !cfg.NackDiscard)
+			if err != nil && !errors.Is(err, io.EOF) {
+				// #nosec G104 -- best-effort ack, the broker redelivers
+				_ = msg.Nack(false, !cfg.NackDiscard)
 				if cfg.NackDiscard {
 					f.logger.Debug(logPrefix, "Nack: message discarded from queue '"+cfg.Name+"'")
 				}
+
 				return nil, err
 			}
 
-			msg.Ack(false)
+			// #nosec G104 -- best-effort ack, the broker redelivers
+			_ = msg.Ack(false)
 
 			newResponse := proxy.Response{Data: data, IsComplete: true}
 			newResponse = ef.Format(newResponse)
+
 			return &newResponse, nil
 		}
 	}, nil
@@ -108,10 +117,11 @@ func getConsumerConfig(remote *config.Backend) (*consumerCfg, error) {
 	b, _ := json.Marshal(v)
 	cfg := &consumerCfg{}
 	err := json.Unmarshal(b, cfg)
+
 	return cfg, err
 }
 
-// newConsumer needs to execute connect first because it blocks the execution
+// newConsumer needs to execute connect first because it blocks the execution.
 func (h *connectionHandler) newConsumer(dns string, cfg *consumerCfg, maxRetries int, bckoff string) (<-chan amqp.Delivery, error) {
 	emptyChan := make(chan amqp.Delivery)
 	close(emptyChan)
@@ -129,6 +139,7 @@ func (h *connectionHandler) newConsumer(dns string, cfg *consumerCfg, maxRetries
 		cfg.NoWait,
 		nil,
 	); err != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		h.conn.Close()
 		return emptyChan, fmt.Errorf("declaring the exchange for %s/%s: %s", dns, cfg.Name, err.Error())
 	}
@@ -142,6 +153,7 @@ func (h *connectionHandler) newConsumer(dns string, cfg *consumerCfg, maxRetries
 		nil,
 	)
 	if err != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		h.conn.Close()
 		return emptyChan, fmt.Errorf("declaring the queue for %s/%s: %s", dns, cfg.Name, err.Error())
 	}
@@ -161,6 +173,7 @@ func (h *connectionHandler) newConsumer(dns string, cfg *consumerCfg, maxRetries
 
 	if cfg.PrefetchCount != 0 || cfg.PrefetchSize != 0 {
 		if err := h.conn.ch.Qos(cfg.PrefetchCount, cfg.PrefetchSize, false); err != nil {
+			// #nosec G104 -- closing is best effort, the error is not actionable
 			h.conn.Close()
 			return emptyChan, fmt.Errorf("setting the QoS for the consumer %s/%s: %s", dns, cfg.Name, err.Error())
 		}
@@ -176,8 +189,10 @@ func (h *connectionHandler) newConsumer(dns string, cfg *consumerCfg, maxRetries
 		nil,
 	)
 	if err != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		h.conn.Close()
 		return emptyChan, fmt.Errorf("setting up the consumer for %s/%s: %s", dns, cfg.Name, err.Error())
 	}
+
 	return msgs, nil
 }

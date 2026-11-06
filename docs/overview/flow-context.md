@@ -60,13 +60,13 @@ endpoint and backend stages see the same thing whether the work came from HTTP o
 
 | Data | Set by | Read with |
 |---|---|---|
-| request ID | `flow/entry` (client header if valid and trusted, else a UUID) | `RequestID()` |
+| request ID | `flow/entry` (client header if valid and trusted, else a UUID v7) | `RequestID()` |
 | kind / source | entry (`http`) or async agent (`async`, agent name) | `Kind()`, `Source()` |
 | start time | entry | `StartedAt()`, `Elapsed()` |
 | client: method, path, host, IP | entry | `Client()` |
-| endpoint pattern + method | endpoint handler (`engine/router/mux/endpoint.go`) | `Endpoint()` |
+| endpoint pattern + method | endpoint handler (`engine/router/endpoint.go`) | `Endpoint()` |
 | path params | endpoint handler | `Params()` (copy) |
-| JWT claims | JWT validator (`feature/auth/jose/mux`) | `Claims()` (copy) |
+| JWT claims | JWT validator (`feature/auth/jose`) | `Claims()` (copy) |
 | backend calls: url_pattern, method, hosts, status, complete, duration, error | `flow/backend` step 0 (`recordFlow`) | `BackendCalls()` (copy) |
 | custom values | any layer | `Set`, `Get`, `Delete` |
 
@@ -81,8 +81,8 @@ Service-level `extra_config`, namespace `inkgate/context` (alias `context`):
 "extra_config": {
   "context": {
     "request_id_header": "X-Request-Id",
-    "trust_request_id": true,
-    "propagate_request_id": false
+    "trust_request_id": false,
+    "propagate_request_id": true
   }
 }
 ```
@@ -90,8 +90,8 @@ Service-level `extra_config`, namespace `inkgate/context` (alias `context`):
 | Option | Default | Effect |
 |---|---|---|
 | `request_id_header` | `X-Request-Id` | header read from clients, written on responses, and sent to backends when propagating |
-| `trust_request_id` | `true` | reuse the client's ID when it is printable ASCII without spaces, at most 128 characters; otherwise generate one |
-| `propagate_request_id` | `false` | add the request ID header to every backend request |
+| `trust_request_id` | `false` | reuse the client's ID when it is printable ASCII without spaces, at most 128 characters; otherwise generate one |
+| `propagate_request_id` | `true` | add the request ID header to every backend request |
 
 ## Plugins
 

@@ -39,6 +39,7 @@ func (b *Binder) DoString(s string) error {
 func (b *Binder) DoFile(f string) error {
 	b.load()
 	return b.do(b.state.DoFile(f), func(problem int) *source {
+		// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 		s, _ := ioutil.ReadFile(f)
 		return newSource(string(s), problem)
 	})
@@ -51,11 +52,6 @@ func (b *Binder) do(err error, h errSourceHandler) error {
 	}
 
 	return nil
-}
-
-// source returns lua source script
-func (b *Binder) source() string {
-	return b.state.String()
 }
 
 func (b *Binder) load() {

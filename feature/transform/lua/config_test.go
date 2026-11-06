@@ -9,7 +9,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
-	source := "lua/factorial.lua"
+	source := "../../../tests/fixtures/lua/factorial.lua"
 	key := "1234"
 	in := config.ExtraConfig{
 		key: map[string]any{

@@ -2,11 +2,13 @@
 package prometheus
 
 import (
+	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	prom "github.com/prometheus/client_golang/prometheus"
 	promcollectors "github.com/prometheus/client_golang/prometheus/collectors"
@@ -17,7 +19,7 @@ import (
 	"github.com/9edang/inkgate/feature/telemetry/otel/config"
 )
 
-// PrometheusCollector implemnts the metrics exporter
+// PrometheusCollector implemnts the metrics exporter.
 type PrometheusCollector struct {
 	registry          *prom.Registry
 	exporter          *prometheus.Exporter
@@ -69,7 +71,7 @@ func Exporter(ctx context.Context, cfg config.PrometheusExporter) (*PrometheusCo
 	}
 
 	go func() {
-		if serverErr := server.ListenAndServe(); serverErr != http.ErrServerClosed {
+		if serverErr := server.ListenAndServe(); !errors.Is(serverErr, http.ErrServerClosed) {
 			log.Printf("[SERVICE: kotel] The Prometheus exporter failed to listen and serve: %v", serverErr)
 		}
 	}()
@@ -77,6 +79,7 @@ func Exporter(ctx context.Context, cfg config.PrometheusExporter) (*PrometheusCo
 	go func() {
 		<-ctx.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// #nosec G104 -- best-effort shutdown, the error is not actionable
 		server.Shutdown(ctx)
 		cancel()
 	}()

@@ -18,13 +18,14 @@
 package opencensus
 
 import (
-	"github.com/9edang/inkgate/context"
 	"io"
 	"net/http"
 	"net/http/httptrace"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/plugin/ochttp/propagation/b3"
@@ -115,6 +116,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		newClientTrace: t.NewClientTrace,
 	}
 	rt = statsTransport{base: rt, tags: t.tags}
+
 	return rt.RoundTrip(req)
 }
 
@@ -122,6 +124,7 @@ func (t *Transport) base() http.RoundTripper {
 	if t.Base != nil {
 		return t.Base
 	}
+
 	return http.DefaultTransport
 }
 
@@ -179,6 +182,7 @@ func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		span.SetStatus(trace.Status{Code: trace.StatusCodeUnknown, Message: err.Error()})
 		span.End()
+
 		return resp, err
 	}
 
@@ -190,6 +194,7 @@ func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// resp.Body.Close() is invoked.
 	bt := &bodyTracker{rc: resp.Body, span: span}
 	resp.Body = wrappedBody(bt, resp.Body)
+
 	return resp, err
 }
 
@@ -242,6 +247,7 @@ func (bt *bodyTracker) Read(b []byte) (int, error) {
 			Message: err.Error(),
 		})
 	}
+
 	return n, err
 }
 
@@ -284,6 +290,7 @@ func TraceStatus(httpStatusCode int, _ string) trace.Status {
 	case http.StatusOK:
 		code = trace.StatusCodeOK
 	}
+
 	return trace.Status{Code: code, Message: codeToStr[code]}
 }
 
@@ -311,6 +318,7 @@ func isHealthEndpoint(path string) bool {
 	if path == "/healthz" || path == "/_ah/health" {
 		return true
 	}
+
 	return false
 }
 
@@ -351,7 +359,7 @@ func (t statsTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		track.end()
 	} else {
 		track.statusCode = resp.StatusCode
-		if req.Method != "HEAD" {
+		if req.Method != http.MethodHead {
 			track.respContentLength = resp.ContentLength
 		}
 		if resp.Body == nil {
@@ -361,6 +369,7 @@ func (t statsTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 			resp.Body = wrappedBody(track, resp.Body)
 		}
 	}
+
 	return resp, err
 }
 
@@ -405,7 +414,8 @@ func (t *tracker) end() {
 			m = append(m, ochttp.ClientRequestBytes.M(t.reqSize))
 		}
 
-		stats.RecordWithTags(t.ctx, []tag.Mutator{
+		// #nosec G104 -- error is not actionable here
+		_ = stats.RecordWithTags(t.ctx, []tag.Mutator{
 			tag.Upsert(ochttp.StatusCode, strconv.Itoa(t.statusCode)),
 			tag.Upsert(ochttp.KeyClientStatus, strconv.Itoa(t.statusCode)),
 		}, m...)
@@ -421,6 +431,7 @@ func (t *tracker) Read(b []byte) (int, error) {
 	case io.EOF:
 		t.end()
 	}
+
 	return n, err
 }
 

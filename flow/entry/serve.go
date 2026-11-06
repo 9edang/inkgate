@@ -3,24 +3,23 @@ package entry
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/proxy"
-	mux "github.com/9edang/inkgate/engine/router/mux"
+	"github.com/9edang/inkgate/engine/router"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
-	muxmetrics "github.com/9edang/inkgate/feature/telemetry/metrics/mux"
 	xml "github.com/9edang/inkgate/feature/transform/xml"
-	muxxml "github.com/9edang/inkgate/feature/transform/xml/mux"
 	"github.com/9edang/inkgate/flow/boot"
 	"github.com/9edang/inkgate/flow/request"
 )
 
 // Router is the gorilla/mux HTTP side of inkgate, handed to boot.Main by cmd/inkgate.
 var Router = boot.Router{
-	Name:             "mux",
+	Name:             "router",
 	NewMetrics:       newMetrics,
 	RegisterEncoders: registerRenders,
 	TestRoutes:       testRoutes,
@@ -30,19 +29,19 @@ var Router = boot.Router{
 // Serve builds stage 2 (entry) and stage 3 (request) with gorilla/mux on top of the
 // endpoint pipeline from boot, then runs the server until ctx is done.
 func Serve(ctx context.Context, s boot.Services) {
-	handlerFactory := request.NewHandlerFactory(s.Logger, &muxmetrics.Metrics{Metrics: s.Metrics}, s.TokenRejecter)
+	handlerFactory := request.NewHandlerFactory(s.Logger, &metrics.HTTPMetrics{Metrics: s.Metrics}, s.TokenRejecter)
 
-	routerFactory := mux.NewFactory(mux.Config{
-		Engine:         mux.NewEngine(s.Config),
-		HealthPath:     mux.HealthPath(s.Config),
-		HealthHandler:  mux.NewHealthHandler(s.AgentPing),
+	routerFactory := router.NewFactory(router.Config{
+		Engine:         router.NewEngine(s.Config),
+		HealthPath:     router.HealthPath(s.Config),
+		HealthHandler:  router.NewHealthHandler(s.AgentPing),
 		Middlewares:    NewMiddlewares(s.Config, s.Logger),
 		HandlerFactory: handlerFactory,
 		ProxyFactory:   s.EndpointFactory,
 		Logger:         s.Logger,
-		DebugPattern:   mux.DefaultDebugPattern,
-		EchoPattern:    mux.DefaultEchoPattern,
-		RunServer:      mux.RunServerFunc(NewRunServer(s.Logger)),
+		DebugPattern:   router.DefaultDebugPattern,
+		EchoPattern:    router.DefaultEchoPattern,
+		RunServer:      NewRunServer(s.Logger),
 	})
 
 	s.Logger.Info("Starting the inkgate instance")
@@ -51,12 +50,12 @@ func Serve(ctx context.Context, s boot.Services) {
 
 // newMetrics creates the collector and serves /__stats on its own ServeMux.
 func newMetrics(ctx context.Context, cfg config.ServiceConfig, l logging.Logger) *metrics.Metrics {
-	return muxmetrics.New(ctx, cfg.ExtraConfig, l).Metrics
+	return metrics.NewHTTPMetrics(ctx, cfg.ExtraConfig, l).Metrics
 }
 
 // registerRenders adds the XML output encoding.
 func registerRenders() {
-	mux.RegisterRender(xml.Name, muxxml.Render)
+	router.RegisterRender(xml.Name, xml.Render)
 }
 
 // testRoutes registers every endpoint on a real gorilla router for one second,
@@ -73,6 +72,7 @@ func testRoutes(cfg config.ServiceConfig) (err error) {
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	mux.DefaultFactory(proxy.DefaultFactory(logging.NoOp), logging.NoOp).NewWithContext(ctx).Run(cfg)
+	router.DefaultFactory(proxy.DefaultFactory(logging.NoOp), logging.NoOp).NewWithContext(ctx).Run(cfg)
+
 	return nil
 }

@@ -4,8 +4,9 @@ package state
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -15,7 +16,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 
@@ -61,7 +62,7 @@ type OTELState struct {
 }
 
 // NewWithVersion create a new OTELState with a version for
-// the Inkgate service, with the provided metrics and traces exporters
+// the Inkgate service, with the provided metrics and traces exporters.
 func NewWithVersion(serviceName string, cfg *OTELStateConfig, version string,
 	me map[string]exporter.MetricReader, te map[string]exporter.SpanExporter,
 ) (*OTELState, error) {
@@ -69,7 +70,9 @@ func NewWithVersion(serviceName string, cfg *OTELStateConfig, version string,
 }
 
 // NewWithVersionAndEnv create a new OTELState with a version for
-// the Inkgate service, with the provided metrics and traces exporters
+// the Inkgate service, with the provided metrics and traces exporters.
+//
+//nolint:revive // the signature is fixed by the interface or the caller
 func NewWithVersionAndEnv(serviceName string, cfg *OTELStateConfig, version string,
 	env string, me map[string]exporter.MetricReader, te map[string]exporter.SpanExporter,
 ) (*OTELState, error) {
@@ -120,8 +123,7 @@ func NewWithVersionAndEnv(serviceName string, cfg *OTELStateConfig, version stri
 			samplerOpt = sdktrace.WithSampler(sdktrace.ParentBased(
 				sdktrace.TraceIDRatioBased(cfg.TraceSampleRate)))
 		}
-		traceOpts = append(traceOpts, samplerOpt)
-		traceOpts = append(traceOpts, sdktrace.WithResource(res))
+		traceOpts = append(traceOpts, samplerOpt, sdktrace.WithResource(res))
 		sdkTracerProvider = sdktrace.NewTracerProvider(traceOpts...)
 		tracerProvider = sdkTracerProvider
 	}
@@ -142,6 +144,7 @@ func (s *OTELState) Tracer() trace.Tracer {
 	if s == nil {
 		return nil
 	}
+
 	return s.tracer
 }
 
@@ -150,6 +153,7 @@ func (s *OTELState) Meter() metric.Meter {
 	if s == nil {
 		return nil
 	}
+
 	return s.meter
 }
 
@@ -157,6 +161,7 @@ func (s *OTELState) MeterProvider() metric.MeterProvider {
 	if s == nil {
 		return nil
 	}
+
 	return s.meterProvider
 }
 
@@ -164,6 +169,7 @@ func (s *OTELState) TracerProvider() trace.TracerProvider {
 	if s == nil {
 		return nil
 	}
+
 	return s.tracerProvider
 }
 
@@ -172,6 +178,7 @@ func (s *OTELState) Propagator() propagation.TextMapPropagator {
 	if s == nil {
 		return nil
 	}
+
 	return otel.GetTextMapPropagator()
 }
 
@@ -182,9 +189,11 @@ func (s *OTELState) Shutdown(ctx context.Context) {
 		return
 	}
 	if s.sdkTracerProvider != nil {
-		s.sdkTracerProvider.Shutdown(ctx)
+		// #nosec G104 -- best-effort shutdown, the error is not actionable
+		_ = s.sdkTracerProvider.Shutdown(ctx)
 	}
 	if s.sdkMeterProvider != nil {
-		s.sdkMeterProvider.Shutdown(ctx)
+		// #nosec G104 -- best-effort shutdown, the error is not actionable
+		_ = s.sdkMeterProvider.Shutdown(ctx)
 	}
 }

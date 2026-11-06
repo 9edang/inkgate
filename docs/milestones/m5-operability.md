@@ -20,7 +20,7 @@ default, add `--strict` to `run` and `check` that fails on any namespace that no
 
 ## 5.2 JSON schema
 
-`flow/boot/schema/schema.json` is `{}`, so offline linting accepts everything. Generate the schema from the config
+`schema/schema.json` is `{}`, so offline linting accepts everything. Generate the schema from the config
 structs and each feature's option list, and test it against every config in `tests/fixtures`.
 
 ## 5.3 `pprof`

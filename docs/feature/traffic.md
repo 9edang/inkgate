@@ -22,7 +22,7 @@ flowchart LR
 |---|---|---|
 | Namespace | `qos/ratelimit/router` | `qos/ratelimit/proxy` |
 | Where | stage 3 step 7 | stage 5 step 5 |
-| Code | shared config + buckets: `feature/traffic/ratelimit/router` · adapter: `feature/traffic/ratelimit/mux` | `feature/traffic/ratelimit/proxy` (shared) |
+| Code | shared config + buckets: `feature/traffic/ratelimit/router` · adapter: `feature/traffic/ratelimit/router` | `feature/traffic/ratelimit/proxy` (shared) |
 | Result | 503 when the endpoint limit is hit, 429 when a client limit is hit | error (the backend is not called) |
 
 **Endpoint options:** `max_rate` + `capacity` (whole endpoint), `client_max_rate` + `client_capacity` (per client),

@@ -8,17 +8,21 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"log"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/9edang/inkgate/internal/constant"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
+
+	jose "github.com/go-jose/go-jose/v3"
+
 	"github.com/9edang/inkgate/engine/core"
 	auth0 "github.com/9edang/inkgate/internal/auth0"
-	jose "github.com/go-jose/go-jose/v3"
 
 	"github.com/9edang/inkgate/feature/auth/jose/secrets"
 )
@@ -54,11 +58,12 @@ func SecretProvider(cfg SecretProviderConfig, te auth0.RequestTokenExtractor) (*
 		if cfg.LocalPath == "" {
 			return NewJWKClientWithCache(opts, te, NewMemoryKeyCacher(0, 0, opts.KeyIdentifyStrategy)), nil
 		}
+
 		return newLocalSecretProvider(opts, cfg, te)
 	}
 
 	if cfg.LocalPath != "" {
-		return nil, fmt.Errorf("cache could not be used with jwk_local_path")
+		return nil, errors.New("cache could not be used with jwk_local_path")
 	}
 	var cacheDuration time.Duration
 	cacheDuration = time.Duration(cfg.CacheDuration) * time.Second
@@ -74,6 +79,7 @@ func SecretProvider(cfg SecretProviderConfig, te auth0.RequestTokenExtractor) (*
 	)
 
 	if _, ok := cacheOnce[cfg.URI]; !ok {
+		//nolint:errcheck // background goroutine, nothing to report the error to
 		go client.GetKey("unknown")
 		cacheOnce[cfg.URI] = struct{}{}
 	}
@@ -104,6 +110,7 @@ func newLocalSecretProvider(opts JWKClientOptions, cfg SecretProviderConfig, te 
 	if err != nil {
 		return nil, err
 	}
+
 	return NewJWKClientWithCache(opts, te, keyCacher), nil
 }
 
@@ -114,10 +121,11 @@ func NewFileKeyCacher(data []byte, keyIdentifyStrategy string) (*FileKeyCacher, 
 	}
 	keyMap := map[string]*jose.JSONWebKey{}
 	keyIDGetter := KeyIDGetterFactory(keyIdentifyStrategy)
-	for _, k := range keys.Keys {
-		keyToStore := k
+	for i := range keys.Keys {
+		keyToStore := keys.Keys[i]
 		keyMap[keyIDGetter.Get(&keyToStore)] = &keyToStore
 	}
+
 	return &FileKeyCacher{keys: keyMap}, nil
 }
 
@@ -130,6 +138,7 @@ func (f *FileKeyCacher) Get(keyID string) (*jose.JSONWebKey, error) {
 	if !ok {
 		return nil, fmt.Errorf("key '%s' not found in the key set", keyID)
 	}
+
 	return v, nil
 }
 
@@ -150,14 +159,15 @@ func newJWKClientOptions(cfg SecretProviderConfig) (JWKClientOptions, error) {
 	if cfg.LocalCA != "" {
 		certs, err := os.ReadFile(cfg.LocalCA)
 		if err != nil {
-			return JWKClientOptions{}, fmt.Errorf("failed to append %q to RootCAs: %v", cfg.LocalCA, err)
+			return JWKClientOptions{}, fmt.Errorf("failed to append %q to RootCAs: %w", cfg.LocalCA, err)
 		}
 		rootCAs.AppendCertsFromPEM(certs)
 	}
 
 	tlsConfig := &tls.Config{
-		CipherSuites:       cfg.Cs,
-		MinVersion:         tls.VersionTLS12,
+		CipherSuites: cfg.Cs,
+		MinVersion:   tls.VersionTLS12,
+		// #nosec G402 -- operator opt-in through the config (allow_insecure)
 		InsecureSkipVerify: cfg.AllowInsecure, // skipcq: GSC-G402
 		RootCAs:            rootCAs,
 	}
@@ -196,7 +206,7 @@ type inkgateTransport struct {
 }
 
 func (k inkgateTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("User-Agent", core.InkgateUserAgent)
+	req.Header.Set(constant.HeaderUserAgent, core.InkgateUserAgent)
 	return k.Transport.RoundTrip(req)
 }
 
@@ -209,6 +219,7 @@ func DecodeFingerprints(in []string) ([][]byte, error) {
 		}
 		out[i] = r
 	}
+
 	return out, nil
 }
 
@@ -262,10 +273,11 @@ func (d *Dialer) DialTLSContext(ctx context.Context, network, addr string) (net.
 	if !keyPinValid {
 		return nil, ErrPinnedKeyNotFound
 	}
+
 	return c, nil
 }
 
-// DefaultEnabledCipherSuites is a collection of secure cipher suites to use
+// DefaultEnabledCipherSuites is a collection of secure cipher suites to use.
 var DefaultEnabledCipherSuites = []uint16{
 	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,

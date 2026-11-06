@@ -3,14 +3,16 @@ package prometheus
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/9edang/inkgate/context"
+
 	"contrib.go.opencensus.io/exporter/prometheus"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	prom "github.com/prometheus/client_golang/prometheus"
+
+	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 )
 
 func init() {
@@ -48,7 +50,7 @@ func Exporter(ctx context.Context, cfg opencensus.Config) (*prometheus.Exporter,
 	}
 
 	go func() {
-		if serverErr := server.ListenAndServe(); serverErr != http.ErrServerClosed {
+		if serverErr := server.ListenAndServe(); !errors.Is(serverErr, http.ErrServerClosed) {
 			log.Fatalf("[SERVICE: Opencensus] The Prometheus exporter failed to listen and serve: %v", serverErr)
 		}
 	}()
@@ -56,6 +58,7 @@ func Exporter(ctx context.Context, cfg opencensus.Config) (*prometheus.Exporter,
 	go func() {
 		<-ctx.Done()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// #nosec G104 -- best-effort shutdown, the error is not actionable
 		server.Shutdown(ctx)
 		cancel()
 	}()

@@ -3,11 +3,14 @@ package secrets
 import (
 	"crypto/aes"
 	"crypto/cipher"
+
+	// #nosec G501 -- not used for security: checksum or key identifier only
 	"crypto/md5" // skipcq: GSC-G501
 	"crypto/rand"
 	"encoding/hex"
-	"github.com/9edang/inkgate/context"
 	"io"
+
+	"github.com/9edang/inkgate/context"
 
 	"gocloud.dev/secrets"
 	_ "gocloud.dev/secrets/awskms"
@@ -28,53 +31,59 @@ func New(ctx context.Context, url string) (*Cypher, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &Cypher{keeper: k}, nil
 }
 
 // Cypher is a structure able to encrypt and decrypt messages with an encrypted key.
 // Before encrypting or decrypting the message, the encrypted key is decrypted with the
-// help of the wrapped secrets.Keeper
+// help of the wrapped secrets.Keeper.
 type Cypher struct {
 	keeper *secrets.Keeper
 }
 
 // Encrypt encrypts a plain text using a encrypted key, returning a cipher message. Before using the given key,
-// it decrypts the key with the secrets.Keeper
+// it decrypts the key with the secrets.Keeper.
 func (c *Cypher) Encrypt(ctx context.Context, plainText, cipheredKey []byte) ([]byte, error) {
 	plainKey, err := c.keeper.Decrypt(ctx, cipheredKey)
 	if err != nil {
 		return []byte{}, err
 	}
+
 	return Encrypt(plainText, plainKey)
 }
 
 // Decrypt decrypts an encrypted text using a encrypted key, returning a plain message. Before using the given
-// key, it decrypts the key with the secrets.Keeper
+// key, it decrypts the key with the secrets.Keeper.
 func (c *Cypher) Decrypt(ctx context.Context, cipherText, cipheredKey []byte) ([]byte, error) {
 	plainKey, err := c.keeper.Decrypt(ctx, cipheredKey)
 	if err != nil {
 		return []byte{}, err
 	}
+
 	return Decrypt(cipherText, plainKey)
 }
 
-// EncryptKey encrypts the given plain key with the secrets.Keeper
+// EncryptKey encrypts the given plain key with the secrets.Keeper.
 func (c *Cypher) EncryptKey(ctx context.Context, plainKey []byte) ([]byte, error) {
 	return c.keeper.Encrypt(ctx, plainKey)
 }
 
-// Close releases any resources used for the Cypher
+// Close releases any resources used for the Cypher.
 func (c *Cypher) Close() {
+	// #nosec G104 -- closing is best effort, the error is not actionable
 	c.keeper.Close()
 }
 
 func createHash(key []byte) string {
+	// #nosec G401 -- not used for security: checksum or key identifier only
 	hasher := md5.New() // skipcq: GO-S1023, GSC-G401
 	hasher.Write(key)
+
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-// Encrypt encrypts the received data with a passphrase using AES GCM
+// Encrypt encrypts the received data with a passphrase using AES GCM.
 func Encrypt(data, passphrase []byte) ([]byte, error) {
 	block, _ := aes.NewCipher([]byte(createHash(passphrase)))
 	gcm, err := cipher.NewGCM(block)
@@ -86,10 +95,11 @@ func Encrypt(data, passphrase []byte) ([]byte, error) {
 		return []byte{}, err
 	}
 	ciphertext := gcm.Seal(nonce, nonce, data, nil)
+
 	return ciphertext, nil
 }
 
-// Decrypt decrypts the received data with a passphrase using AES GCM
+// Decrypt decrypts the received data with a passphrase using AES GCM.
 func Decrypt(data, passphrase []byte) ([]byte, error) {
 	block, err := aes.NewCipher([]byte(createHash(passphrase)))
 	if err != nil {
@@ -105,5 +115,6 @@ func Decrypt(data, passphrase []byte) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
+
 	return plaintext, nil
 }

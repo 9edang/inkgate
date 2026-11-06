@@ -42,7 +42,7 @@ For a plugin outside the inkgate repository, point the module at your inkgate ch
 # go.mod
 module example.com/my-plugins
 
-go 1.26.0
+go 1.27.3
 
 require github.com/9edang/inkgate v0.0.0
 
@@ -228,7 +228,7 @@ type ResponseWrapper interface {
 The registered name is `tag-response-response` (plugin name + the suffix you pass to `f`). That is the name the
 config uses. A request modifier receives a wrapper with `Params()`, `Headers()`, `Body()`, `Method()`, `URL()`,
 `Query()` and `Path()`; a modifier may also implement `RegisterContext(ctx)` to stop its goroutines at shutdown.
-A full example with both directions is in [engine/proxy/plugin/tests/logger](../../engine/proxy/plugin/tests/logger/main.go).
+A full example with both directions is in [tests/plugins/proxy/logger](../../tests/plugins/proxy/logger/main.go).
 
 ## 7. Build the `.so` files
 

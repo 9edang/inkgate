@@ -1,14 +1,16 @@
 package opencensus
 
 import (
-	"github.com/9edang/inkgate/context"
 	"net/http"
 
-	"github.com/9edang/inkgate/engine/config"
-	transport "github.com/9edang/inkgate/engine/transport/http/client"
+	"github.com/9edang/inkgate/context"
+
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
+
+	"github.com/9edang/inkgate/engine/config"
+	transport "github.com/9edang/inkgate/engine/transport/http/client"
 )
 
 var defaultClient = &http.Client{Transport: &ochttp.Transport{}}
@@ -17,6 +19,7 @@ func NewHTTPClient(ctx context.Context) *http.Client {
 	if !IsBackendEnabled() {
 		return transport.NewHTTPClient(ctx)
 	}
+
 	return defaultClient
 }
 
@@ -35,6 +38,7 @@ func HTTPRequestExecutorFromConfig(clientFactory transport.HTTPClientFactory, cf
 		httpClient := clientFactory(ctx)
 
 		if _, ok := httpClient.Transport.(*Transport); ok {
+			// #nosec G704 -- the target URL comes from the operator config
 			return httpClient.Do(req.WithContext(trace.NewContext(ctx, fromContext(ctx))))
 		}
 
@@ -51,6 +55,7 @@ func HTTPRequestExecutorFromConfig(clientFactory transport.HTTPClientFactory, cf
 			Jar:           httpClient.Jar,
 			Timeout:       httpClient.Timeout,
 		}
+		// #nosec G704 -- the target URL comes from the operator config
 		return c.Do(req.WithContext(trace.NewContext(ctx, fromContext(ctx))))
 	}
 }

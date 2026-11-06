@@ -2,22 +2,24 @@ package boot
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/9edang/inkgate/context"
+
+	"github.com/spf13/cobra"
+
 	cmd "github.com/9edang/inkgate/engine/cli"
 	"github.com/9edang/inkgate/engine/logging"
 	proxy "github.com/9edang/inkgate/engine/proxy/plugin"
 	client "github.com/9edang/inkgate/engine/transport/http/client/plugin"
 	server "github.com/9edang/inkgate/engine/transport/http/server/plugin"
-	"github.com/spf13/cobra"
 )
 
-// LoadPluginsWithContext loads and registers the plugins so they can be used if enabled at the configuration
+// LoadPluginsWithContext loads and registers the plugins so they can be used if enabled at the configuration.
 func LoadPluginsWithContext(ctx context.Context, folder, pattern string, logger logging.Logger) {
 	logger.Debug("[SERVICE: Plugin Loader] Starting loading process")
 
@@ -104,6 +106,7 @@ func NewTestPluginCmdWithArgs(flags ...cmd.FlagBuilder) cmd.Command {
 	for _, f := range flags {
 		c.AddFlag(f)
 	}
+
 	return c
 }
 
@@ -111,6 +114,7 @@ func AddCheck(f func(context.Context, *cobra.Command, string, string) bool) {
 	additionalChecks = append(additionalChecks, f)
 }
 
+//nolint:cyclop,gocyclo // long carried-over function, split when it is next changed
 func testPluginFunc(ccmd *cobra.Command, args []string) { // skipcq: GO-R1005
 	if len(args) == 0 {
 		ccmd.Println("At least one plugin is required.")
@@ -128,13 +132,16 @@ func testPluginFunc(ccmd *cobra.Command, args []string) { // skipcq: GO-R1005
 	var failed int
 	globalOK := true
 	for _, pluginPath := range args {
+		// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 		f, err := os.Open(pluginPath)
 		if os.IsNotExist(err) {
 			ccmd.Println(fmt.Sprintf("[KO] Unable to open the plugin %s.", pluginPath))
 			failed++
 			globalOK = false
+
 			continue
 		}
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		f.Close()
 
 		name := filepath.Base(pluginPath)
@@ -174,6 +181,7 @@ func testPluginFunc(ccmd *cobra.Command, args []string) { // skipcq: GO-R1005
 	ccmd.Println(fmt.Sprintf("[OK] %d tested plugin(s) in %s", len(args), time.Since(start)))
 }
 
+//nolint:dupl // the handler, client and modifier checks are alike on purpose
 func checkClientPlugin(ccmd *cobra.Command, folder, name string) bool {
 	_, err := client.LoadWithLogger(
 		folder,
@@ -182,15 +190,17 @@ func checkClientPlugin(ccmd *cobra.Command, folder, name string) bool {
 		logging.NoOp,
 	)
 	if err == nil {
-		ccmd.Println(fmt.Sprintf("[OK] CLIENT\t%s", name))
+		ccmd.Println("[OK] CLIENT\t" + name)
 		return true
 	}
 
 	var msg string
 	if mErrs, ok := err.(pluginLoaderErr); ok {
+		var msgSb193 strings.Builder
 		for _, err := range mErrs.Errs() {
-			msg += err.Error()
+			msgSb193.WriteString(err.Error())
 		}
+		msg += msgSb193.String()
 	} else {
 		msg = err.Error()
 	}
@@ -205,9 +215,11 @@ func checkClientPlugin(ccmd *cobra.Command, folder, name string) bool {
 	}
 
 	ccmd.Println(fmt.Sprintf("[KO] CLIENT\t%s: %s", name, msg))
+
 	return false
 }
 
+//nolint:dupl // the handler, client and modifier checks are alike on purpose
 func checkHandlerPlugin(ccmd *cobra.Command, folder, name string) bool {
 	_, err := server.LoadWithLogger(
 		folder,
@@ -216,15 +228,17 @@ func checkHandlerPlugin(ccmd *cobra.Command, folder, name string) bool {
 		logging.NoOp,
 	)
 	if err == nil {
-		ccmd.Println(fmt.Sprintf("[OK] SERVER\t%s", name))
+		ccmd.Println("[OK] SERVER\t" + name)
 		return true
 	}
 
 	var msg string
 	if mErrs, ok := err.(pluginLoaderErr); ok {
+		var msgSb227 strings.Builder
 		for _, err := range mErrs.Errs() {
-			msg += err.Error()
+			msgSb227.WriteString(err.Error())
 		}
+		msg += msgSb227.String()
 	} else {
 		msg = err.Error()
 	}
@@ -239,6 +253,7 @@ func checkHandlerPlugin(ccmd *cobra.Command, folder, name string) bool {
 	}
 
 	ccmd.Println(fmt.Sprintf("[KO] SERVER\t%s: %s", name, msg))
+
 	return false
 }
 
@@ -251,15 +266,17 @@ func checkModifierPlugin(ctx context.Context, ccmd *cobra.Command, folder, name 
 		logging.NoOp,
 	)
 	if err == nil {
-		ccmd.Println(fmt.Sprintf("[OK] MODIFIER\t%s", name))
+		ccmd.Println("[OK] MODIFIER\t" + name)
 		return true
 	}
 
 	var msg string
 	if mErrs, ok := err.(pluginLoaderErr); ok {
+		var msgSb262 strings.Builder
 		for _, err := range mErrs.Errs() {
-			msg += err.Error()
+			msgSb262.WriteString(err.Error())
 		}
+		msg += msgSb262.String()
 	} else {
 		msg = err.Error()
 	}
@@ -274,5 +291,6 @@ func checkModifierPlugin(ctx context.Context, ccmd *cobra.Command, folder, name 
 	}
 
 	ccmd.Println(fmt.Sprintf("[KO] MODIFIER\t%s: %s", name, msg))
+
 	return false
 }

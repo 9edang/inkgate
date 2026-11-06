@@ -4,7 +4,7 @@
 // checklist. Run prepares the shared services (logging, telemetry, plugins,
 // JWT revocation), builds the router-independent stages
 //
-//	endpoint  endpoint pipeline (validation, merge, ...)
+//	endpoint  pipeline (validation, merge, ...)
 //	backend   one backend call (QoS, connectors, HTTP client)
 //
 // and hands them to entry.Router.Serve, which builds the HTTP stages
@@ -13,8 +13,9 @@ package boot
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"os"
+
+	"github.com/9edang/inkgate/context"
 
 	"golang.org/x/sync/errgroup"
 
@@ -42,7 +43,7 @@ func Run(ctx context.Context, cfg config.ServiceConfig, r Router) {
 	if err != nil {
 		return
 	}
-	logger.Info(fmt.Sprintf("Starting inkgate v%s", core.InkgateVersion))
+	logger.Info("Starting inkgate v" + core.InkgateVersion)
 	startUsageReporter(ctx, logger, cfg)
 	if wd, err := os.Getwd(); err == nil {
 		logger.Info("Working directory is", wd)
@@ -97,8 +98,10 @@ func Run(ctx context.Context, cfg config.ServiceConfig, r Router) {
 		logger.Info(fmt.Sprintf("[SERVICE: %s] Building the router", r.Name))
 		r.Serve(ctx, services)
 		closeGroupCtx()
+
 		return nil
 	})
 
-	g.Wait()
+	// #nosec G104 -- error is not actionable here
+	_ = g.Wait()
 }

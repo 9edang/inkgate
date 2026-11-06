@@ -30,7 +30,6 @@ flowchart LR
 | `telemetry.go` | `registerTelemetry` (Influx, OpenCensus, OTel), `newTokenRejecter`, `startUsageReporter` (opt-in: `INKGATE_USAGE_URL`) |
 | `plugins.go` | `LoadPluginsWithContext` and the `test-plugin` command |
 | `encoding.go` | `RegisterEncoders`: XML and RSS decoders (renders are registered by `entry.Router`) |
-| `schema/` | embedded JSON schema for `check --lint-no-network` |
 
 ## `Run` step by step
 
@@ -49,7 +48,7 @@ flowchart LR
 |---|---|
 | `Config` | the parsed, normalized `ServiceConfig` |
 | `Logger`, `LogWriter` | the logger; the GELF writer or nil |
-| `Metrics` | the shared collector (`feature/telemetry/metrics`); `flow/entry` wraps it for request metrics (`feature/telemetry/metrics/mux`) |
+| `Metrics` | the shared collector (`feature/telemetry/metrics`); `flow/entry` wraps it for request metrics (`feature/telemetry/metrics`) |
 | `TokenRejecter` | JWT revocation check for the jose adapter |
 | `EndpointFactory` | builds stage 4 (and stage 5 inside it) for an endpoint |
 | `AgentPing` | async agents report here; the health endpoint shows them |

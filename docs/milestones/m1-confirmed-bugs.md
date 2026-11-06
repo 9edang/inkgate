@@ -63,5 +63,5 @@ body), and every response is copied once more in memory.
 **Fix**: run the chain on an `io.Pipe`-backed `http.ResponseWriter` that returns the `*http.Response` as soon as the
 headers are written (status and headers first, then the body streams through the pipe), and pass flushes through.
 
-**Done when**: an SSE backend behind a client plugin passes the stream tests in `engine/router/mux/stream_test.go`,
+**Done when**: an SSE backend behind a client plugin passes the stream tests in `engine/router/stream_test.go`,
 and the existing chain tests still pass.

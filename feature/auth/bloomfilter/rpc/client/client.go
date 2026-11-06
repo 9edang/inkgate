@@ -9,33 +9,34 @@ import (
 	rpc_bf "github.com/9edang/inkgate/feature/auth/bloomfilter/rpc"
 )
 
-// Bloomfilter rpc client type
+// Bloomfilter rpc client type.
 type Bloomfilter struct {
 	client *rpc.Client
 }
 
-// New creates a new bloomfilter rpc client with address
+// New creates a new bloomfilter rpc client with address.
 func New(address string) (*Bloomfilter, error) {
 	client, err := rpc.Dial("tcp", address)
 	if err != nil {
 		return nil, err
 	}
+
 	return &Bloomfilter{client}, nil
 }
 
-// Add element through bloomfilter rpc client
+// Add element through bloomfilter rpc client.
 func (b *Bloomfilter) Add(elem []byte) error {
 	var addOutput rpc_bf.AddOutput
 	return b.client.Call("BloomfilterRPC.Add", rpc_bf.AddInput{Elems: [][]byte{elem}}, &addOutput)
 }
 
-// AddBatch adds a set of elements through bloomfilter rpc client
+// AddBatch adds a set of elements through bloomfilter rpc client.
 func (b *Bloomfilter) AddBatch(batch [][]byte) error {
 	var addOutput rpc_bf.AddOutput
 	return b.client.Call("BloomfilterRPC.Add", rpc_bf.AddInput{Elems: batch}, &addOutput)
 }
 
-// Check present element through bloomfilter rpc client
+// Check present element through bloomfilter rpc client.
 func (b *Bloomfilter) Check(elem []byte) (bool, error) {
 	var checkOutput rpc_bf.CheckOutput
 	if err := b.client.Call("BloomfilterRPC.Check", rpc_bf.CheckInput{Elems: [][]byte{elem}}, &checkOutput); err != nil {
@@ -46,10 +47,11 @@ func (b *Bloomfilter) Check(elem []byte) (bool, error) {
 			return false, nil
 		}
 	}
+
 	return true, nil
 }
 
-// Union element through bloomfilter rpc client with sliding bloomfilters
+// Union element through bloomfilter rpc client with sliding bloomfilters.
 func (b *Bloomfilter) Union(that any) (float64, error) {
 	v, ok := that.(*rotate.Bloomfilter)
 	if !ok {
@@ -63,7 +65,8 @@ func (b *Bloomfilter) Union(that any) (float64, error) {
 	return unionOutput.Capacity, nil
 }
 
-// Close bloomfilter rpc client
+// Close bloomfilter rpc client.
 func (b *Bloomfilter) Close() {
+	// #nosec G104 -- closing is best effort, the error is not actionable
 	b.client.Close()
 }

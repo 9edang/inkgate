@@ -3,13 +3,15 @@
 package config
 
 import (
-	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/9edang/inkgate/internal/json"
 )
 
-// Parser reads a configuration file, parses it and returns the content as an init ServiceConfig struct
+// Parser reads a configuration file, parses it and returns the content as an init ServiceConfig struct.
 type Parser interface {
 	Parse(configFile string) (ServiceConfig, error)
 }
@@ -18,15 +20,15 @@ type Parser interface {
 // If f is a function with the appropriate signature, ParserFunc(f) is a Parser that calls f.
 type ParserFunc func(string) (ServiceConfig, error)
 
-// Parse implements the Parser interface
+// Parse implements the Parser interface.
 func (f ParserFunc) Parse(configFile string) (ServiceConfig, error) { return f(configFile) }
 
-// NewParser creates a new parser using the json library
+// NewParser creates a new parser using the json library.
 func NewParser() Parser {
 	return NewParserWithFileReader(os.ReadFile)
 }
 
-// NewParserWithFileReader returns a Parser with the injected FileReaderFunc function
+// NewParserWithFileReader returns a Parser with the injected FileReaderFunc function.
 func NewParserWithFileReader(f FileReaderFunc) Parser {
 	return parser{fileReader: f}
 }
@@ -35,7 +37,7 @@ type parser struct {
 	fileReader FileReaderFunc
 }
 
-// Parser implements the Parse interface
+// Parser implements the Parse interface.
 func (p parser) Parse(configFile string) (ServiceConfig, error) {
 	var result ServiceConfig
 	var cfg parseableServiceConfig
@@ -43,6 +45,7 @@ func (p parser) Parse(configFile string) (ServiceConfig, error) {
 	if err != nil {
 		return result, CheckErr(err, configFile)
 	}
+	//nolint:musttag // decoded by hand, the tags are not needed
 	if err = json.Unmarshal(data, &cfg); err != nil {
 		return result, CheckErr(err, configFile)
 	}
@@ -55,29 +58,32 @@ func (p parser) Parse(configFile string) (ServiceConfig, error) {
 	return result, nil
 }
 
-// CheckErr returns a proper documented error
+// CheckErr returns a proper documented error.
 func CheckErr(err error, configFile string) error {
-	switch e := err.(type) {
-	case *json.SyntaxError:
-		return NewParseError(err, configFile, int(e.Offset))
-	case *json.UnmarshalTypeError:
-		return NewParseError(err, configFile, int(e.Offset))
-	case *os.PathError:
+	var pathErr *os.PathError
+
+	if failure, ok := json.DecodeError(err); ok {
+		return NewParseError(errors.New(failure.Message), configFile, failure.Offset)
+	}
+
+	if errors.As(err, &pathErr) {
 		return fmt.Errorf(
 			"'%s' (%s): %s",
 			configFile,
-			e.Op,
-			e.Err.Error(),
+			pathErr.Op,
+			pathErr.Err.Error(),
 		)
-	default:
-		return fmt.Errorf("'%s': %v", configFile, err)
 	}
+
+	return fmt.Errorf("'%s': %w", configFile, err)
 }
 
-// NewParseError returns a new ParseError
+// NewParseError returns a new ParseError.
 func NewParseError(err error, configFile string, offset int) *ParseError {
+	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	b, _ := os.ReadFile(configFile)
 	row, col := getErrorRowCol(b, offset)
+
 	return &ParseError{
 		ConfigFile: configFile,
 		Err:        err,
@@ -91,7 +97,7 @@ func getErrorRowCol(source []byte, offset int) (row, col int) {
 	if len(source) < offset {
 		offset = len(source) - 1
 	}
-	for i := 0; i < offset; i++ {
+	for i := range offset {
 		v := source[i]
 		if v == '\r' {
 			continue
@@ -99,15 +105,17 @@ func getErrorRowCol(source []byte, offset int) (row, col int) {
 		if v == '\n' {
 			col = 0
 			row++
+
 			continue
 		}
 		col++
 	}
+
 	return
 }
 
 // ParseError is an error containing details regarding the row and column where
-// an parse error occurred
+// an parse error occurred.
 type ParseError struct {
 	ConfigFile string
 	Offset     int
@@ -116,7 +124,7 @@ type ParseError struct {
 	Err        error
 }
 
-// Error returns the error message for the ParseError
+// Error returns the error message for the ParseError.
 func (p *ParseError) Error() string {
 	return fmt.Sprintf(
 		"'%s': %v, offset: %v, row: %v, col: %v",
@@ -128,7 +136,7 @@ func (p *ParseError) Error() string {
 	)
 }
 
-// FileReaderFunc is a function used to read the content of a config file
+// FileReaderFunc is a function used to read the content of a config file.
 type FileReaderFunc func(string) ([]byte, error)
 
 type parseableServiceConfig struct {
@@ -248,6 +256,7 @@ func (p *parseableServiceConfig) normalize() ServiceConfig {
 		agents = append(agents, a.normalize())
 	}
 	cfg.AsyncAgents = agents
+
 	return cfg
 }
 
@@ -319,6 +328,7 @@ func (p *parseableEndpointConfig) normalize() *EndpointConfig {
 		backends = append(backends, b.normalize())
 	}
 	e.Backend = backends
+
 	return &e
 }
 
@@ -364,6 +374,7 @@ func (p *parseableAsyncAgent) normalize() *AsyncAgent {
 		backends = append(backends, b.normalize())
 	}
 	e.Backend = backends
+
 	return &e
 }
 
@@ -410,6 +421,7 @@ func (p *parseableBackend) normalize() *Backend {
 	if p.ExtraConfig != nil {
 		b.ExtraConfig = *p.ExtraConfig
 	}
+
 	return &b
 }
 
@@ -418,5 +430,6 @@ func parseDuration(v string) time.Duration {
 	if err != nil {
 		return 0
 	}
+
 	return d
 }

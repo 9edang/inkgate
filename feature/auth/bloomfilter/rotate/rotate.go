@@ -7,18 +7,20 @@ package rotate
 import (
 	"bytes"
 	"encoding/gob"
+	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/feature/auth/bloomfilter"
 	bbloomfilter "github.com/9edang/inkgate/feature/auth/bloomfilter/bloomfilter"
 )
 
 // New creates a new sliding set of 3 bloomfilters
-// It uses a context and configuration
+// It uses a context and configuration.
 func New(ctx context.Context, cfg Config) *Bloomfilter {
 	localCtx, cancel := context.WithCancel(ctx)
 	prevCfg := bloomfilter.EmptyConfig
@@ -34,17 +36,19 @@ func New(ctx context.Context, cfg Config) *Bloomfilter {
 		ctx:      ctx,
 	}
 
+	// #nosec G115 -- TTL from the operator config, in seconds
 	go r.keepRotating(localCtx, time.NewTicker(time.Duration(cfg.TTL)*time.Second).C)
+
 	return r
 }
 
-// Config contains a bloomfilter config and the rotation frequency TTL in sec
+// Config contains a bloomfilter config and the rotation frequency TTL in sec.
 type Config struct {
 	bloomfilter.Config
 	TTL uint `json:"ttl"`
 }
 
-// Bloomfilter type defines a sliding set of 3 bloomfilters
+// Bloomfilter type defines a sliding set of 3 bloomfilters.
 type Bloomfilter struct {
 	Previous, Current, Next *bbloomfilter.Bloomfilter
 	Config                  Config
@@ -53,14 +57,14 @@ type Bloomfilter struct {
 	cancel                  context.CancelFunc
 }
 
-// Close sliding set of bloomfilters
+// Close sliding set of bloomfilters.
 func (bs *Bloomfilter) Close() {
 	if bs != nil && bs.cancel != nil {
 		bs.cancel()
 	}
 }
 
-// Add element to sliding set of bloomfilters
+// Add element to sliding set of bloomfilters.
 func (bs *Bloomfilter) Add(elem []byte) {
 	bs.mutex.RLock()
 	defer bs.mutex.RUnlock()
@@ -69,7 +73,7 @@ func (bs *Bloomfilter) Add(elem []byte) {
 	bs.Current.Add(elem)
 }
 
-// Check if element in sliding set of bloomfilters
+// Check if element in sliding set of bloomfilters.
 func (bs *Bloomfilter) Check(elem []byte) bool {
 	bs.mutex.RLock()
 	defer bs.mutex.RUnlock()
@@ -80,7 +84,7 @@ func (bs *Bloomfilter) Check(elem []byte) bool {
 // Union two sliding sets of bloomfilters
 // Take care that false positive probability P,
 // number of elements being filtered N and
-// hashfunctions are the same
+// hashfunctions are the same.
 func (bs *Bloomfilter) Union(that any) (float64, error) {
 	bs.mutex.RLock()
 	defer bs.mutex.RUnlock()
@@ -106,6 +110,7 @@ func (bs *Bloomfilter) Union(that any) (float64, error) {
 	}
 
 	_, err := bs.Previous.Union(other.Previous)
+
 	return bs.capacity(), err
 }
 
@@ -132,13 +137,13 @@ func (bs *Bloomfilter) keepRotating(ctx context.Context, c <-chan time.Time) {
 }
 
 // SerializibleBloomfilter used when (de)serializing a set of sliding bloomfilters
-// It has exportable fields
+// It has exportable fields.
 type SerializibleBloomfilter struct {
 	Previous, Current, Next *bbloomfilter.Bloomfilter
 	Config                  Config
 }
 
-// MarshalBinary serializes a set of sliding bloomfilters
+// MarshalBinary serializes a set of sliding bloomfilters.
 func (bs *Bloomfilter) MarshalBinary() ([]byte, error) {
 	bs.mutex.RLock()
 	defer bs.mutex.RUnlock()
@@ -152,11 +157,13 @@ func (bs *Bloomfilter) MarshalBinary() ([]byte, error) {
 		Config:   bs.Config,
 	})
 
+	// #nosec G104 -- closing is best effort, the error is not actionable
 	w.Close()
+
 	return buf.Bytes(), err
 }
 
-// MarshalBinary deserializes a set of sliding bloomfilters
+// MarshalBinary deserializes a set of sliding bloomfilters.
 func (bs *Bloomfilter) UnmarshalBinary(data []byte) error {
 	if bs != nil && bs.cancel != nil {
 		bs.cancel()
@@ -172,7 +179,7 @@ func (bs *Bloomfilter) UnmarshalBinary(data []byte) error {
 	}
 
 	target := &SerializibleBloomfilter{}
-	if err := gob.NewDecoder(r).Decode(target); err != nil && err != io.EOF {
+	if err := gob.NewDecoder(r).Decode(target); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
 
@@ -193,6 +200,7 @@ func (bs *Bloomfilter) UnmarshalBinary(data []byte) error {
 		mutex:    new(sync.RWMutex),
 	}
 
+	// #nosec G115 -- TTL from the operator config, in seconds
 	go bs.keepRotating(localCtx, time.NewTicker(time.Duration(bs.Config.TTL)*time.Second).C)
 
 	return nil

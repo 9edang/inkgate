@@ -1,24 +1,26 @@
 // Package metrics defines a set of basic building blocks for instrumenting Inkgate gateways
 //
-// Check "github.com/9edang/inkgate/feature/telemetry/metrics/mux" for the router adapter.
+// metrics_router.go holds the HTTP router adapter (HTTPMetrics).
 // packages for complete implementations
 package metrics
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"strings"
 	"time"
 
+	"github.com/9edang/inkgate/context"
+
+	"github.com/rcrowley/go-metrics"
+
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
-	"github.com/rcrowley/go-metrics"
 )
 
-// defaultListenAddrt is the default listen address:port for the stats endpoint service
+// defaultListenAddrt is the default listen address:port for the stats endpoint service.
 var defaultListenAddr = ":8090"
 
-// New creates a new metrics producer
+// New creates a new metrics producer.
 func New(ctx context.Context, e config.ExtraConfig, l logging.Logger) *Metrics {
 	registry := metrics.NewPrefixedRegistry("inkgate.")
 
@@ -49,10 +51,10 @@ func New(ctx context.Context, e config.ExtraConfig, l logging.Logger) *Metrics {
 	return &m
 }
 
-// Namespace is the key to look for extra configuration details
+// Namespace is the key to look for extra configuration details.
 const Namespace = "inkgate/feature/telemetry/metrics"
 
-// Config holds if a component is active or not
+// Config holds if a component is active or not.
 type Config struct {
 	ProxyDisabled    bool
 	RouterDisabled   bool
@@ -77,8 +79,8 @@ func ConfigGetter(e config.ExtraConfig) any {
 
 	userCfg := new(Config)
 	userCfg.CollectionTime = time.Minute
-	if collectionTime, ok := tmp["collection_time"]; ok {
-		if d, err := time.ParseDuration(collectionTime.(string)); err == nil {
+	if collectionTime, ok := tmp["collection_time"].(string); ok {
+		if d, err := time.ParseDuration(collectionTime); err == nil {
 			userCfg.CollectionTime = d
 		}
 	}
@@ -102,10 +104,11 @@ func getBool(data map[string]any, name string) bool {
 			return v
 		}
 	}
+
 	return false
 }
 
-// Metrics is the component that manages all the metrics
+// Metrics is the component that manages all the metrics.
 type Metrics struct {
 	// Config is the metrics collector configuration
 	Config *Config
@@ -118,12 +121,12 @@ type Metrics struct {
 	latestSnapshot Stats
 }
 
-// Snapshot returns the last calculted snapshot
+// Snapshot returns the last calculted snapshot.
 func (m *Metrics) Snapshot() Stats {
 	return m.latestSnapshot
 }
 
-// TakeSnapshot takes a snapshot of the current state
+// TakeSnapshot takes a snapshot of the current state.
 func (m *Metrics) TakeSnapshot() Stats {
 	tmp := NewStats()
 
@@ -145,6 +148,7 @@ func (m *Metrics) TakeSnapshot() Stats {
 			metric.Clear()
 		}
 	})
+
 	return tmp
 }
 
@@ -183,7 +187,7 @@ func (l logger) Printf(format string, v ...any) {
 	l.logger.Debug(strings.TrimRight(fmt.Sprintf(format, v...), "\n"))
 }
 
-// DummyRegistry implements the rcrowley/go-metrics.Registry interface
+// DummyRegistry implements the rcrowley/go-metrics.Registry interface.
 type DummyRegistry struct{}
 
 func (DummyRegistry) Each(_ func(string, any)) {}

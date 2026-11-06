@@ -11,7 +11,7 @@ Diagrams are [Mermaid](https://mermaid.js.org); they render on GitHub, GitLab an
 | If you are... | Read |
 |---|---|
 | new to the project | [overview/architecture.md](overview/architecture.md) → [overview/request-lifecycle.md](overview/request-lifecycle.md) → [overview/flow-context.md](overview/flow-context.md) → [overview/startup.md](overview/startup.md) |
-| working on the HTTP side (gorilla/mux) | [engines/mux.md](engines/mux.md) |
+| working on the HTTP side (gorilla/mux) | [engine/gateway.md](engine/gateway.md) |
 | debugging a request | [flow/](flow) stage by stage, starting at [flow/2-entry.md](flow/2-entry.md) |
 | changing a capability (JWT, rate limit, Lua...) | the matching page in [feature/](feature) |
 | touching config, the core pipeline or HTTP transport | [engine/](engine) |
@@ -29,13 +29,10 @@ docs/
 │   ├── request-lifecycle.md one request end to end, sequence diagram
 │   ├── flow-context.md      the flow context: the data every layer shares for one request
 │   └── startup.md           from the command line to the first request
-├── engines/             the router of this project
-│   ├── README.md            what is router-specific, the boot.Router contract
-│   └── mux.md
 ├── flow/                one page per stage
 │   ├── 1-boot.md   2-entry.md   3-request.md   4-endpoint.md   5-backend.md
 ├── engine/              shared machinery
-│   ├── config.md  router.md  proxy.md  transport.md  encoding-and-discovery.md  async-and-plugins.md  cli.md
+│   ├── config.md  gateway.md  router.md  proxy.md  transport.md  encoding-and-discovery.md  async-and-plugins.md  cli.md
 ├── feature/             one page per business domain
 │   ├── auth.md  security.md  validation.md  traffic.md  transform.md  connector.md  telemetry.md
 ├── guides/              how-to

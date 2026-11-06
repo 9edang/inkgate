@@ -2,13 +2,15 @@ package zipkin
 
 import (
 	"errors"
-	"github.com/9edang/inkgate/context"
 	"net"
 
+	"github.com/9edang/inkgate/context"
+
 	"contrib.go.opencensus.io/exporter/zipkin"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	"github.com/openzipkin/zipkin-go/model"
 	httpreporter "github.com/openzipkin/zipkin-go/reporter/http"
+
+	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 )
 
 func init() {
@@ -21,12 +23,14 @@ func Exporter(_ context.Context, cfg opencensus.Config) (*zipkin.Exporter, error
 	if cfg.Exporters.Zipkin == nil {
 		return nil, errDisabled
 	}
+
 	return zipkin.NewExporter(
 		httpreporter.NewReporter(cfg.Exporters.Zipkin.CollectorURL),
 		&model.Endpoint{
 			ServiceName: cfg.Exporters.Zipkin.ServiceName,
 			IPv4:        net.ParseIP(cfg.Exporters.Zipkin.IP),
-			Port:        uint16(cfg.Exporters.Zipkin.Port),
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
+			Port: uint16(cfg.Exporters.Zipkin.Port),
 		},
 	), nil
 }
