@@ -39,4 +39,4 @@ flowchart TD
 | `INKGATE_USAGE_URL` | enables the anonymous usage reporter (off when unset) |
 
 `flow/boot/main.go` also registers the short namespace aliases (`aliases` map) and embeds
-`flow/boot/schema/schema.json` for `check -n`. That file is a placeholder (`{}`) until a schema is written.
+`schema/schema.json` for `check -n`. That file is a placeholder (`{}`) until a schema is written.

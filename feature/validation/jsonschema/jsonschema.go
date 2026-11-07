@@ -3,16 +3,18 @@ package jsonschema
 import (
 	"bytes"
 	"errors"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"net/http"
 	"strings"
 
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/proxy"
-	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 const Namespace = "inkgate/feature/validation/jsonschema"
@@ -20,7 +22,7 @@ const Namespace = "inkgate/feature/validation/jsonschema"
 var ErrEmptyBody = &malformedError{err: errors.New("could not validate an empty body")}
 
 // ProxyFactory creates an proxy factory over the injected one adding a JSON Schema
-// validator middleware to the pipe when required
+// validator middleware to the pipe when required.
 func ProxyFactory(logger logging.Logger, pf proxy.Factory) proxy.FactoryFunc {
 	return proxy.FactoryFunc(func(cfg *config.EndpointConfig) (proxy.Proxy, error) {
 		next, err := pf.New(cfg)
@@ -33,13 +35,16 @@ func ProxyFactory(logger logging.Logger, pf proxy.Factory) proxy.FactoryFunc {
 		}
 
 		c := jsonschema.NewCompiler()
-		c.AddResource("./schema.json", jschema)
+		// #nosec G104 -- static schema, adding it cannot fail
+		_ = c.AddResource("./schema.json", jschema)
 		s, err := c.Compile("./schema.json")
 		if err != nil {
 			logger.Error("[ENDPOINT: " + cfg.Endpoint + "][JSONSchema] Parsing the definition:" + err.Error())
+			//nolint:nilerr // a schema that fails to compile is skipped on purpose
 			return next, nil
 		}
 		logger.Debug("[ENDPOINT: " + cfg.Endpoint + "][JSONSchema] Validator enabled")
+
 		return newProxy(s, next), nil
 	})
 }
@@ -53,6 +58,7 @@ func newProxy(schema *jsonschema.Schema, next proxy.Proxy) proxy.Proxy {
 		if err != nil {
 			return nil, err
 		}
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		r.Body.Close()
 		if len(body) == 0 {
 			return nil, ErrEmptyBody
@@ -86,6 +92,7 @@ func configGetter(cfg config.ExtraConfig) any {
 	if err != nil {
 		return nil
 	}
+
 	return schema
 }
 
@@ -100,6 +107,7 @@ func (v *validationError) Error() string {
 			return ss[1]
 		}
 	}
+
 	return s
 }
 

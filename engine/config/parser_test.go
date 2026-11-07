@@ -167,43 +167,43 @@ func TestNewParser_errorMessages(t *testing.T) {
 			name:    "case0",
 			path:    "/tmp/ok.json",
 			content: []byte(`{`),
-			expErr:  "'/tmp/ok.json': unexpected end of JSON input, offset: 1, row: 0, col: 1",
+			expErr:  "'/tmp/ok.json': invalid JSON: eof, offset: 1, row: 0, col: 1",
 		},
 		{
 			name:    "case1",
 			path:    "/tmp/ok.json",
 			content: []byte(`>`),
-			expErr:  "'/tmp/ok.json': invalid character '>' looking for beginning of value, offset: 1, row: 0, col: 1",
+			expErr:  "'/tmp/ok.json': invalid JSON: invalid char, offset: 1, row: 0, col: 1",
 		},
 		{
 			name:    "case2",
 			path:    "/tmp/ok.json",
 			content: []byte(`"`),
-			expErr:  "'/tmp/ok.json': unexpected end of JSON input, offset: 1, row: 0, col: 1",
+			expErr:  "'/tmp/ok.json': invalid JSON: eof, offset: 1, row: 0, col: 1",
 		},
 		{
 			name:    "case3",
 			path:    "/tmp/ok.json",
 			content: []byte(``),
-			expErr:  "'/tmp/ok.json': unexpected end of JSON input, offset: 0, row: 0, col: 0",
+			expErr:  "'/tmp/ok.json': invalid JSON: eof, offset: 0, row: 0, col: 0",
 		},
 		{
 			name:    "case4",
 			path:    "/tmp/ok.json",
 			content: []byte(`[{}]`),
-			expErr:  "'/tmp/ok.json': json: cannot unmarshal array into Go value of type config.parseableServiceConfig, offset: 1, row: 0, col: 1",
+			expErr:  "'/tmp/ok.json': cannot unmarshal array into Go value of type config.parseableServiceConfig, offset: 0, row: 0, col: 0",
 		},
 		{
 			name:    "case5",
 			path:    "/tmp/ok.json",
 			content: []byte(`42`),
-			expErr:  "'/tmp/ok.json': json: cannot unmarshal number into Go value of type config.parseableServiceConfig, offset: 2, row: 0, col: 2",
+			expErr:  "'/tmp/ok.json': cannot unmarshal number into Go value of type config.parseableServiceConfig, offset: 0, row: 0, col: 0",
 		},
 		{
 			name:    "case6",
 			path:    "/tmp/ok.json",
 			content: []byte("\r\n42"),
-			expErr:  "'/tmp/ok.json': json: cannot unmarshal number into Go value of type config.parseableServiceConfig, offset: 4, row: 1, col: 2",
+			expErr:  "'/tmp/ok.json': cannot unmarshal number into Go value of type config.parseableServiceConfig, offset: 2, row: 1, col: 0",
 		},
 		{
 			name: "case7",
@@ -216,7 +216,7 @@ func TestNewParser_errorMessages(t *testing.T) {
 	"timeout": "3s",
 	"endpoints": []
 }`),
-			expErr: "'/tmp/ok.json': invalid character '\"' after object key:value pair, offset: 83, row: 5, col: 2",
+			expErr: "'/tmp/ok.json': invalid JSON: invalid char '\"', offset: 82, row: 5, col: 1",
 		},
 	} {
 		t.Run(configContent.name, func(t *testing.T) {
@@ -271,7 +271,7 @@ func TestNewParser_readingError(t *testing.T) {
 		t.FailNow()
 	}
 
-	expected := "'/tmp/reading.json': invalid character 'h' looking for beginning of object key string, offset: 2, row: 0, col: 2"
+	expected := "'/tmp/reading.json': invalid JSON: invalid char 'h', offset: 1, row: 0, col: 1"
 	_, err := NewParser().Parse(wrongConfigPath)
 	if err == nil || err.Error() != expected {
 		t.Error("Error expected. Got", err)

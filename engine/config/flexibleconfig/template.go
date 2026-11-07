@@ -2,8 +2,8 @@ package flexibleconfig
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"log"
 	"os"
@@ -12,8 +12,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/9edang/inkgate/engine/config"
+	"github.com/9edang/inkgate/internal/json"
+
 	"github.com/Masterminds/sprig/v3"
+
+	"github.com/9edang/inkgate/engine/config"
 )
 
 type Config struct {
@@ -145,10 +148,12 @@ func (t *TemplateParser) Parse(configFile string) (config.ServiceConfig, error) 
 		return config.ServiceConfig{}, err
 	}
 
+	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	t.lastSource, _ = os.ReadFile(filename)
 	cfg, err := t.Parser.Parse(filename)
 
 	if t.Path == "" {
+		// #nosec G104 -- error is not actionable here
 		os.Remove(filename)
 	}
 
@@ -157,8 +162,9 @@ func (t *TemplateParser) Parse(configFile string) (config.ServiceConfig, error) 
 
 func (t *TemplateParser) LastSource() ([]byte, error) {
 	if t.lastSource == nil {
-		return nil, fmt.Errorf("no content")
+		return nil, errors.New("no content")
 	}
+
 	return t.lastSource, nil
 }
 
@@ -168,6 +174,7 @@ func (*TemplateParser) marshal(v any) string {
 }
 
 func (t *TemplateParser) include(v any) string {
+	//nolint:forcetypeassert // the value type is fixed by construction
 	a, _ := os.ReadFile(path.Join(t.Partials, v.(string)))
 	return string(a)
 }
@@ -183,32 +190,36 @@ func (p parserError) Error() string {
 		msgs[j] = fmt.Sprintf("\t- %s: %s", i, e.Error())
 		j++
 	}
+
 	return "loading flexible-config settings:\n" + strings.Join(msgs, "\n")
 }
 
 func renameFile(src, dst string) (err error) {
 	err = copyFile(src, dst)
 	if err != nil {
-		return fmt.Errorf("failed to copy source file %s to %s: %s", src, dst, err)
+		return fmt.Errorf("failed to copy source file %s to %s: %w", src, dst, err)
 	}
 	err = os.RemoveAll(src)
 	if err != nil {
-		return fmt.Errorf("failed to cleanup source file %s: %s", src, err)
+		return fmt.Errorf("failed to cleanup source file %s: %w", src, err)
 	}
+
 	return nil
 }
 
 // credit https://gist.github.com/r0l1/92462b38df26839a3ca324697c8cba04
 func copyFile(src, dst string) (err error) {
+	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	in, err := os.Open(src)
 	if err != nil {
-		return
+		return err
 	}
 	defer func() { err = in.Close() }()
 
+	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	out, err := os.Create(dst)
 	if err != nil {
-		return
+		return err
 	}
 	defer func() {
 		if e := out.Close(); e != nil {
@@ -218,22 +229,22 @@ func copyFile(src, dst string) (err error) {
 
 	_, err = io.Copy(out, in)
 	if err != nil {
-		return
+		return err
 	}
 
 	err = out.Sync()
 	if err != nil {
-		return
+		return err
 	}
 
 	si, err := os.Stat(src)
 	if err != nil {
-		return
+		return err
 	}
 	err = os.Chmod(dst, si.Mode())
 	if err != nil {
-		return
+		return err
 	}
 
-	return
+	return err
 }

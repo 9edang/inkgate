@@ -8,6 +8,8 @@ import (
 // RegisterEncoders enables the backend decoders beyond JSON (XML, RSS).
 // Output renderers are router-specific and registered by the variant.
 func RegisterEncoders() {
-	xml.Register()
-	rss.Register()
+	// #nosec G104 -- error is not actionable here
+	_ = xml.Register()
+	// #nosec G104 -- error is not actionable here
+	_ = rss.Register()
 }

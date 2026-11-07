@@ -36,9 +36,11 @@ inkgate/
 ├── cmd/inkgate/     the binary: boot.Main(entry.Router)
 ├── context/         the flow context: core data of one request, carried by every layer (replaces "context")
 ├── flow/            WHEN things happen: boot → entry → request → endpoint → backend
-├── feature/         WHAT the gateway can do; mux adapters sit next to their feature in feature/<domain>/<name>/mux
-├── engine/          the plumbing: config, proxy pipeline, HTTP transport, discovery, CLI; the router in engine/router/mux
+├── feature/         WHAT the gateway can do; router code sits next to its feature
+├── engine/          the plumbing: config, proxy pipeline, HTTP transport, discovery, CLI; the router in engine/router
 ├── internal/        helper libraries
+├── examples/        small runnable programs (the Lua binder examples)
+├── schema/          the JSON schema of inkgate.json, embedded for `check --lint-no-network`
 ├── docs/            documentation, and the milestones (what to fix, speed up and add next)
 └── tests/           integration suite, run against bin/inkgate
 ```
@@ -49,7 +51,6 @@ Start reading at [docs/README.md](docs/README.md). What comes next is in [docs/m
 
 ```sh
 make test          # build, unit tests and the integration suite
-make check-layout  # gorilla/mux code only in the router, the adapters and the HTTP stages
 ```
 
 Known unit-test failures and their causes: [docs/known-issues.md](docs/known-issues.md).

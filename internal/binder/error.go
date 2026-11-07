@@ -170,6 +170,7 @@ func (e *Error) Source() string {
 
 // Print prints problem source code
 func (e *Error) Print() {
+	// #nosec G104 -- error is not actionable here
 	color.New(color.FgHiRed).Println(e.Error())
 	fmt.Println()
 	fmt.Println(e.Source())

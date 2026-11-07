@@ -5,4 +5,4 @@ static, shadow, concurrency, load balancing), HTTP client and server, encodings,
 Go plugin loading and the CLI framework.
 
 Features plug into it through `engine/proxy` (`Factory`, `BackendFactory`). Routers implement `engine/router` (`Factory`, `RunServerFunc`, the router `Namespace`); the gorilla/mux
-implementation is `engine/router/mux`.
+implementation is `engine/router`.

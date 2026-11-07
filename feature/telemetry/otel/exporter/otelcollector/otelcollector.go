@@ -4,10 +4,11 @@ package otelcollector
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -37,6 +38,7 @@ func (c *OtelCollector) MetricReader(reportingPeriod time.Duration) sdkmetric.Re
 	if c.customMetricReportingPeriod >= time.Second {
 		reportingPeriod = c.customMetricReportingPeriod
 	}
+
 	return sdkmetric.NewPeriodicReader(c.metricExporter,
 		sdkmetric.WithInterval(reportingPeriod))
 }
@@ -95,10 +97,11 @@ func httpExporterWithOptions(ctx context.Context, cfg config.OTLPExporter,
 	}
 
 	return &OtelCollector{
-		exporter:                    exporter,
-		metricExporter:              metricExporter,
-		metricsDisabledByDefault:    cfg.DisableMetrics,
-		tracesDisabledByDefault:     cfg.DisableTraces,
+		exporter:                 exporter,
+		metricExporter:           metricExporter,
+		metricsDisabledByDefault: cfg.DisableMetrics,
+		tracesDisabledByDefault:  cfg.DisableTraces,
+		// #nosec G115 -- TTL from the operator config, in seconds
 		customMetricReportingPeriod: time.Duration(cfg.CustomMetricReportingPeriod) * time.Second,
 	}, nil
 }
@@ -148,10 +151,11 @@ func grpcExporterWithOptions(ctx context.Context, cfg config.OTLPExporter,
 	}
 
 	return &OtelCollector{
-		exporter:                    exporter,
-		metricExporter:              metricExporter,
-		metricsDisabledByDefault:    cfg.DisableMetrics,
-		tracesDisabledByDefault:     cfg.DisableTraces,
+		exporter:                 exporter,
+		metricExporter:           metricExporter,
+		metricsDisabledByDefault: cfg.DisableMetrics,
+		tracesDisabledByDefault:  cfg.DisableTraces,
+		// #nosec G115 -- TTL from the operator config, in seconds
 		customMetricReportingPeriod: time.Duration(cfg.CustomMetricReportingPeriod) * time.Second,
 	}, nil
 }
@@ -167,6 +171,7 @@ func ExporterWithOptions(ctx context.Context, cfg config.OTLPExporter, options [
 	if cfg.UseHTTP {
 		return httpExporterWithOptions(ctx, cfg, options)
 	}
+
 	return grpcExporterWithOptions(ctx, cfg, options)
 }
 

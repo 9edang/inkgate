@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"maps"
 	"time"
 
 	"github.com/9edang/inkgate/context"
@@ -22,9 +23,7 @@ func recordFlow(next proxy.BackendFactory) proxy.BackendFactory {
 			}
 			if flow.PropagatesRequestID() && req != nil {
 				headers := make(map[string][]string, len(req.Headers)+1)
-				for k, v := range req.Headers {
-					headers[k] = v
-				}
+				maps.Copy(headers, req.Headers)
 				headers[flow.RequestIDHeader()] = []string{flow.RequestID()}
 				clone := *req
 				clone.Headers = headers
@@ -48,6 +47,7 @@ func recordFlow(next proxy.BackendFactory) proxy.BackendFactory {
 				rec.Err = err.Error()
 			}
 			flow.AddBackendCall(rec)
+
 			return resp, err
 		}
 	}

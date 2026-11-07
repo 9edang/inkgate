@@ -3,18 +3,20 @@ package opencensus
 import (
 	"bytes"
 	"errors"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"net/http"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/9edang/inkgate/engine/config"
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
+
 	"go.opencensus.io/plugin/ochttp"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/trace"
+
+	"github.com/9edang/inkgate/engine/config"
 )
 
 type ExporterFactory func(context.Context, Config) (any, error)
@@ -80,6 +82,7 @@ func (c *composableRegister) ExporterFactories(ctx context.Context, cfg Config, 
 	c.traceExporter(traceExporters...)
 }
 
+//nolint:gocognit // long carried-over function, split when it is next changed
 func (c composableRegister) Register(_ context.Context, cfg Config, vs []*view.View) error {
 	if len(vs) == 0 {
 		vs = DefaultViews
@@ -90,6 +93,7 @@ func (c composableRegister) Register(_ context.Context, cfg Config, vs []*view.V
 
 	// modify metric tags
 	// ref: https://godoc.org/go.opencensus.io/plugin/ochttp#pkg-variables
+	//nolint:nestif // nested config handling, split when it is next changed
 	if cfg.Exporters.Prometheus != nil {
 		for _, view := range vs {
 			// client metrics (method + statuscode tags are enabled by default)
@@ -294,10 +298,12 @@ func parseCfg(srvCfg config.ServiceConfig) (*Config, error) {
 		return nil, ErrNoConfig
 	}
 	buf := new(bytes.Buffer)
-	json.NewEncoder(buf).Encode(tmp)
+	// #nosec G104 -- response write is best effort, the client may be gone
+	_ = json.NewEncoder(buf).Encode(tmp)
 	if err := json.NewDecoder(buf).Decode(cfg); err != nil {
 		return nil, err
 	}
+
 	return cfg, nil
 }
 
@@ -311,10 +317,12 @@ func parseEndpointConfig(endpointCfg *config.EndpointConfig) (*EndpointExtraConf
 		return nil, ErrNoConfig
 	}
 	buf := new(bytes.Buffer)
-	json.NewEncoder(buf).Encode(tmp)
+	// #nosec G104 -- response write is best effort, the client may be gone
+	_ = json.NewEncoder(buf).Encode(tmp)
 	if err := json.NewDecoder(buf).Decode(cfg); err != nil {
 		return nil, err
 	}
+
 	return cfg, nil
 }
 
@@ -328,10 +336,12 @@ func parseBackendConfig(backendCfg *config.Backend) (*EndpointExtraConfig, error
 		return nil, ErrNoConfig
 	}
 	buf := new(bytes.Buffer)
-	json.NewEncoder(buf).Encode(tmp)
+	// #nosec G104 -- response write is best effort, the client may be gone
+	_ = json.NewEncoder(buf).Encode(tmp)
 	if err := json.NewDecoder(buf).Decode(cfg); err != nil {
 		return nil, err
 	}
+
 	return cfg, nil
 }
 
@@ -340,7 +350,7 @@ var (
 	replaceMetricBackendPath = regexp.MustCompile(`{{.(.*?)}}`)
 )
 
-// GetAggregatedPathForMetrics returns a path aggregator function ready to reduce path cardinality in the metrics
+// GetAggregatedPathForMetrics returns a path aggregator function ready to reduce path cardinality in the metrics.
 func GetAggregatedPathForMetrics(cfg *config.EndpointConfig) func(r *http.Request) string {
 	if cfg == nil {
 		return simplePathExtractor
@@ -374,7 +384,7 @@ func GetAggregatedPathForMetrics(cfg *config.EndpointConfig) func(r *http.Reques
 	return fixedPathExtractor(replaceMetricPath.ReplaceAllString(cfg.Endpoint, `{$1}`))
 }
 
-// GetAggregatedPathForBackendMetrics returns a path aggregator function ready to reduce path cardinality in the metrics
+// GetAggregatedPathForBackendMetrics returns a path aggregator function ready to reduce path cardinality in the metrics.
 func GetAggregatedPathForBackendMetrics(cfg *config.Backend) func(r *http.Request) string {
 	if cfg == nil {
 		return simplePathExtractor
@@ -420,6 +430,7 @@ func fromContext(ctx context.Context) *trace.Span {
 	if span == nil {
 		span, _ = ctx.Value(ContextKey).(*trace.Span)
 	}
+
 	return span
 }
 

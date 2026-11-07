@@ -108,7 +108,7 @@ func TestLua_Module(t *testing.T) {
 		return nil
 	})
 
-	if err := b.DoFile("lua_test.lua"); err != nil {
+	if err := b.DoFile("../../tests/fixtures/binder/lua_test.lua"); err != nil {
 		t.Error("Error execute module", err)
 	}
 }

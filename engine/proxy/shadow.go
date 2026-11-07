@@ -3,8 +3,9 @@
 package proxy
 
 import (
-	"github.com/9edang/inkgate/context"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -25,7 +26,7 @@ type shadowFactory struct {
 func (s shadowFactory) New(cfg *config.EndpointConfig) (p Proxy, err error) {
 	if len(cfg.Backend) == 0 {
 		err = ErrNoBackends
-		return
+		return p, err
 	}
 
 	cfgCopy := *cfg
@@ -39,6 +40,7 @@ func (s shadowFactory) New(cfg *config.EndpointConfig) (p Proxy, err error) {
 				maxTimeout = d
 			}
 			shadow = append(shadow, b)
+
 			continue
 		}
 		regular = append(regular, b)
@@ -53,15 +55,15 @@ func (s shadowFactory) New(cfg *config.EndpointConfig) (p Proxy, err error) {
 		p = ShadowMiddlewareWithTimeout(maxTimeout, p, pShadow)
 	}
 
-	return
+	return p, err
 }
 
-// NewShadowFactory creates a new shadowFactory using the provided Factory
+// NewShadowFactory creates a new shadowFactory using the provided Factory.
 func NewShadowFactory(f Factory) Factory {
 	return shadowFactory{f}
 }
 
-// ShadowMiddlewareWithLogger is a Middleware that creates a shadowProxy
+// ShadowMiddlewareWithLogger is a Middleware that creates a shadowProxy.
 func ShadowMiddlewareWithLogger(logger logging.Logger, next ...Proxy) Proxy {
 	switch len(next) {
 	case 0:
@@ -77,12 +79,12 @@ func ShadowMiddlewareWithLogger(logger logging.Logger, next ...Proxy) Proxy {
 	}
 }
 
-// ShadowMiddleware is a Middleware that creates a shadowProxy
+// ShadowMiddleware is a Middleware that creates a shadowProxy.
 func ShadowMiddleware(next ...Proxy) Proxy {
 	return ShadowMiddlewareWithLogger(logging.NoOp, next...)
 }
 
-// ShadowMiddlewareWithTimeoutAndLogger is a Middleware that creates a shadowProxy with a timeout in the context
+// ShadowMiddlewareWithTimeoutAndLogger is a Middleware that creates a shadowProxy with a timeout in the context.
 func ShadowMiddlewareWithTimeoutAndLogger(logger logging.Logger, timeout time.Duration, next ...Proxy) Proxy {
 	switch len(next) {
 	case 0:
@@ -98,7 +100,7 @@ func ShadowMiddlewareWithTimeoutAndLogger(logger logging.Logger, timeout time.Du
 	}
 }
 
-// ShadowMiddlewareWithTimeout is a Middleware that creates a shadowProxy with a timeout in the context
+// ShadowMiddlewareWithTimeout is a Middleware that creates a shadowProxy with a timeout in the context.
 func ShadowMiddlewareWithTimeout(timeout time.Duration, next ...Proxy) Proxy {
 	return ShadowMiddlewareWithTimeoutAndLogger(logging.NoOp, timeout, next...)
 }
@@ -116,9 +118,11 @@ func NewShadowProxyWithTimeout(timeout time.Duration, p1, p2 Proxy) Proxy {
 		shadowCtx, cancel := newContextWrapperWithTimeout(ctx, timeout)
 		shadowRequest := CloneRequest(request)
 		go func() {
-			p2(shadowCtx, shadowRequest)
+			// #nosec G104 -- shadow traffic result is ignored by design
+			_, _ = p2(shadowCtx, shadowRequest)
 			cancel()
 		}()
+
 		return p1(ctx, request)
 	}
 }

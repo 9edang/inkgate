@@ -2,9 +2,10 @@ package amqp
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"sync/atomic"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -19,7 +20,7 @@ var (
 	DefaultStartupRetries  = 3
 )
 
-// NewBackendFactory returns a proxy.BackendFactory that setup AMQP backends
+// NewBackendFactory returns a proxy.BackendFactory that setup AMQP backends.
 func NewBackendFactory(ctx context.Context, logger logging.Logger, bf proxy.BackendFactory) proxy.BackendFactory {
 	f := backendFactory{
 		logger: logger,
@@ -49,7 +50,7 @@ func (f backendFactory) New(remote *config.Backend) proxy.Proxy {
 }
 
 // connectionHandler handles the connection to the amqp backend
-// the connection is shared by all the requests to that backend
+// the connection is shared by all the requests to that backend.
 type connectionHandler struct {
 	logger       logging.Logger
 	logPrefix    string
@@ -57,7 +58,7 @@ type connectionHandler struct {
 	conn         connection
 }
 
-// newConnectionHandler returns a configured connectionHandler
+// newConnectionHandler returns a configured connectionHandler.
 func newConnectionHandler(ctx context.Context, l logging.Logger, logPrefix string) connectionHandler {
 	c := connectionHandler{
 		logger:       l,
@@ -67,13 +68,15 @@ func newConnectionHandler(ctx context.Context, l logging.Logger, logPrefix strin
 	}
 	go func() {
 		<-ctx.Done()
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		c.conn.Close()
 	}()
+
 	return c
 }
 
 // newConnection should only be used via connect() beacause it doesn't Lock
-// to replace the connection
+// to replace the connection.
 func (h *connectionHandler) newConnection(path string) error {
 	c := connection{}
 	conn, err := amqp.Dial(path)
@@ -87,6 +90,7 @@ func (h *connectionHandler) newConnection(path string) error {
 	}
 	c.ch = ch
 	h.conn = c
+
 	return nil
 }
 
@@ -109,7 +113,7 @@ func (h *connectionHandler) connect(dns string, maxRetries int, bckoff string) e
 	if maxRetries == 0 {
 		maxRetries = 1
 	}
-	for i := 0; i < maxRetries; i++ {
+	for i := range maxRetries {
 		<-time.After(bo(i))
 		res = h.newConnection(dns)
 		if res == nil {
@@ -118,6 +122,7 @@ func (h *connectionHandler) connect(dns string, maxRetries int, bckoff string) e
 		}
 		h.logger.Debug(h.logPrefix, fmt.Sprintf("Connection attempt #%d: %s", i+1, res))
 	}
+
 	return res
 }
 
@@ -133,6 +138,7 @@ func (c connection) Close() error {
 	if c.ch == nil {
 		return nil
 	}
+
 	return c.ch.Close()
 }
 
@@ -140,6 +146,7 @@ func (c connection) IsClosed() bool {
 	if c.conn == nil {
 		return true
 	}
+
 	return c.conn.IsClosed()
 }
 

@@ -39,7 +39,7 @@ func BenchmarkProxyFactory(b *testing.B) {
 		ExtraConfig: config.ExtraConfig{
 			ProxyNamespace: map[string]any{
 				"sources": []any{
-					"../lua/factorial.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
 				},
 
 				"pre": `local req = request.load()
@@ -113,8 +113,8 @@ func BenchmarkProxyFactoryWithCustomError(b *testing.B) {
 		ExtraConfig: config.ExtraConfig{
 			ProxyNamespace: map[string]any{
 				"sources": []any{
-					"../lua/env.lua",
-					"../lua/factorial.lua",
+					"../../../../tests/fixtures/lua/env.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
 				},
 
 				"pre": "local t = 1\ncustom_error(\"meh\")",
@@ -169,8 +169,8 @@ func BenchmarkProxyFactoryWithLuaError(b *testing.B) {
 		ExtraConfig: config.ExtraConfig{
 			ProxyNamespace: map[string]any{
 				"sources": []any{
-					"../lua/env.lua",
-					"../lua/factorial.lua",
+					"../../../../tests/fixtures/lua/env.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
 				},
 
 				"pre": "lokal t = 1\ncustom_error(\"meh\")",

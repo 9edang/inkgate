@@ -12,30 +12,30 @@ package entry
 import (
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
-	mux "github.com/9edang/inkgate/engine/router/mux"
-	botdetector "github.com/9edang/inkgate/feature/security/botdetector/mux"
-	httpsecure "github.com/9edang/inkgate/feature/security/httpsecure/mux"
-	lua "github.com/9edang/inkgate/feature/transform/lua/mux"
+	"github.com/9edang/inkgate/engine/router"
+	"github.com/9edang/inkgate/feature/security/botdetector/gateway"
+	"github.com/9edang/inkgate/feature/security/httpsecure"
+	luarouter "github.com/9edang/inkgate/feature/transform/lua/router"
 )
 
-// NewMiddlewares returns the service-wide middleware. The mux router applies
+// NewMiddlewares returns the service-wide middleware. The router applies
 // the list in order, each one wrapping the previous, so the LAST item is the
 // first to see a request.
-func NewMiddlewares(cfg config.ServiceConfig, logger logging.Logger) []mux.HandlerMiddleware {
-	var mws []mux.HandlerMiddleware
+func NewMiddlewares(cfg config.ServiceConfig, logger logging.Logger) []router.HandlerMiddleware {
+	var mws []router.HandlerMiddleware
 
 	// 3. bot detector, service level
-	if mw := botdetector.NewMiddleware(cfg.ExtraConfig, logger); mw != nil {
+	if mw := gateway.NewMiddleware(cfg.ExtraConfig, logger); mw != nil {
 		mws = append(mws, mw)
 	}
 
 	// 2. Lua, service level
-	mws = lua.RegisterMiddleware(logger, cfg.ExtraConfig, mux.PathParamExtractor, mws)
+	mws = luarouter.RegisterMiddleware(logger, cfg.ExtraConfig, router.PathParamExtractor, mws)
 
 	// 1. secure headers and host checks
 	if mw := httpsecure.NewSecureMw(cfg.ExtraConfig); mw != nil {
 		mws = append(mws, mw)
-		logger.Debug("[SERVICE: mux][HTTPsecure] Successfully loaded module")
+		logger.Debug("[SERVICE: Router][HTTPsecure] Successfully loaded module")
 	}
 
 	return mws

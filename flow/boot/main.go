@@ -1,22 +1,20 @@
 package boot
 
 import (
-	"embed"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/env"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/env"
+
 	cmd "github.com/9edang/inkgate/engine/cli"
 	"github.com/9edang/inkgate/engine/config"
 	flexibleconfig "github.com/9edang/inkgate/engine/config/flexibleconfig"
 	koanf "github.com/9edang/inkgate/engine/config/koanf"
+	"github.com/9edang/inkgate/schema"
 )
-
-//go:embed schema
-var embedSchema embed.FS
 
 // Main is the whole program of a router variant: it reads the command line,
 // parses the config and calls Run. cmd/inkgate only passes entry.Router to it.
@@ -56,15 +54,9 @@ func Main(r Router) {
 		})
 	}
 
-	var rawSchema string
-	schema, err := embedSchema.ReadFile("schema/schema.json")
-	if err == nil {
-		rawSchema = string(schema)
-	}
-
 	commandsToLoad := []cmd.Command{
 		cmd.RunCommand,
-		cmd.NewCheckCmd(rawSchema),
+		cmd.NewCheckCmd(schema.JSON),
 		cmd.PluginCommand,
 		cmd.VersionCommand,
 		cmd.AuditCommand,

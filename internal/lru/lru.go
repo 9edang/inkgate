@@ -49,14 +49,17 @@ func (c *LruCache) Get(key string) (res []byte, status bool) {
 	var ent *list.Element
 	if ent, status = c.items[key]; status {
 		c.evictList.MoveToFront(ent)
+		//nolint:forcetypeassert // the value type is fixed by construction
 		res = ent.Value.(*entry).value
 	}
 
 	c.mu.Unlock()
+
 	return
 }
 
 func (c *LruCache) Set(key string, resp []byte) {
+	// #nosec G115 -- numeric value from the operator config, far below the overflow range
 	if len(resp) >= int(c.maxSize) {
 		return
 	}
@@ -66,8 +69,10 @@ func (c *LruCache) Set(key string, resp []byte) {
 	// Check for existing item
 	if ent, ok := c.items[key]; ok {
 		c.evictList.MoveToFront(ent)
+		//nolint:forcetypeassert // the value type is fixed by construction
 		ent.Value.(*entry).value = resp
 		c.mu.Unlock()
+
 		return
 	}
 
@@ -99,7 +104,9 @@ func (c *LruCache) release(element *list.Element) {
 		return
 	}
 
+	//nolint:forcetypeassert // the value type is fixed by construction
 	delete(c.items, element.Value.(*entry).key)
+	//nolint:forcetypeassert // the value type is fixed by construction
 	c.inUseSize -= uint64(len(element.Value.(*entry).value))
 	c.evictList.Remove(element)
 	element.Value = nil

@@ -1,6 +1,6 @@
 # engine/router — routing
 
-**Code:** [engine/router](../../engine/router) (contract) · [engine/router/mux](../../engine/router/mux) (gorilla/mux implementation)
+**Code:** [engine/router](../../engine/router) (contract) · [engine/router](../../engine/router) (gorilla/mux implementation)
 
 The contract package holds what the rest of the gateway needs from a router:
 
@@ -16,7 +16,7 @@ The gorilla/mux router turns the endpoint list into routes. Each route gets a pi
 ```mermaid
 sequenceDiagram
     participant S as entry.Serve
-    participant F as mux.NewFactory
+    participant F as router.NewFactory
     participant R as router.Run
     participant E as engine
     S->>F: Engine, ProxyFactory, HandlerFactory, RunServer
@@ -30,7 +30,7 @@ sequenceDiagram
     R->>R: RunServer(ctx, cfg, engine)
 ```
 
-## Implementation (`engine/router/mux`)
+## Implementation (`engine/router`)
 
 | | |
 |---|---|
@@ -40,7 +40,7 @@ sequenceDiagram
 | renders | `render.go`, `negotiate.go` |
 | debug / echo | `debug.go`, `echo.go` |
 
-Full details: [../engines/mux.md](../engines/mux.md).
+Full details: [../engine/gateway.md](../engine/gateway.md).
 
 ## Path syntax
 

@@ -15,10 +15,10 @@ import (
 	limiter "github.com/9edang/inkgate/feature/traffic/ratelimit"
 )
 
-// Namespace is the key to use to store and access the custom config data for the router
+// Namespace is the key to use to store and access the custom config data for the router.
 const Namespace = "qos/ratelimit/router"
 
-// Config is the custom config struct containing the params for the router middlewares
+// Config is the custom config struct containing the params for the router middlewares.
 type Config struct {
 	MaxRate        float64       `json:"max_rate"`
 	Capacity       uint64        `json:"capacity"`
@@ -32,7 +32,7 @@ type Config struct {
 	CleanUpThreads uint64        `json:"cleanup_threads"`
 }
 
-// ZeroCfg is the zero value for the Config struct
+// ZeroCfg is the zero value for the Config struct.
 var ZeroCfg = Config{}
 
 var (
@@ -42,6 +42,8 @@ var (
 
 // ConfigGetter parses the extra config for the rate adapter and
 // returns a ZeroCfg and an error if something goes wrong.
+//
+//nolint:cyclop,gocognit,gocyclo // long carried-over function, split when it is next changed
 func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	v, ok := e[Namespace]
 	if !ok {
@@ -65,8 +67,10 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	if v, ok := tmp["capacity"]; ok {
 		switch val := v.(type) {
 		case int64:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.Capacity = uint64(val)
 		case int:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.Capacity = uint64(val)
 		case float64:
 			cfg.Capacity = uint64(val)
@@ -88,8 +92,10 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	if v, ok := tmp["client_capacity"]; ok {
 		switch val := v.(type) {
 		case int64:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.ClientCapacity = uint64(val)
 		case int:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.ClientCapacity = uint64(val)
 		case float64:
 			cfg.ClientCapacity = uint64(val)
@@ -106,12 +112,13 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 			every = time.Second
 		}
 		factor := float64(time.Second) / float64(every)
-		cfg.MaxRate = cfg.MaxRate * factor
-		cfg.ClientMaxRate = cfg.ClientMaxRate * factor
+		cfg.MaxRate *= factor
+		cfg.ClientMaxRate *= factor
 
 		if every > cfg.TTL {
 			// we do not need crypto strength random number to generate some
 			// jitter in the duration, so we mark it to skipcq the check:
+			// #nosec G404 -- not security sensitive: jitter or host choice
 			cfg.TTL = time.Duration(int64((1 + 0.25*rand.Float64()) * float64(every))) // skipcq: GSC-G404
 		}
 	}
@@ -119,8 +126,10 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	if v, ok := tmp["num_shards"]; ok {
 		switch val := v.(type) {
 		case int64:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.NumShards = uint64(val)
 		case int:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.NumShards = uint64(val)
 		case float64:
 			cfg.NumShards = uint64(val)
@@ -142,8 +151,10 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	if v, ok := tmp["cleanup_threads"]; ok {
 		switch val := v.(type) {
 		case int64:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.CleanUpThreads = uint64(val)
 		case int:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.CleanUpThreads = uint64(val)
 		case float64:
 			cfg.CleanUpThreads = uint64(val)

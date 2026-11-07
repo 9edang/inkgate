@@ -3,19 +3,107 @@ version: "2"
 
 run:
   timeout: 5m
-  tests: true
+  relative-path-mode: gomod
+  issues-exit-code: 2
+  tests: false
+  modules-download-mode: readonly
+  allow-parallel-runners: false
+  allow-serial-runners: false
+  go: "1.27"
+  concurrency: 4 # `make lint` overrides it with SCAN_CPUS
 
 linters:
-  # errcheck, govet, ineffassign, staticcheck, unused
-  default: standard
   enable:
-    - bodyclose    # HTTP response bodies must be closed
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - copyloopvar
+    - cyclop
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errorlint
+    - exhaustive
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - gocognit
+    - goconst
+    - gocyclo
+    - gocritic
+    - godot
+    - gomodguard_v2
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - govet
+    - grouper
+    - iface
+    - importas
+    - ineffassign
+    - intrange
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nakedret
+    - nestif
+    - nilnesserr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - staticcheck
+    - tagalign
+    - testifylint
+    - thelper
     - unconvert
-    - nilerr       # returning nil when an err was just checked
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - whitespace
+    - zerologlint
+    - sqlclosecheck
+    - nilerr # returning nil when an err was just checked
+
   settings:
+    cyclop:
+      max-complexity: 15
+      package-average: 0
+
     errcheck:
       check-type-assertions: false
+      check-blank: false
+      # the default exclusions stay on; these are added to them
       exclude-functions:
+        - io/ioutil.ReadFile
+        - io.Copy(*bytes.Buffer)
+        - io.Copy(os.Stdout)
+        - github.com/joho/godotenv.Load
+        - os.Setenv
         # errors from these are not actionable
         - (io.Closer).Close
         - (*os.File).Close
@@ -27,27 +115,80 @@ linters:
         - fmt.Fprintln
         - os.Remove
         - os.RemoveAll
-    govet:
-      disable:
-        - inline  # reports ioutil calls as "declared using go1.27" when the toolchain is newer than go.mod
+
+    errchkjson:
+      check-error-free-encoding: false
+      report-no-exported: false
+
+    gocyclo:
+      min-complexity: 15
+
+    gosec:
+      severity: medium
+      confidence: medium
+      concurrency: 12
+
+    exhaustive:
+      # A switch over a domain enum must name every value. Adding a status and
+      # forgetting one branch is the classic silent bug this catches.
+      default-signifies-exhaustive: true
+
+    gocritic:
+      enabled-tags:
+        - performance
+      disabled-checks:
+        # Flags every value receiver over ~80 bytes; params structs trip it by
+        # design. Re-enable if profiles say copying actually costs you.
+        - hugeParam
+
+
     staticcheck:
       checks:
         - all
-        - -ST1000  # package comments
-        - -ST1003  # naming style (acronyms in existing public names)
-        - -ST1005  # capitalized error strings kept for compatibility
-        - -ST1016  # receiver names
-        - -ST1020  # doc comment form
+        - -ST1000 # package comments
+        - -ST1003 # naming style (acronyms in existing public names)
+        - -ST1005 # capitalized error strings kept for compatibility
+        - -ST1016 # receiver names
+        - -ST1020 # doc comment form
         - -ST1021
         - -ST1022
-        - -QF1001  # De Morgan suggestions
+        - -QF1001 # De Morgan suggestions
         - -QF1003
-        - -QF1008  # embedded field selectors
+        - -QF1008 # embedded field selectors
+        - -SA1019 # deprecated APIs (h2c, DualStack, opencensus names): upgrade them separately
+
+    testifylint:
+      enable-all: true
+
+    nestif:
+      min-complexity: 10
+
+    revive:
+      rules:
+        # More than four arguments means the call site stops being readable and
+        # every added parameter is a breaking change. Pass a params struct instead.
+        # The limit is 5, not 4, because ctx counts toward it and every function
+        # that does I/O takes one: ctx + 4 real arguments is the intended ceiling.
+        - name: argument-limit
+          arguments: [5]
+
+        # At most two results: the value and an error. A third result is a
+        # field of the value; return a result struct instead.
+        - name: function-result-limit
+          arguments: [2]
+
+    nlreturn:
+      block-size: 2
+
   exclusions:
     generated: lax
+    warn-unused: false
     presets:
       - comments
       - std-error-handling
+    paths:
+      - tmp/*
+      - bin/*
     rules:
       # tests may ignore errors and use fixtures freely
       - path: _test\.go
@@ -60,11 +201,72 @@ linters:
         linters:
           - errcheck
           - unused
+          - noctx
+          - forbidigo
+          - nilerr
+          - bodyclose
+          - forcetypeassert
+          - gocritic
+          - prealloc
+          - revive
+          - cyclop
+          - gocyclo
+          - gocognit
 
 formatters:
   enable:
     - gofmt
+    - goimports
+    - golines
+
+  settings:
+    gofmt:
+      simplify: false
+      rewrite-rules:
+        - pattern: "interface{}"
+          replacement: "any"
+        - pattern: "a[b:len(a)]"
+          replacement: "a[b:]"
+
+    goimports:
+      local-prefixes:
+        - github.com/9edang/inkgate
+
+    golines:
+      max-len: 200
+      tab-len: 8
+      shorten-comments: true
+      reformat-tags: false
+      chain-split-dots: false
+
+  exclusions:
+    generated: lax
+    paths:
+      - tmp/*
+      - bin/*
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: false
+  # report only what is new in the working tree (and whole files that were touched);
+  # set to false, or run `make lint LINT_ALL=1`, to see the existing findings too
+  new: true
+  whole-files: true
+  fix: false
+
+output:
+  show-stats: true
+  path-mode: abs
+  sort-order:
+    - severity
+    - linter
+    - file
+  formats:
+    text:
+      path: stdout
+    json:
+      path: ./bin/reports/lint.json
+
+severity:
+  default: error

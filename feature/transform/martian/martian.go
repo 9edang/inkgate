@@ -3,18 +3,18 @@ package martian
 import (
 	"bytes"
 	"errors"
+	"io"
+	"net/http"
+
 	"github.com/9edang/inkgate/context"
 	"github.com/9edang/inkgate/internal/json"
-	"io/ioutil"
-	"net/http"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/proxy"
 	"github.com/9edang/inkgate/engine/transport/http/client"
 
-	// import the required martian packages so they can be used
-	"github.com/9edang/inkgate/feature/transform/martian/header"
+	// import the required martian packages so they can be used.
 	"github.com/google/martian"
 	_ "github.com/google/martian/body"
 	_ "github.com/google/martian/cookie"
@@ -27,6 +27,8 @@ import (
 	_ "github.com/google/martian/querystring"
 	_ "github.com/google/martian/stash"
 	_ "github.com/google/martian/status"
+
+	"github.com/9edang/inkgate/feature/transform/martian/header"
 )
 
 // NewBackendFactory creates a proxy.BackendFactory with the martian request executor wrapping the injected one.
@@ -47,10 +49,10 @@ func NewConfiguredBackendFactory(logger logging.Logger, ref func(*config.Backend
 		if !ok {
 			return proxy.NewHTTPProxyWithHTTPExecutor(remote, re, remote.Decoder)
 		}
-		switch result.Err {
-		case nil:
+		switch {
+		case result.Err == nil:
 			return proxy.NewHTTPProxyWithHTTPExecutor(remote, HTTPRequestExecutor(result.Result, re), remote.Decoder)
-		case ErrEmptyValue:
+		case errors.Is(result.Err, ErrEmptyValue):
 			return proxy.NewHTTPProxyWithHTTPExecutor(remote, re, remote.Decoder)
 		default:
 			logger.Error(result, remote.ExtraConfig)
@@ -60,7 +62,7 @@ func NewConfiguredBackendFactory(logger logging.Logger, ref func(*config.Backend
 }
 
 // HTTPRequestExecutor creates a wrapper over the received request executor, so the martian modifiers can be
-// executed before and after the execution of the request
+// executed before and after the execution of the request.
 func HTTPRequestExecutor(result *parse.Result, re client.HTTPRequestExecutor) client.HTTPRequestExecutor {
 	return func(ctx context.Context, req *http.Request) (resp *http.Response, err error) {
 		if err = modifyRequest(result.RequestModifier(), req); err != nil {
@@ -82,18 +84,19 @@ func HTTPRequestExecutor(result *parse.Result, re client.HTTPRequestExecutor) cl
 				Request:    req,
 				Header:     http.Header{},
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+				Body:       io.NopCloser(bytes.NewBufferString("")),
 			}
 		}
 
 		err = modifyResponse(result.ResponseModifier(), resp)
+
 		return
 	}
 }
 
 func modifyRequest(mod martian.RequestModifier, req *http.Request) error {
 	if req.Body == nil {
-		req.Body = ioutil.NopCloser(bytes.NewBufferString(""))
+		req.Body = io.NopCloser(bytes.NewBufferString(""))
 	}
 	if req.Header == nil {
 		req.Header = http.Header{}
@@ -102,12 +105,13 @@ func modifyRequest(mod martian.RequestModifier, req *http.Request) error {
 	if mod == nil {
 		return nil
 	}
+
 	return mod.ModifyRequest(req)
 }
 
 func modifyResponse(mod martian.ResponseModifier, resp *http.Response) error {
 	if resp.Body == nil {
-		resp.Body = ioutil.NopCloser(bytes.NewBufferString(""))
+		resp.Body = io.NopCloser(bytes.NewBufferString(""))
 	}
 	if resp.Header == nil {
 		resp.Header = http.Header{}
@@ -119,13 +123,14 @@ func modifyResponse(mod martian.ResponseModifier, resp *http.Response) error {
 	if mod == nil {
 		return nil
 	}
+
 	return mod.ModifyResponse(resp)
 }
 
-// Namespace is the key to look for extra configuration details
+// Namespace is the key to look for extra configuration details.
 const Namespace = "inkgate/feature/transform/martian"
 
-// Result is a simple wrapper over the parse.FromJSON response tuple
+// Result is a simple wrapper over the parse.FromJSON response tuple.
 type Result struct {
 	Result *parse.Result
 	Err    error
@@ -155,12 +160,12 @@ func ConfigGetter(e config.ExtraConfig) any {
 }
 
 var (
-	// ErrEmptyValue is the error returned when there is no config under the namespace
+	// ErrEmptyValue is the error returned when there is no config under the namespace.
 	ErrEmptyValue = errors.New("getting the extra config for the martian module")
-	// ErrBadValue is the error returned when the config is not a map
+	// ErrBadValue is the error returned when the config is not a map.
 	ErrBadValue = errors.New("casting the extra config for the martian module")
-	// ErrMarshallingValue is the error returned when the config map can not be marshalled again
+	// ErrMarshallingValue is the error returned when the config map can not be marshalled again.
 	ErrMarshallingValue = errors.New("marshalling the extra config for the martian module")
-	// ErrEmptyResponse is the error returned when the modifier receives a nil response
+	// ErrEmptyResponse is the error returned when the modifier receives a nil response.
 	ErrEmptyResponse = errors.New("getting the http response from the request executor")
 )

@@ -26,16 +26,16 @@ flowchart TD
 
 ## Steps
 
-| # | Step | Shared logic | mux adapter | Namespace (alias) |
+| # | Step | Shared logic | Router code | Namespace (alias) |
 |---|---|---|---|---|
-| 1 | OpenTelemetry | `feature/telemetry/otel` | `feature/telemetry/otel/mux` | `telemetry/opentelemetry` |
-| 2 | bot detector | `feature/security/botdetector` | `feature/security/botdetector/mux` | `security/bot-detector` |
-| 3 | OpenCensus span | `feature/telemetry/opencensus` | `feature/telemetry/opencensus/mux` | `telemetry/opencensus` |
-| 4 | request metrics | `feature/telemetry/metrics` | `feature/telemetry/metrics/mux` | `telemetry/metrics` |
-| 5 | JWT validation | `feature/auth/jose` | `feature/auth/jose/mux` | `auth/validator` |
-| 6 | Lua endpoint script | `feature/transform/lua/router` | `feature/transform/lua/mux` | `modifier/lua-endpoint` |
-| 7 | rate limit | `feature/traffic/ratelimit/router` | `feature/traffic/ratelimit/mux` | `qos/ratelimit/router` |
-| 8 | endpoint handler | `engine/proxy` | `engine/router/mux` `CustomEndpointHandlerWithHTTPError` + `NewRequestWithPathParams` | endpoint fields |
+| 1 | OpenTelemetry | `feature/telemetry/otel` | `feature/telemetry/otel` | `telemetry/opentelemetry` |
+| 2 | bot detector | `feature/security/botdetector` | `feature/security/botdetector/gateway` | `security/bot-detector` |
+| 3 | OpenCensus span | `feature/telemetry/opencensus` | `feature/telemetry/opencensus` | `telemetry/opencensus` |
+| 4 | request metrics | `feature/telemetry/metrics` | `feature/telemetry/metrics` | `telemetry/metrics` |
+| 5 | JWT validation | `feature/auth/jose` | `feature/auth/jose` | `auth/validator` |
+| 6 | Lua endpoint script | `feature/transform/lua/router` | `feature/transform/lua/router` | `modifier/lua-endpoint` |
+| 7 | rate limit | `feature/traffic/ratelimit/router` | `feature/traffic/ratelimit/router` | `qos/ratelimit/router` |
+| 8 | endpoint handler | `engine/proxy` | `engine/router` `CustomEndpointHandlerWithHTTPError` + `NewRequestWithPathParams` | endpoint fields |
 
 Each step returns the next handler unchanged when its namespace is absent from the endpoint's `extra_config`.
 

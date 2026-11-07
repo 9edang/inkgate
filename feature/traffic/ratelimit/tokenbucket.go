@@ -6,25 +6,25 @@ import (
 )
 
 // NewTokenBucket returns a token bucket with the given rate and capacity, using the default clock and
-// an initial stock of cap
+// an initial stock of cap.
 func NewTokenBucket(rate float64, capacity uint64) *TokenBucket {
 	return NewTokenBucketWithClock(rate, capacity, nil)
 }
 
-// Clock defines the interface for clock sources
+// Clock defines the interface for clock sources.
 type Clock interface {
 	Now() time.Time
 	Since(time.Time) time.Duration
 }
 
 // NewTokenBucketWithClock returns a token bucket with the given rate, capacity, and clock and
-// an initial stock of capacity
+// an initial stock of capacity.
 func NewTokenBucketWithClock(rate float64, capacity uint64, c Clock) *TokenBucket {
 	return NewTokenBucketWithInitialStock(rate, capacity, capacity, c)
 }
 
 // NewTokenBucketWithInitialStock returns a token bucket with the given rate, capacity, clock
-// and initial stock
+// and initial stock.
 func NewTokenBucketWithInitialStock(r float64, capacity, i uint64, c Clock) *TokenBucket {
 	if c == nil {
 		c = defaultClock{}
@@ -78,7 +78,7 @@ func NewTokenBucketBuilder(rate float64, capacity, initialStock uint64, clk Cloc
 	}
 }
 
-// TokenBucket is an implementation of the token bucket pattern
+// TokenBucket is an implementation of the token bucket pattern.
 type TokenBucket struct {
 	fillInterval time.Duration
 	capacity     uint64
@@ -89,11 +89,12 @@ type TokenBucket struct {
 }
 
 // Allow flags if the current request can be processed or not. It updates the internal state if
-// the request can be processed
+// the request can be processed.
 func (t *TokenBucket) Allow() bool {
 	t.mu.Lock()
 	r := t.canConsume()
 	t.mu.Unlock()
+
 	return r
 }
 
@@ -105,6 +106,7 @@ func (t *TokenBucket) canConsume() bool {
 	}
 
 	// if there are no more tokens in the bucket, calculate how many tokens should be added
+	// #nosec G115 -- numeric value from the operator config, far below the overflow range
 	tokensToAdd := uint64(t.clock.Since(t.lastRefill) / t.fillInterval)
 
 	// if there are no tokens to be added to the empty bucket
@@ -113,6 +115,7 @@ func (t *TokenBucket) canConsume() bool {
 	}
 
 	// update the time of the last refill depending on how many tokens we added
+	// #nosec G115 -- TTL from the operator config, in seconds
 	t.lastRefill = t.lastRefill.Add(time.Duration(tokensToAdd) * t.fillInterval)
 
 	// normalize the amount of tokens to add
@@ -122,6 +125,7 @@ func (t *TokenBucket) canConsume() bool {
 	}
 
 	t.tokens += tokensToAdd - 1
+
 	return true
 }
 

@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleParse() {
-	cfg, err := config.NewParser().Parse("./tests/example1.json")
+	cfg, err := config.NewParser().Parse("../../../tests/fixtures/audit/example1.json")
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -418,7 +418,7 @@ func ExampleParse() {
 }
 
 func ExampleParse_withRevokerServer() {
-	cfg, err := config.NewParser().Parse("./tests/revoker.json")
+	cfg, err := config.NewParser().Parse("../../../tests/fixtures/audit/revoker.json")
 	if err != nil {
 		fmt.Println(err.Error())
 		return

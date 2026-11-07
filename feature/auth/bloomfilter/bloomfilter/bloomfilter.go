@@ -11,11 +11,12 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/9edang/inkgate/feature/auth/bloomfilter"
 	"github.com/tmthrgd/go-bitset"
+
+	"github.com/9edang/inkgate/feature/auth/bloomfilter"
 )
 
-// Bloomfilter basic type
+// Bloomfilter basic type.
 type Bloomfilter struct {
 	bs  bitset.Bitset
 	m   uint
@@ -24,10 +25,11 @@ type Bloomfilter struct {
 	cfg bloomfilter.Config
 }
 
-// New creates a new bloomfilter from a given config
+// New creates a new bloomfilter from a given config.
 func New(cfg bloomfilter.Config) *Bloomfilter {
 	m := bloomfilter.M(cfg.N, cfg.P)
 	k := bloomfilter.K(m, cfg.N)
+
 	return &Bloomfilter{
 		m:   m,
 		k:   k,
@@ -37,7 +39,7 @@ func New(cfg bloomfilter.Config) *Bloomfilter {
 	}
 }
 
-// Add an element to bloomfilter
+// Add an element to bloomfilter.
 func (b Bloomfilter) Add(elem []byte) {
 	for _, h := range b.h {
 		for _, x := range h(elem) {
@@ -46,7 +48,7 @@ func (b Bloomfilter) Add(elem []byte) {
 	}
 }
 
-// Check if an element is in the bloomfilter
+// Check if an element is in the bloomfilter.
 func (b Bloomfilter) Check(elem []byte) bool {
 	for _, h := range b.h {
 		for _, x := range h(elem) {
@@ -55,10 +57,11 @@ func (b Bloomfilter) Check(elem []byte) bool {
 			}
 		}
 	}
+
 	return true
 }
 
-// Union of two bloomfilters
+// Union of two bloomfilters.
 func (b *Bloomfilter) Union(that any) (float64, error) {
 	other, ok := that.(*Bloomfilter)
 	if !ok {
@@ -82,7 +85,7 @@ func (b *Bloomfilter) Union(that any) (float64, error) {
 	return b.Capacity(), nil
 }
 
-// SerializibleBloomfilter used when (de)serializing a bloomfilter
+// SerializibleBloomfilter used when (de)serializing a bloomfilter.
 type SerializibleBloomfilter struct {
 	BS       bitset.Bitset
 	M        uint
@@ -91,7 +94,7 @@ type SerializibleBloomfilter struct {
 	Cfg      bloomfilter.Config
 }
 
-// MarshalBinary serializes a bloomfilter
+// MarshalBinary serializes a bloomfilter.
 func (b *Bloomfilter) MarshalBinary() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	err := gob.NewEncoder(buf).Encode(&SerializibleBloomfilter{
@@ -101,14 +104,14 @@ func (b *Bloomfilter) MarshalBinary() ([]byte, error) {
 		HashName: b.cfg.HashName,
 		Cfg:      b.cfg,
 	})
-	//zip buf.Bytes
+	// zip buf.Bytes
 
 	return buf.Bytes(), err
 }
 
-// UnmarshalBinary deserializes a bloomfilter
+// UnmarshalBinary deserializes a bloomfilter.
 func (b *Bloomfilter) UnmarshalBinary(data []byte) error {
-	//unzip data
+	// unzip data
 	buf := bytes.NewBuffer(data)
 	target := SerializibleBloomfilter{}
 
@@ -126,11 +129,7 @@ func (b *Bloomfilter) UnmarshalBinary(data []byte) error {
 	return nil
 }
 
-// Capacity returns the fill degree of the bloomfilter
+// Capacity returns the fill degree of the bloomfilter.
 func (b *Bloomfilter) Capacity() float64 {
 	return float64(b.bs.Count()) / float64(b.m)
-}
-
-func (b *Bloomfilter) hashFactoryNameK(hashName string) []bloomfilter.Hash {
-	return bloomfilter.HashFactoryNames[hashName](b.k)
 }

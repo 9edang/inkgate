@@ -21,7 +21,7 @@ inkgate/
 │   ├── transform/      lua, martian, xml, rss
 │   ├── connector/      amqp (+ async agents), pubsub, lambda
 │   └── telemetry/      metrics, influx, opencensus, otel, gologging, gelf, logstash, usage, audit
-│                       a feature that needs HTTP context has a mux adapter in feature/<domain>/<name>/mux
+│                       a feature that needs HTTP context keeps its router code next to its logic
 │
 ├── engine/             ③ PLUMBING — generic machinery
 │   ├── config/         model, parser (+ flexibleconfig, koanf)
@@ -38,14 +38,13 @@ inkgate/
 ```
 
 **Rule of thumb:** `flow` decides *when* something runs, `feature` decides *what* it does, `engine` is the
-plumbing. gorilla/mux code lives only in `engine/router/mux`, the `feature/**/mux` adapters, `flow/entry`,
-`flow/request` and `cmd/` (`make check-layout`).
+plumbing.
 
 ```mermaid
 flowchart LR
     C["cmd/inkgate"] --> FB["flow/boot"]
     FB --> FEP["flow/endpoint → flow/backend"]
-    FB -. "Router.Serve" .-> FER["flow/entry → flow/request<br/>engine/router/mux · feature/**/mux"]
+    FB -. "Router.Serve" .-> FER["flow/entry → flow/request<br/>engine/router"]
     FER --> FEP
     FEP --> FE[feature] --> EN[engine]
 ```
@@ -95,9 +94,9 @@ Details: [startup.md](startup.md), [../flow/1-boot.md](../flow/1-boot.md).
 
 | I want to... | Do this |
 |---|---|
-| add a step to requests | an adapter in `feature/<domain>/<name>/mux` + one entry in `flow/request/request.go` |
+| add a step to requests | router code in `feature/<domain>/<name>` + one entry in `flow/request/request.go` |
 | add a step to endpoints or backend calls | one entry in `flow/endpoint` or `flow/backend` |
-| add a new capability | package under `feature/<domain>/`; add a `/mux` adapter only if it needs HTTP context |
+| add a new capability | package under `feature/<domain>/`; add router code only if it needs HTTP context |
 | add a new kind of backend (like Lambda) | `feature/connector/<name>`, then a step in `flow/backend` before Martian |
 | add startup work | a function in `flow/boot/telemetry.go` (or a new file there) called from `Run` |
 | change config parsing | `engine/config` |

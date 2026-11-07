@@ -75,7 +75,7 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Pre: Single source with bad code",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/bad-code.lua",
+					"../../../../tests/fixtures/lua/bad-code.lua",
 				},
 				"pre": "custom_error(\"wont reach here\")",
 			},
@@ -85,7 +85,7 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Pre: Single source with bad method implementation",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/bad-func.lua",
+					"../../../../tests/fixtures/lua/bad-func.lua",
 				},
 				"pre": "badfunc(1)",
 			},
@@ -95,9 +95,9 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Pre: Multiple sources",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/factorial.lua",
-					"../lua/bad-code.lua",
-					"../lua/add.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
+					"../../../../tests/fixtures/lua/bad-code.lua",
+					"../../../../tests/fixtures/lua/add.lua",
 				},
 				"pre": "custom_error(\"wont reach here\")",
 			},
@@ -114,10 +114,10 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Pre: Multiple sources, bad function call",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/env.lua",
-					"../lua/factorial.lua",
-					"../lua/bad-func.lua",
-					"../lua/add.lua",
+					"../../../../tests/fixtures/lua/env.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
+					"../../../../tests/fixtures/lua/bad-func.lua",
+					"../../../../tests/fixtures/lua/add.lua",
 				},
 				"pre": "badfunc(1)",
 			},
@@ -165,7 +165,7 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Post: Single source with bad code",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/bad-code.lua",
+					"../../../../tests/fixtures/lua/bad-code.lua",
 				},
 				"post": "custom_error(\"wont reach here\")",
 			},
@@ -175,7 +175,7 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Post: Single source with bad method implementation",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/bad-func.lua",
+					"../../../../tests/fixtures/lua/bad-func.lua",
 				},
 				"post": "badfunc(1)",
 			},
@@ -185,9 +185,9 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Post: Multiple sources",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/factorial.lua",
-					"../lua/bad-code.lua",
-					"../lua/add.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
+					"../../../../tests/fixtures/lua/bad-code.lua",
+					"../../../../tests/fixtures/lua/add.lua",
 				},
 				"post": "custom_error(\"wont reach here\")",
 			},
@@ -197,10 +197,10 @@ func TestProxyFactory_luaError(t *testing.T) {
 			Name: "Post: Multiple sources, bad function call",
 			Cfg: map[string]any{
 				"sources": []any{
-					"../lua/env.lua",
-					"../lua/factorial.lua",
-					"../lua/bad-func.lua",
-					"../lua/add.lua",
+					"../../../../tests/fixtures/lua/env.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
+					"../../../../tests/fixtures/lua/bad-func.lua",
+					"../../../../tests/fixtures/lua/add.lua",
 				},
 				"post": "badfunc(1)",
 			},
@@ -538,7 +538,7 @@ func TestProxyFactory(t *testing.T) { // skipcq: GO-R1005
 		ExtraConfig: config.ExtraConfig{
 			ProxyNamespace: map[string]any{
 				"sources": []any{
-					"../lua/factorial.lua",
+					"../../../../tests/fixtures/lua/factorial.lua",
 				},
 				"allow_open_libs": true,
 

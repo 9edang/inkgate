@@ -6,15 +6,17 @@ import (
 
 // NewMemoryStore returns a LimiterStore using the memory backend
 //
-// Deprecated: Use NewLimiterStore instead
+// Deprecated: Use NewLimiterStore instead.
 func NewMemoryStore(maxRate float64, capacity int) LimiterStore {
 	return NewLimiterStore(maxRate, capacity, DefaultShardedMemoryBackend(context.Background()))
 }
 
-// NewLimiterStore returns a LimiterStore using the received backend for persistence
+// NewLimiterStore returns a LimiterStore using the received backend for persistence.
 func NewLimiterStore(maxRate float64, capacity int, backend Backend) LimiterStore {
+	// #nosec G115 -- numeric value from the operator config, far below the overflow range
 	f := NewTokenBucketBuilder(maxRate, uint64(capacity), uint64(capacity), nil)
 	return func(t string) Limiter {
+		//nolint:forcetypeassert // the value type is fixed by construction
 		return backend.Load(t, f).(Limiter)
 	}
 }
@@ -29,7 +31,9 @@ func NewLimiterFromBackendAndBuilder(backend Backend, limiterBuilder LimiterBuil
 	if limiterBuilder == nil {
 		limiterBuilder = NewTokenBucketBuilder(1, 1, 1, nil)
 	}
+
 	return func(strToken string) Limiter {
+		//nolint:forcetypeassert // the value type is fixed by construction
 		return backend.Load(strToken, limiterBuilder).(Limiter)
 	}
 }

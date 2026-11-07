@@ -6,9 +6,9 @@ Package dnssrv defines some implementations for a dns based service discovery
 package dnssrv
 
 import (
-	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -16,17 +16,17 @@ import (
 	"github.com/9edang/inkgate/engine/sd"
 )
 
-// Namespace is the key for the dns sd module
+// Namespace is the key for the dns sd module.
 const Namespace = "dns"
 const DefaultTTL = 30 * time.Second
 const MinTTL = time.Second
 
-// Register registers the dns sd subscriber factory under the name defined by Namespace
+// Register registers the dns sd subscriber factory under the name defined by Namespace.
 func Register() error {
 	return sd.GetRegister().Register(Namespace, SubscriberFactory)
 }
 
-// TTL is the duration of the cached data
+// TTL is the duration of the cached data.
 var TTL = DefaultTTL
 
 func SetTTL(d time.Duration) {
@@ -38,20 +38,20 @@ func SetTTL(d time.Duration) {
 	TTL = d
 }
 
-// DefaultLookup is the function used for the DNS resolution
+// DefaultLookup is the function used for the DNS resolution.
 var DefaultLookup = net.LookupSRV
 
-// SubscriberFactory builds a DNS_SRV Subscriber with the received config
+// SubscriberFactory builds a DNS_SRV Subscriber with the received config.
 func SubscriberFactory(cfg *config.Backend) sd.Subscriber {
 	return NewDetailedWithScheme(cfg.Host[0], DefaultLookup, TTL, cfg.SDScheme)
 }
 
-// New creates a DNS subscriber with the default values
+// New creates a DNS subscriber with the default values.
 func New(name string) sd.Subscriber {
 	return NewDetailed(name, DefaultLookup, TTL)
 }
 
-// NewDetailed creates a DNS subscriber with the received values
+// NewDetailed creates a DNS subscriber with the received values.
 func NewDetailed(name string, lookup lookup, ttl time.Duration) sd.Subscriber {
 	return NewDetailedWithScheme(name, lookup, ttl, "http")
 }
@@ -94,7 +94,7 @@ type subscriber struct {
 	scheme string
 }
 
-// Hosts returns a copy of the cached set of hosts. It is safe to call it concurrently
+// Hosts returns a copy of the cached set of hosts. It is safe to call it concurrently.
 func (s subscriber) Hosts() ([]string, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
@@ -106,6 +106,7 @@ func (s subscriber) Hosts() ([]string, error) {
 
 	res := make([]string, len(hs))
 	copy(res, hs)
+
 	return res, nil
 }
 
@@ -139,10 +140,13 @@ func (s subscriber) resolve() ([]string, error) {
 					if srvs[i].Target == srvs[j].Target {
 						return srvs[i].Port < srvs[j].Port
 					}
+
 					return srvs[i].Target < srvs[j].Target
 				}
+
 				return srvs[i].Weight > srvs[j].Weight
 			}
+
 			return srvs[i].Priority < srvs[j].Priority
 		},
 	)
@@ -155,15 +159,16 @@ func (s subscriber) resolve() ([]string, error) {
 			break
 		}
 		ws = append(ws, a.Weight)
-		host = append(host, s.scheme+"://"+net.JoinHostPort(a.Target, fmt.Sprint(a.Port)))
+		host = append(host, s.scheme+"://"+net.JoinHostPort(a.Target, strconv.FormatUint(uint64(a.Port), 10)))
 	}
 
 	instances := make([]string, 0, len(ws))
 	for i, times := range compact(ws) {
-		for j := uint16(0); j < times; j++ {
+		for range times {
 			instances = append(instances, host[i])
 		}
 	}
+
 	return instances, nil
 }
 
@@ -198,8 +203,10 @@ func normalize(ws []uint16) []uint16 {
 
 	res := make([]uint16, len(ws))
 	for i, w := range ws {
+		// #nosec G115 -- numeric value from the operator config, far below the overflow range
 		res[i] = uint16(int64(w) * int64(scale) / sum)
 	}
+
 	return res
 }
 
@@ -212,6 +219,7 @@ func gcd(ws []uint16) uint16 {
 		for b > 0 {
 			a, b = b, a%b
 		}
+
 		return a
 	}
 

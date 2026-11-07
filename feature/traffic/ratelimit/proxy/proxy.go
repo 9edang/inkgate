@@ -36,8 +36,9 @@ package proxy
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -46,30 +47,31 @@ import (
 	limiter "github.com/9edang/inkgate/feature/traffic/ratelimit"
 )
 
-// Namespace is the key to use to store and access the custom config data for the proxy
+// Namespace is the key to use to store and access the custom config data for the proxy.
 const Namespace = "qos/ratelimit/proxy"
 
-// Config is the custom config struct containing the params for the limiter
+// Config is the custom config struct containing the params for the limiter.
 type Config struct {
 	MaxRate  float64 `json:"max_rate"`
 	Capacity uint64  `json:"capacity"`
 }
 
-// BackendFactory adds a ratelimiting middleware wrapping the internal factory
+// BackendFactory adds a ratelimiting middleware wrapping the internal factory.
 func BackendFactory(logger logging.Logger, next proxy.BackendFactory) proxy.BackendFactory {
 	return func(cfg *config.Backend) proxy.Proxy {
 		return NewMiddleware(logger, cfg)(next(cfg))
 	}
 }
 
-// NewMiddleware builds a middleware based on the extra config params or fallbacks to the next proxy
+// NewMiddleware builds a middleware based on the extra config params or fallbacks to the next proxy.
 func NewMiddleware(logger logging.Logger, remote *config.Backend) proxy.Middleware {
 	logPrefix := "[BACKEND: " + remote.URLPattern + "][Ratelimit]"
 	cfg, err := ConfigGetter(remote.ExtraConfig)
 	if err != nil {
-		if err != ErrNoExtraCfg {
+		if !errors.Is(err, ErrNoExtraCfg) {
 			logger.Error(logPrefix, err)
 		}
+
 		return proxy.EmptyMiddleware
 	}
 	if cfg.MaxRate <= 0 {
@@ -86,20 +88,23 @@ func NewMiddleware(logger logging.Logger, remote *config.Backend) proxy.Middlewa
 
 	tb := limiter.NewTokenBucket(cfg.MaxRate, cfg.Capacity)
 	logger.Debug(logPrefix, "Enabling the rate limiter")
+
 	return func(next ...proxy.Proxy) proxy.Proxy {
 		if len(next) > 1 {
 			panic(proxy.ErrTooManyProxies)
 		}
+
 		return func(ctx context.Context, request *proxy.Request) (*proxy.Response, error) {
 			if !tb.Allow() {
 				return nil, limiter.ErrLimited
 			}
+
 			return next[0](ctx, request)
 		}
 	}
 }
 
-// ZeroCfg is the zero value for the Config struct
+// ZeroCfg is the zero value for the Config struct.
 var ZeroCfg = Config{}
 
 var (
@@ -132,8 +137,10 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	if v, ok := tmp["capacity"]; ok {
 		switch val := v.(type) {
 		case int64:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.Capacity = uint64(val)
 		case int:
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			cfg.Capacity = uint64(val)
 		case float64:
 			cfg.Capacity = uint64(val)
@@ -148,7 +155,7 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 		}
 		factor = float64(time.Second) / float64(every)
 	}
-	cfg.MaxRate = cfg.MaxRate * factor
+	cfg.MaxRate *= factor
 
 	return cfg, nil
 }

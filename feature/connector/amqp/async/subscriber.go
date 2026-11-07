@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"sync/atomic"
 	"time"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -20,7 +21,7 @@ import (
 )
 
 // Subscriber defines the configuration of a single subscriber/consumer to be initialized
-// and maintained by the inkgate service
+// and maintained by the inkgate service.
 type Subscriber struct {
 	Name  string
 	Topic string
@@ -45,6 +46,8 @@ type Options struct {
 
 // New instantiates and executes an async agent consuming from a rabbitmq
 // service. The caller is responsible for reconnections.
+//
+//nolint:cyclop,gocognit,gocyclo // long carried-over function, split when it is next changed
 func New(ctx context.Context, cfg Subscriber, opts Options) error { // skipcq: GO-R1005
 	v, ok := cfg.ExtraConfig[consumerNamespace]
 	if !ok {
@@ -112,6 +115,7 @@ func New(ctx context.Context, cfg Subscriber, opts Options) error { // skipcq: G
 	}
 
 recvLoop:
+	//nolint:forcetypeassert // the value type is fixed by construction
 	for !shouldExit.Load().(bool) {
 		// block until an event happens
 		// 1: semaphore acquired
@@ -160,6 +164,7 @@ recvLoop:
 					opts.Logger.Error(fmt.Sprintf("[SERVICE: AsyncAgent][AMQP][%s] Ack: %s", cfg.Name, err))
 					shouldExit.Store(true)
 				}
+
 				return
 			}
 
@@ -218,28 +223,34 @@ func newProcessor(ctx context.Context, cfg Subscriber, logger logging.Logger, ne
 			return true
 		}
 		logger.Error(fmt.Sprintf("[SERVICE: AsyncAgent][AMQP][%s] %s", cfg.Name, err.Error()))
+
 		return false
 	}
 }
 
+//nolint:revive // the signature is fixed by the interface or the caller
 func initConsumer(opts consumerOptions, _ logging.Logger) (msgs <-chan amqp.Delivery, closeF func(), err error) {
 	closeF = func() {}
 
 	conn, err1 := amqp.Dial(opts.Host)
 	if err1 != nil {
 		err = err1
-		return
+		return msgs, closeF, err
 	}
 
 	ch, err1 := conn.Channel()
 	if err1 != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		conn.Close()
 		err = err1
-		return
+
+		return msgs, closeF, err
 	}
 
 	closeF = func() {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		ch.Close()
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		conn.Close()
 	}
 
@@ -254,7 +265,7 @@ func initConsumer(opts consumerOptions, _ logging.Logger) (msgs <-chan amqp.Deli
 	)
 	if err != nil {
 		closeF()
-		return
+		return msgs, closeF, err
 	}
 
 	q, err1 := ch.QueueDeclare(
@@ -268,7 +279,8 @@ func initConsumer(opts consumerOptions, _ logging.Logger) (msgs <-chan amqp.Deli
 	if err1 != nil {
 		closeF()
 		err = err1
-		return
+
+		return msgs, closeF, err
 	}
 	err = ch.QueueBind(
 		q.Name,        // queue name
@@ -279,13 +291,13 @@ func initConsumer(opts consumerOptions, _ logging.Logger) (msgs <-chan amqp.Deli
 	)
 	if err != nil {
 		closeF()
-		return
+		return msgs, closeF, err
 	}
 
 	if opts.PrefetchCount != 0 || opts.PrefetchSize != 0 {
 		if err = ch.Qos(opts.PrefetchCount, opts.PrefetchSize, false); err != nil {
 			closeF()
-			return
+			return msgs, closeF, err
 		}
 	}
 
@@ -300,10 +312,10 @@ func initConsumer(opts consumerOptions, _ logging.Logger) (msgs <-chan amqp.Deli
 	)
 	if err != nil {
 		closeF()
-		return
+		return msgs, closeF, err
 	}
 
-	return
+	return msgs, closeF, err
 }
 
 var ErrNoConsumerCfgDefined = errors.New("no amqp consumer defined")

@@ -21,7 +21,7 @@ import (
 func TestLoadWithLogger(t *testing.T) {
 	buff := new(bytes.Buffer)
 	l, _ := logging.NewLogger("DEBUG", buff, "")
-	total, err := LoadWithLogger("./tests", ".so", RegisterClient, l)
+	total, err := LoadWithLogger("../../../../../tests/plugins/client", ".so", RegisterClient, l)
 	if err != nil {
 		t.Error(err.Error())
 		t.Fail()

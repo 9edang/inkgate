@@ -3,12 +3,15 @@ package amqp
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"math"
 	"strconv"
 	"time"
+
+	"github.com/9edang/inkgate/internal/constant"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -29,6 +32,7 @@ func getProducerConfig(remote *config.Backend) (*producerCfg, error) {
 	b, _ := json.Marshal(v)
 	cfg := &producerCfg{}
 	err := json.Unmarshal(b, cfg)
+
 	return cfg, err
 }
 
@@ -44,6 +48,7 @@ type producerCfg struct {
 	StaticRoutingKey bool   `json:"static_routing_key"`
 }
 
+//nolint:cyclop,gocognit,gocyclo // long carried-over function, split when it is next changed
 func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend) (proxy.Proxy, error) {
 	if len(remote.Host) < 1 {
 		return proxy.NoopProxy, errNoBackendHostDefined
@@ -53,9 +58,10 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 
 	cfg, err := getProducerConfig(remote)
 	if err != nil {
-		if err != errNoProducerCfgDefined {
+		if !errors.Is(err, errNoProducerCfgDefined) {
 			f.logger.Debug(logPrefix, fmt.Sprintf("%s: %s", dns, err.Error()))
 		}
+
 		return proxy.NoopProxy, err
 	}
 	cfg.LogPrefix = logPrefix
@@ -67,12 +73,14 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 	connHandler := newConnectionHandler(ctx, f.logger, cfg.LogPrefix)
 	if err := connHandler.newProducer(dns, cfg, DefaultStartupRetries, DefaultBackoffStrategy); err != nil {
 		f.logger.Error(logPrefix, err.Error())
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		connHandler.conn.Close()
 	}
 
 	f.logger.Debug(logPrefix, "Producer attached")
 	go func() {
 		<-ctx.Done()
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		connHandler.conn.Close()
 	}()
 
@@ -100,12 +108,13 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 			MessageId:   r.Params[cfg.MessageIdKey],
 		}
 
-		if len(r.Headers["Content-Type"]) > 0 {
-			pub.ContentType = r.Headers["Content-Type"][0]
+		if len(r.Headers[constant.HeaderContentType]) > 0 {
+			pub.ContentType = r.Headers[constant.HeaderContentType][0]
 		}
 
 		if v, ok := r.Params[cfg.PriorityKey]; ok {
 			if i, err := strconv.Atoi(v); err == nil {
+				// #nosec G115 -- numeric value from the operator config, far below the overflow range
 				pub.Priority = uint8(i)
 			}
 		}
@@ -123,7 +132,8 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 					}
 				}()
 			}
-			return nil, fmt.Errorf("connection not available, trying to reconnect")
+
+			return nil, errors.New("connection not available, trying to reconnect")
 		}
 
 		if err := connHandler.conn.ch.Publish(
@@ -133,7 +143,7 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 			cfg.Immediate,
 			pub,
 		); err != nil {
-			if err != amqp.ErrClosed || !connHandler.reconnecting.CompareAndSwap(false, true) {
+			if !errors.Is(err, amqp.ErrClosed) || !connHandler.reconnecting.CompareAndSwap(false, true) {
 				return nil, err
 			}
 			go func() {
@@ -141,6 +151,7 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 					f.logger.Debug(logPrefix, err.Error())
 				}
 			}()
+
 			return nil, err
 		}
 
@@ -148,7 +159,7 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 	}, nil
 }
 
-// newProducer needs to execute connect first because it blocks the execution
+// newProducer needs to execute connect first because it blocks the execution.
 func (h *connectionHandler) newProducer(dns string, cfg *producerCfg, maxRetries int, bckoff string) error {
 	if err := h.connect(dns, maxRetries, bckoff); err != nil {
 		return fmt.Errorf("getting the channel for %s/%s: %s", dns, cfg.Name, err.Error())
@@ -163,6 +174,7 @@ func (h *connectionHandler) newProducer(dns string, cfg *producerCfg, maxRetries
 		cfg.NoWait,
 		nil,
 	); err != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		h.conn.Close()
 		return fmt.Errorf("declaring the exchange for %s/%s: %s", dns, cfg.Name, err.Error())
 	}

@@ -29,8 +29,8 @@ flowchart TD
 | File | Responsibility |
 |---|---|
 | `server.go` | `NewRunServer`: net/http server → flow context → OpenTelemetry → CORS → http-server plugins; `withFlowContext` creates the flow ([../overview/flow-context.md](../overview/flow-context.md)) and logs a `[FLOW]` summary |
-| `engine.go` | `NewMiddlewares`: httpsecure, Lua and bot detector as `mux.HandlerMiddleware`s, in request order |
-| `serve.go` | `Router` (the `boot.Router` value) and `Serve`: handler factory, `mux.NewEngine(cfg)` (gorilla router with 404/405, redirects, options), health handler, `NewRunServer` |
+| `engine.go` | `NewMiddlewares`: httpsecure, Lua and bot detector as `router.HandlerMiddleware`s, in request order |
+| `serve.go` | `Router` (the `boot.Router` value) and `Serve`: handler factory, `router.NewEngine(cfg)` (gorilla router with 404/405, redirects, options), health handler, `NewRunServer` |
 
 ## Details
 
@@ -41,4 +41,4 @@ flowchart TD
   `/__echo/` (`echo_endpoint: true`).
 - Custom 404/405 bodies come from `extra_config["inkgate/engine/router"].error_body` (alias `router`). Without them
   the body is `404 page not found` / `405 method not allowed`, with `X-Inkgate-Completed: false`.
-- Router options, client IP and other gorilla/mux details: [../engines/mux.md](../engines/mux.md).
+- Router options, client IP and other gorilla/mux details: [../engine/gateway.md](../engine/gateway.md).

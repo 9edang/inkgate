@@ -108,7 +108,7 @@ type testCase struct {
 }
 
 func testAudit(t *testing.T, tc testCase) {
-	cfg, err := config.NewParser().Parse("./tests/example1.json")
+	cfg, err := config.NewParser().Parse("../../../tests/fixtures/audit/example1.json")
 	if err != nil {
 		t.Error(err.Error())
 	}

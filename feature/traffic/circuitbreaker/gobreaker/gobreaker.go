@@ -24,18 +24,20 @@ package gobreaker
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"time"
+
+	"github.com/9edang/inkgate/context"
+
+	"github.com/sony/gobreaker/v2"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
-	"github.com/sony/gobreaker/v2"
 )
 
-// Namespace is the key to use to store and access the custom config data
+// Namespace is the key to use to store and access the custom config data.
 const Namespace = "inkgate/feature/traffic/circuitbreaker/gobreaker"
 
-// Config is the custom config struct containing the params for the sony/gobreaker package
+// Config is the custom config struct containing the params for the sony/gobreaker package.
 type Config struct {
 	Name            string
 	Interval        int
@@ -44,7 +46,7 @@ type Config struct {
 	LogStatusChange bool
 }
 
-// ZeroCfg is the zero value for the Config struct
+// ZeroCfg is the zero value for the Config struct.
 var ZeroCfg = Config{}
 
 // ConfigGetter implements the config.ConfigGetter interface. It parses the extra config for the
@@ -102,13 +104,14 @@ func (c *CircuitBreaker) Execute(req func() (any, error)) (any, error) {
 	return c.cb.Execute(req)
 }
 
-// NewCircuitBreaker builds a gobreaker circuit breaker with the injected config
+// NewCircuitBreaker builds a gobreaker circuit breaker with the injected config.
 func NewCircuitBreaker(cfg Config, logger logging.Logger) CircuitBreaker {
 	settings := gobreaker.Settings{
 		Name:     cfg.Name,
 		Interval: time.Duration(cfg.Interval) * time.Second,
 		Timeout:  time.Duration(cfg.Timeout) * time.Second,
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			// #nosec G115 -- numeric value from the operator config, far below the overflow range
 			return counts.ConsecutiveFailures > uint32(cfg.MaxErrors)
 		},
 		IsExcluded: func(err error) bool {

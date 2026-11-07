@@ -1,8 +1,9 @@
 package boot
 
 import (
-	"github.com/9edang/inkgate/context"
 	"io"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -16,7 +17,7 @@ import (
 // endpoint and backend stages) is done by boot; flow/entry only builds the
 // HTTP side: stage 2 (entry) and stage 3 (request).
 type Router struct {
-	// Name is the router name ("mux"); the binary is "inkgate-<Name>".
+	// Name is the router name, used in the boot logs.
 	Name string
 	// NewMetrics creates the metrics collector and serves its stats endpoint
 	// with this router.

@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/9edang/inkgate/engine/config"
 	"github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
+
+	"github.com/9edang/inkgate/engine/config"
 )
 
 var delimiter = "."
@@ -21,7 +22,7 @@ const (
 	prefix = "INKGATE_"
 )
 
-// New creates a new parser using the koanf library
+// New creates a new parser using the koanf library.
 func New() Parser {
 	return NewWithOptions(".")
 }
@@ -30,13 +31,13 @@ func NewWithOptions(delimiter string) Parser {
 	return Parser{koanf.New(delimiter)}
 }
 
-// Parser is a config parser using the viper library
+// Parser is a config parser using the viper library.
 type Parser struct {
 	koanf *koanf.Koanf
 }
 
 // Parse reads and parses the configFile, and if there is no
-// error calls initializes the config
+// error calls initializes the config.
 func (p Parser) Parse(configFile string) (config.ServiceConfig, error) {
 	cfg, err := p.ParseWithoutInit(configFile)
 	if err != nil {
@@ -45,11 +46,12 @@ func (p Parser) Parse(configFile string) (config.ServiceConfig, error) {
 	if err := cfg.Init(); err != nil {
 		return cfg, config.CheckErr(err, configFile)
 	}
+
 	return cfg, nil
 }
 
 // ParseWithoutInit reads and parses the configFile. The values of the file can be
-// override with envvars, using the INKGATE_ prefix
+// override with envvars, using the INKGATE_ prefix.
 func (p Parser) ParseWithoutInit(configFile string) (config.ServiceConfig, error) {
 	var cfg config.ServiceConfig
 
@@ -70,7 +72,8 @@ func (p Parser) ParseWithoutInit(configFile string) (config.ServiceConfig, error
 	cb := func(s string) string {
 		return strings.ToLower(strings.TrimPrefix(s, prefix))
 	}
-	p.koanf.Load(env.Provider(prefix, delimiter, cb), nil)
+	// #nosec G104 -- error is not actionable here
+	_ = p.koanf.Load(env.Provider(prefix, delimiter, cb), nil)
 
 	uCfg := koanf.UnmarshalConf{
 		Tag: "mapstructure",
@@ -84,7 +87,7 @@ func (p Parser) ParseWithoutInit(configFile string) (config.ServiceConfig, error
 	return cfg, nil
 }
 
-// cleanupServiceConfig make sure ExtraConfig type is map[string]any
+// cleanupServiceConfig make sure ExtraConfig type is map[string]any.
 func cleanupServiceConfig(cfg *config.ServiceConfig) {
 	cfg.ExtraConfig = cleanConfigMap(cfg.ExtraConfig)
 	for _, endpoint := range cfg.Endpoints {
@@ -100,6 +103,7 @@ func cleanConfigMap(cfg map[string]any) map[string]any {
 	for k, v := range cfg {
 		cfg[k] = cleanupMapValue(v)
 	}
+
 	return cfg
 }
 
@@ -109,17 +113,20 @@ func cleanupMapValue(input any) any {
 		for key, value := range data {
 			data[key] = cleanupMapValue(value)
 		}
+
 		return data
 	case map[string]any:
 		for key, value := range data {
 			data[key] = cleanupMapValue(value)
 		}
+
 		return data
 	case map[any]any:
 		output := make(map[string]any)
 		for key, value := range data {
 			output[fmt.Sprintf("%v", key)] = cleanupMapValue(value)
 		}
+
 		return output
 	default:
 		return data

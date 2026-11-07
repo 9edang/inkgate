@@ -5,15 +5,17 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/9edang/inkgate/engine/cli/plugin"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
+
+	"github.com/9edang/inkgate/engine/cli/plugin"
 )
 
 // indirectRequires returns the indirect dependencies of the go.sum file.
 func indirectRequires(goSum string) (map[string]struct{}, error) {
 	dir := filepath.Dir(goSum)
 	filename := filepath.Join(dir, "go.mod")
+	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("reading go.mod: %w", err)
@@ -78,6 +80,7 @@ func pluginFuncErr(cmd *cobra.Command, _ []string) error {
 				} else {
 					cmd.Printf("go get %s@%s\n", diff.Name, diff.Expected)
 				}
+
 				continue
 			}
 

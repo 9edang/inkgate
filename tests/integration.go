@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"log"
 	"net"
@@ -21,6 +20,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
@@ -62,7 +63,7 @@ var (
 	)
 )
 
-// TestCase defines a single case to be tested
+// TestCase defines a single case to be tested.
 type TestCase struct {
 	Name string     `json:"name"`
 	Err  string     `json:"error"`
@@ -71,7 +72,7 @@ type TestCase struct {
 	Next []TestCase `json:"next"`
 }
 
-// Input is the definition of the request to send in a given TestCase
+// Input is the definition of the request to send in a given TestCase.
 type Input struct {
 	URL    string            `json:"url"`
 	Method string            `json:"method"`
@@ -79,7 +80,7 @@ type Input struct {
 	Body   any               `json:"body"`
 }
 
-// Output contains the data required to verify the response received in a given TestCase
+// Output contains the data required to verify the response received in a given TestCase.
 type Output struct {
 	StatusCode int                 `json:"status_code"`
 	Body       any                 `json:"body"`
@@ -87,12 +88,12 @@ type Output struct {
 	Schema     map[string]any      `json:"schema"`
 }
 
-// CmdBuilder defines an interface for building the cmd to be managed by the Runner
+// CmdBuilder defines an interface for building the cmd to be managed by the Runner.
 type CmdBuilder interface {
 	New(*Config) *exec.Cmd
 }
 
-// BackendBuilder defines an interface for building a server as a backend for the tests
+// BackendBuilder defines an interface for building a server as a backend for the tests.
 type BackendBuilder interface {
 	New(*Config) http.Server
 }
@@ -129,6 +130,7 @@ func (c *Config) getBinPath() string {
 	if c.BinPath != "" {
 		return c.BinPath
 	}
+
 	return *defaultBinPath
 }
 
@@ -136,6 +138,7 @@ func (c *Config) getCfgPath() string {
 	if c.CfgPath != "" {
 		return c.CfgPath
 	}
+
 	return *defaultCfgPath
 }
 
@@ -143,6 +146,7 @@ func (c *Config) getSpecsPath() string {
 	if c.SpecsPath != "" {
 		return c.SpecsPath
 	}
+
 	return *defaultSpecsPath
 }
 
@@ -150,6 +154,7 @@ func (c *Config) getBackendPort() int {
 	if c.BackendPort != 0 {
 		return c.BackendPort
 	}
+
 	return *defaultBackendPort
 }
 
@@ -157,6 +162,7 @@ func (c *Config) getDelay() time.Duration {
 	if c.Delay != 0 {
 		return c.Delay
 	}
+
 	return *defaultDelay
 }
 
@@ -164,6 +170,7 @@ func (c *Config) getReadyURL() string {
 	if c.ReadyURL != "" {
 		return c.ReadyURL
 	}
+
 	return *defaultReadyURL
 }
 
@@ -171,6 +178,7 @@ func (c *Config) getReadyURLWait() time.Duration {
 	if c.ReadyURLWait != 0 {
 		return c.ReadyURLWait
 	}
+
 	return *defaultReadyURLWait
 }
 
@@ -178,6 +186,7 @@ func (c *Config) getStartupWait() time.Duration {
 	if c.StartupWait != 0 {
 		return c.StartupWait
 	}
+
 	return *defaultStartupWait
 }
 
@@ -185,6 +194,7 @@ func (c *Config) getEnvironPatterns() string {
 	if c.EnvironPatterns != "" {
 		return c.EnvironPatterns
 	}
+
 	return *defaultEnvironPatterns
 }
 
@@ -192,6 +202,7 @@ func (c *Config) getHttpClient() *http.Client {
 	if c.HttpClient != nil {
 		return c.HttpClient
 	}
+
 	return defaultHttpClient()
 }
 
@@ -203,13 +214,14 @@ func defaultHttpClient() *http.Client {
 			},
 		}
 	}
+
 	return http.DefaultClient
 }
 
 var defaultConfig Config
 
 // NewIntegration sets up a runner for the integration test and returns it with the parsed specs from the specs folder
-// and an error signaling if something went wrong. It uses the default values for any nil argument
+// and an error signaling if something went wrong. It uses the default values for any nil argument.
 func NewIntegration(cfg *Config, cb CmdBuilder, bb BackendBuilder) (*Runner, []TestCase, error) {
 	if cfg == nil {
 		cfg = &defaultConfig
@@ -226,6 +238,7 @@ func NewIntegration(cfg *Config, cb CmdBuilder, bb BackendBuilder) (*Runner, []T
 	}
 	closeFuncs := []func(){
 		func() {
+			// #nosec G104 -- test harness
 			cmd.Process.Kill()
 		},
 	}
@@ -235,6 +248,7 @@ func NewIntegration(cfg *Config, cb CmdBuilder, bb BackendBuilder) (*Runner, []T
 	var err error
 	tcs, err = testCases(*cfg)
 	if err != nil {
+		// #nosec G104 -- test harness
 		cmd.Process.Kill()
 		return nil, tcs, err
 	}
@@ -252,6 +266,7 @@ func NewIntegration(cfg *Config, cb CmdBuilder, bb BackendBuilder) (*Runner, []T
 		backend = &httpServer
 	}
 
+	// #nosec G104 -- test harness
 	closeFuncs = append(closeFuncs, func() { backend.Close() })
 
 	go func() {
@@ -284,6 +299,7 @@ func waitForStartup(readyURL string, readyURLWait, startupWait time.Duration) er
 		startupWait = 1500 * time.Millisecond
 	}
 	<-time.After(startupWait)
+
 	return nil
 }
 
@@ -292,14 +308,16 @@ func waitForReady(readyURL string, readyURLWait time.Duration) error {
 		readyURLWait = time.Second
 	}
 	deadline := time.Now().Add(readyURLWait)
+	// #nosec G107 -- test harness
 	resp, err := http.Get(readyURL)
 
-	for (resp == nil || resp.StatusCode != 200) && time.Now().Before(deadline) {
+	for (resp == nil || resp.StatusCode != http.StatusOK) && time.Now().Before(deadline) {
 		<-time.After(time.Second)
+		// #nosec G107 -- test harness
 		resp, err = http.Get(readyURL)
 	}
 
-	if resp != nil && resp.StatusCode == 200 {
+	if resp != nil && resp.StatusCode == http.StatusOK {
 		fmt.Printf("system under test %s is ready\n", readyURL)
 		return nil
 	}
@@ -317,7 +335,7 @@ func waitForReady(readyURL string, readyURLWait time.Duration) error {
 }
 
 // Runner handles the integration test execution, by dealing with the request generation, response verification
-// and the final shutdown
+// and the final shutdown.
 type Runner struct {
 	closeFuncs []func()
 	once       *sync.Once
@@ -325,7 +343,7 @@ type Runner struct {
 }
 
 // Close shuts down the mocked backend server and the process of the instance
-// under test
+// under test.
 func (i *Runner) Close() {
 	i.once.Do(func() {
 		for _, closeF := range i.closeFuncs {
@@ -334,7 +352,7 @@ func (i *Runner) Close() {
 	})
 }
 
-// Check runs a test case, returning an error if something goes wrong
+// Check runs a test case, returning an error if something goes wrong.
 func (i *Runner) Check(tc TestCase) error {
 	req, err := newRequest(tc.In)
 	if err != nil {
@@ -430,6 +448,7 @@ func assertResponse(actual *http.Response, expected Output) error { // skipcq GO
 		}
 
 		c := jsonschema.NewCompiler()
+		// #nosec G104 -- test harness
 		c.AddResource("./schema.json", doc)
 		schema, err := c.Compile("./schema.json")
 		if err != nil {
@@ -447,7 +466,7 @@ func assertResponse(actual *http.Response, expected Output) error { // skipcq GO
 		err = schema.Validate(b)
 		if err != nil {
 			return responseError{
-				errMessage: append(errMsgs, fmt.Sprintf("problem validating the body: %s", sanitizeValidationError(err))),
+				errMessage: append(errMsgs, "problem validating the body: "+sanitizeValidationError(err)),
 			}
 		}
 	} else if expected.Body != nil {
@@ -471,6 +490,7 @@ func sanitizeValidationError(e error) string {
 			return ss[1]
 		}
 	}
+
 	return s
 }
 
@@ -528,6 +548,7 @@ func newRequest(in Input) (*http.Request, error) {
 	for k, v := range in.Header {
 		req.Header.Add(k, v)
 	}
+
 	return req, nil
 }
 
@@ -542,12 +563,14 @@ func readSpecs(dirPath string) (map[string][]byte, error) {
 		if !strings.HasSuffix(file.Name(), ".json") {
 			continue
 		}
+		// #nosec G304 -- test harness
 		content, err := os.ReadFile(path.Join(dirPath, file.Name()))
 		if err != nil {
 			return data, err
 		}
 		data[file.Name()[:len(file.Name())-5]] = content
 	}
+
 	return data, nil
 }
 
@@ -556,8 +579,10 @@ var defaultCmdBuilder inkgateCmdBuilder
 type inkgateCmdBuilder struct{}
 
 func (k inkgateCmdBuilder) New(cfg *Config) *exec.Cmd {
+	// #nosec G204 -- test harness
 	cmd := exec.Command(cfg.getBinPath(), "run", "-d", "-c", cfg.getCfgPath())
 	cmd.Env = k.getEnviron(cfg)
+
 	return cmd
 }
 
@@ -599,9 +624,10 @@ func (mockBackendBuilder) New(cfg *Config) http.Server {
 	mux.HandleFunc("/redirect/", checkXForwardedFor(http.HandlerFunc(redirectEndpoint)))
 	mux.HandleFunc("/jwk/symmetric", http.HandlerFunc(symmetricJWKEndpoint))
 
-	return http.Server{ // skipcq: GO-S2112
-		Addr:    fmt.Sprintf(":%v", cfg.getBackendPort()),
-		Handler: mux,
+	return http.Server{
+		Addr:              fmt.Sprintf(":%v", cfg.getBackendPort()),
+		Handler:           mux,
+		ReadHeaderTimeout: 3 * time.Second,
 	}
 }
 
@@ -609,20 +635,21 @@ func collectionEndpoint(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
 	var res []any
 
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		res = append(res, map[string]any{
 			"path": r.URL.Path,
 			"i":    i,
 		})
 	}
 
+	// #nosec G104 -- test harness
 	json.NewEncoder(rw).Encode(res)
 }
 
 func checkXForwardedFor(h http.Handler) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		if ip := net.ParseIP(r.Header.Get("X-Forwarded-For")); ip == nil || !ip.IsLoopback() {
-			http.Error(rw, "invalid X-Forwarded-For", 400)
+			http.Error(rw, "invalid X-Forwarded-For", http.StatusBadRequest)
 			return
 		}
 		h.ServeHTTP(rw, r)
@@ -638,6 +665,7 @@ func delayedEndpoint(d time.Duration, h http.Handler) http.HandlerFunc {
 
 func xmlEndpoint(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Add("Content-Type", "application/xml; charset=utf-8")
+	// #nosec G104 -- test harness
 	rw.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
 <user type="admin">
   <name>Elliot</name>
@@ -663,10 +691,12 @@ func echoEndpoint(rw http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Query().Get("dump_body") == "1" {
 		b, _ := io.ReadAll(r.Body)
+		// #nosec G104 -- test harness
 		r.Body.Close()
 		resp["body"] = string(b)
 	}
 
+	// #nosec G104 -- test harness
 	json.NewEncoder(rw).Encode(resp)
 }
 
@@ -684,11 +714,13 @@ func redirectEndpoint(rw http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	// #nosec G710 -- test harness
 	http.Redirect(rw, r, u.String(), code)
 }
 
 func symmetricJWKEndpoint(rw http.ResponseWriter, _ *http.Request) {
 	rw.Header().Add("Content-Type", "application/json")
+	// #nosec G104 -- test harness
 	rw.Write([]byte(`{
   "keys": [
     {

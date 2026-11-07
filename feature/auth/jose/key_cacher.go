@@ -3,22 +3,32 @@ package jose
 import (
 	b64 "encoding/base64"
 	"errors"
-	"github.com/9edang/inkgate/internal/json"
 	"sync"
 	"time"
 
+	"github.com/9edang/inkgate/internal/json"
+
+	"github.com/go-jose/go-jose/v3"
+
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
-	"github.com/go-jose/go-jose/v3"
+)
+
+// key identification strategies: which JWK field the cached keys are indexed by.
+const (
+	strategyKid     = "kid"
+	strategyX5t     = "x5t"
+	strategyX5tS256 = "x5t#S256"
+	strategyKidX5t  = "kid_x5t"
 )
 
 var (
 	ErrNoKeyFound                   = errors.New("no Keys have been found")
 	ErrKeyExpired                   = errors.New("key exists but is expired")
 	defaultGlobalCacheMaxAge uint32 = 900
-	defaultStrategy                 = "kid"
+	defaultStrategy                 = strategyKid
 
-	// Configuring with MaxKeyAgeNoCheck will skip key expiry check
+	// Configuring with MaxKeyAgeNoCheck will skip key expiry check.
 	MaxKeyAgeNoCheck    = time.Duration(-1)
 	globalKeyCacher     = map[string]GlobalCacher{}
 	globalKeyCacherOnce = new(sync.Once)
@@ -37,12 +47,13 @@ func SetGlobalCacher(l logging.Logger, cfg config.ExtraConfig) error {
 	duration := time.Duration(scfg.CacheDuration) * time.Second
 	globalKeyCacherOnce.Do(func() {
 		globalKeyCacher = map[string]GlobalCacher{
-			"kid":      {kc: NewMemoryKeyCacher(duration, -1, "kid"), mu: new(sync.RWMutex)},
-			"x5t":      {kc: NewMemoryKeyCacher(duration, -1, "x5t"), mu: new(sync.RWMutex)},
-			"x5t#S256": {kc: NewMemoryKeyCacher(duration, -1, "x5t#S256"), mu: new(sync.RWMutex)},
-			"kid_x5t":  {kc: NewMemoryKeyCacher(duration, -1, "kid_x5t"), mu: new(sync.RWMutex)},
+			strategyKid:     {kc: NewMemoryKeyCacher(duration, -1, strategyKid), mu: new(sync.RWMutex)},
+			strategyX5t:     {kc: NewMemoryKeyCacher(duration, -1, strategyX5t), mu: new(sync.RWMutex)},
+			strategyX5tS256: {kc: NewMemoryKeyCacher(duration, -1, strategyX5tS256), mu: new(sync.RWMutex)},
+			strategyKidX5t:  {kc: NewMemoryKeyCacher(duration, -1, strategyKidX5t), mu: new(sync.RWMutex)},
 		}
 	})
+
 	return nil
 }
 
@@ -67,10 +78,11 @@ func configGetter(l logging.Logger, cfg config.ExtraConfig) (serviceConfig, erro
 		scfg.CacheDuration = defaultGlobalCacheMaxAge
 		l.Info("[SERVICE: JOSE] Empty shared_cache_duration, using default (15m)")
 	}
+
 	return scfg, nil
 }
 
-// KeyIDGetter extracts a key id from a JSONWebKey
+// KeyIDGetter extracts a key id from a JSONWebKey.
 type KeyIDGetter interface {
 	Get(*jose.JSONWebKey) string
 }
@@ -78,42 +90,43 @@ type KeyIDGetter interface {
 // KeyIDGetterFunc function conforming to the KeyIDGetter interface.
 type KeyIDGetterFunc func(*jose.JSONWebKey) string
 
-// Get calls f(r)
+// Get calls f(r).
 func (f KeyIDGetterFunc) Get(key *jose.JSONWebKey) string {
 	return f(key)
 }
 
-// DefaultKeyIDGetter returns the default kid as JSONWebKey key id
+// DefaultKeyIDGetter returns the default kid as JSONWebKey key id.
 func DefaultKeyIDGetter(key *jose.JSONWebKey) string {
 	return key.KeyID
 }
 
-// X5TKeyIDGetter extracts the key id from the jSONWebKey as the x5t
+// X5TKeyIDGetter extracts the key id from the jSONWebKey as the x5t.
 func X5TKeyIDGetter(key *jose.JSONWebKey) string {
 	return b64.RawURLEncoding.EncodeToString(key.CertificateThumbprintSHA1)
 }
 
-// X5TS256KeyIDGetter extracts the key id from the jSONWebKey as the x5t#S256
+// X5TS256KeyIDGetter extracts the key id from the jSONWebKey as the x5t#S256.
 func X5TS256KeyIDGetter(key *jose.JSONWebKey) string {
 	return b64.RawURLEncoding.EncodeToString(key.CertificateThumbprintSHA256)
 }
 
-// CompoundX5TKeyIDGetter extracts the key id from the jSONWebKey as the a compound string of the kid and the x5t
+// CompoundX5TKeyIDGetter extracts the key id from the jSONWebKey as the a compound string of the kid and the x5t.
 func CompoundX5TKeyIDGetter(key *jose.JSONWebKey) string {
 	return key.KeyID + X5TKeyIDGetter(key)
 }
 
 func KeyIDGetterFactory(keyIdentifyStrategy string) KeyIDGetter {
 	supportedKeyIdentifyStrategy := map[string]KeyIDGetterFunc{
-		"kid":      DefaultKeyIDGetter,
-		"x5t":      X5TKeyIDGetter,
-		"x5t#S256": X5TS256KeyIDGetter,
-		"kid_x5t":  CompoundX5TKeyIDGetter,
+		strategyKid:     DefaultKeyIDGetter,
+		strategyX5t:     X5TKeyIDGetter,
+		strategyX5tS256: X5TS256KeyIDGetter,
+		strategyKidX5t:  CompoundX5TKeyIDGetter,
 	}
 
 	if keyGetter, ok := supportedKeyIdentifyStrategy[keyIdentifyStrategy]; ok {
 		return keyGetter
 	}
+
 	return KeyIDGetterFunc(DefaultKeyIDGetter)
 }
 
@@ -143,14 +156,15 @@ type GMemoryKeyCacher struct {
 func (gkc *GMemoryKeyCacher) Add(keyID string, downloadedKeys []jose.JSONWebKey) (*jose.JSONWebKey, error) {
 	if gkc.Global.kc != nil {
 		gkc.Global.mu.Lock()
-		gkc.Global.kc.Add(keyID, downloadedKeys)
+		// #nosec G104 -- error is not actionable here
+		_, _ = gkc.Global.kc.Add(keyID, downloadedKeys)
 		gkc.Global.mu.Unlock()
 	}
 
 	return gkc.MemoryKeyCacher.Add(keyID, downloadedKeys)
 }
 
-// Get obtains a key from the cache, and checks if the key is expired
+// Get obtains a key from the cache, and checks if the key is expired.
 func (gkc *GMemoryKeyCacher) Get(keyID string) (*jose.JSONWebKey, error) {
 	k, err := gkc.MemoryKeyCacher.Get(keyID)
 	if err == nil || gkc.Global.kc == nil {
@@ -161,8 +175,10 @@ func (gkc *GMemoryKeyCacher) Get(keyID string) (*jose.JSONWebKey, error) {
 	v, err := gkc.Global.kc.Get(keyID)
 	gkc.Global.mu.RUnlock()
 	if err == nil {
-		gkc.MemoryKeyCacher.Add(keyID, []jose.JSONWebKey{*v})
+		// #nosec G104 -- error is not actionable here
+		_, _ = gkc.MemoryKeyCacher.Add(keyID, []jose.JSONWebKey{*v})
 	}
+
 	return v, err
 }
 
@@ -190,10 +206,11 @@ func NewGlobalMemoryKeyCacher(maxKeyAge time.Duration, maxCacheSize int, keyIden
 		g := globalKeyCacher[keyIdentifyStrategy]
 		kc.Global = g
 	}
+
 	return kc
 }
 
-// Get obtains a key from the cache, and checks if the key is expired
+// Get obtains a key from the cache, and checks if the key is expired.
 func (mkc *MemoryKeyCacher) Get(keyID string) (*jose.JSONWebKey, error) {
 	mkc.mu.RLock()
 	searchKey, ok := mkc.entries[keyID]
@@ -202,12 +219,14 @@ func (mkc *MemoryKeyCacher) Get(keyID string) (*jose.JSONWebKey, error) {
 		if mkc.maxKeyAge == MaxKeyAgeNoCheck || !mkc.keyIsExpired(keyID) {
 			return &searchKey.JSONWebKey, nil
 		}
+
 		return nil, ErrKeyExpired
 	}
+
 	return nil, ErrNoKeyFound
 }
 
-// Add adds a key into the cache and handles overflow
+// Add adds a key into the cache and handles overflow.
 func (mkc *MemoryKeyCacher) Add(keyID string, downloadedKeys []jose.JSONWebKey) (*jose.JSONWebKey, error) {
 	var addingKey jose.JSONWebKey
 	var addingKeyID string
@@ -236,12 +255,14 @@ func (mkc *MemoryKeyCacher) Add(keyID string, downloadedKeys []jose.JSONWebKey) 
 			mkc.mu.Unlock()
 			mkc.handleOverflow()
 		}
+
 		return &addingKey, nil
 	}
+
 	return nil, ErrNoKeyFound
 }
 
-// keyIsExpired deletes the key from cache if it is expired
+// keyIsExpired deletes the key from cache if it is expired.
 func (mkc *MemoryKeyCacher) keyIsExpired(keyID string) bool {
 	mkc.mu.RLock()
 	entry := mkc.entries[keyID].addedAt.Add(mkc.maxKeyAge)
@@ -251,12 +272,14 @@ func (mkc *MemoryKeyCacher) keyIsExpired(keyID string) bool {
 		mkc.mu.Lock()
 		delete(mkc.entries, keyID)
 		mkc.mu.Unlock()
+
 		return true
 	}
+
 	return false
 }
 
-// handleOverflow deletes the oldest key from the cache if overflowed
+// handleOverflow deletes the oldest key from the cache if overflowed.
 func (mkc *MemoryKeyCacher) handleOverflow() {
 	if mkc.maxCacheSize < len(mkc.entries) {
 		mkc.mu.RLock()

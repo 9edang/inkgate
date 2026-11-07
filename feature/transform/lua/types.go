@@ -20,18 +20,20 @@ func NewTableFromStringMap(input map[string]string) *Table {
 	for k, v := range input {
 		data[k] = v
 	}
+
 	return &Table{Data: data}
 }
 
 func NewTableFromStringSliceMap(input map[string][]string) *Table {
 	data := make(map[string]any)
 	for k, v := range input {
-		var list []any
+		list := make([]any, 0, len(v))
 		for i := range v {
 			list = append(list, v[i])
 		}
 		data[k] = list
 	}
+
 	return &Table{Data: data}
 }
 
@@ -50,6 +52,7 @@ func (h *HttpResponse) Close() {
 		return
 	}
 
+	// #nosec G104 -- closing is best effort, the error is not actionable
 	h.R.Body.Close()
 	h.R.Body = nil
 }
@@ -60,6 +63,7 @@ func (h *HttpResponse) Body() string {
 		h.Close()
 		h.body = string(b)
 	})
+
 	return h.body
 }
 
@@ -79,19 +83,24 @@ type NativeUserData = glua.LUserData
 type NativeTable = glua.LTable
 
 func ParseToTable(k, v NativeValue, acc map[string]any) {
+	//nolint:exhaustive // only the lua types that map to JSON are handled
 	switch v.Type() {
 	case glua.LTString:
 		acc[k.String()] = v.String()
 	case glua.LTBool:
 		acc[k.String()] = glua.LVAsBool(v)
 	case glua.LTNumber:
+		//nolint:forcetypeassert // the value type is fixed by construction
 		f := float64(v.(NativeNumber))
+		//nolint:forcetypeassert // the value type is fixed by construction
 		if f == float64(int64(v.(NativeNumber))) {
+			//nolint:forcetypeassert // the value type is fixed by construction
 			acc[k.String()] = int(v.(NativeNumber))
 		} else {
 			acc[k.String()] = f
 		}
 	case glua.LTUserData:
+		//nolint:forcetypeassert // the value type is fixed by construction
 		userV := v.(*NativeUserData)
 		if userV.Value == nil {
 			acc[k.String()] = nil
@@ -105,6 +114,7 @@ func ParseToTable(k, v NativeValue, acc map[string]any) {
 		}
 	case glua.LTTable:
 		res := map[string]any{}
+		//nolint:forcetypeassert // the value type is fixed by construction
 		v.(*NativeTable).ForEach(func(k, v NativeValue) {
 			ParseToTable(k, v, res)
 		})
@@ -128,6 +138,7 @@ func MapNativeTable(t *NativeTable) (any, bool) {
 	if err == nil {
 		return at, true
 	}
+
 	return res, false
 }
 

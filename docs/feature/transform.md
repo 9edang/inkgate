@@ -1,6 +1,6 @@
 # feature/transform — changing requests and responses
 
-**Code:** [feature/transform](../../feature/transform): `lua`, `martian`, `xml`, `rss` (+ `internal/binder` Lua bridge, `internal/flatmap`)
+**Code:** [feature/transform](../../feature/transform): `lua`, `martian`, `xml`, `rss` (+ `internal/binder` Lua bridge, `internal/flatmap/tree`)
 
 ```mermaid
 flowchart TD
@@ -18,7 +18,7 @@ flowchart TD
 
 | Alias | Namespace | Where | Script sees |
 |---|---|---|---|
-| `modifier/lua-endpoint` | `inkgate/feature/transform/lua/router` | stage 2 (service) and stage 3 (endpoint); adapter `feature/transform/lua/mux` | the HTTP request: `ctx` |
+| `modifier/lua-endpoint` | `inkgate/feature/transform/lua/router` | stage 2 (service) and stage 3 (endpoint); adapter `feature/transform/lua/router` | the HTTP request: `ctx` |
 | `modifier/lua-proxy` | `inkgate/feature/transform/lua/proxy` | stage 4 | `request` and `response` objects |
 | `modifier/lua-backend` | `inkgate/feature/transform/lua/proxy/backend` | stage 5 | `request` and `response` of one backend |
 
@@ -41,10 +41,10 @@ Use it to add, rename or remove headers, query strings or the body without code.
 ## xml and rss — more encodings
 
 Registered at boot (`flow/boot/encoding.go`):
-- `xml`: backend `encoding: "xml"` decodes XML; endpoint `output_encoding: "xml"` renders XML (`feature/transform/xml/mux`, registered by `entry.Router`).
+- `xml`: backend `encoding: "xml"` decodes XML; endpoint `output_encoding: "xml"` renders XML (`feature/transform/xml`, registered by `entry.Router`).
 - `rss`: backend `encoding: "rss"` decodes RSS/Atom feeds.
 
 ## flatmap (internal)
 
-`internal/flatmap` implements `flatmap_filter` operations (`move`, `append`, `del`) on nested arrays with `*`
+`internal/flatmap/tree` implements `flatmap_filter` operations (`move`, `append`, `del`) on nested arrays with `*`
 wildcards. It is used by `engine/proxy/formatter.go` (see [../engine/proxy.md](../engine/proxy.md)).

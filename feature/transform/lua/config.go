@@ -2,6 +2,7 @@ package lua
 
 import (
 	"bytes"
+	// #nosec G501 -- not used for security: checksum or key identifier only
 	"crypto/md5" // skipcq: GSC-G501
 	"encoding/hex"
 	"errors"
@@ -29,6 +30,7 @@ type SourceLoader interface {
 	Get(string) (string, bool)
 }
 
+//nolint:cyclop,gocyclo // long carried-over function, split when it is next changed
 func Parse(l logging.Logger, e config.ExtraConfig, namespace string) (Config, error) { // skipcq: GO-R1005
 	res := Config{}
 	v, ok := e[namespace]
@@ -71,6 +73,7 @@ func Parse(l logging.Logger, e config.ExtraConfig, namespace string) (Config, er
 	loader := map[string]string{}
 
 	for _, source := range res.Sources {
+		// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 		b, err := os.ReadFile(source)
 		if err != nil {
 			l.Error("[Lua] Opening the source file:", err.Error())
@@ -93,8 +96,9 @@ func Parse(l logging.Logger, e config.ExtraConfig, namespace string) (Config, er
 			return res, ErrWrongChecksumType(source)
 		}
 		content, _ := res.SourceLoader.Get(source)
+		// #nosec G401 -- not used for security: checksum or key identifier only
 		hash := md5.New() // skipcq: GO-S1023, GSC-G401
-		if _, err := io.Copy(hash, bytes.NewBuffer([]byte(content))); err != nil {
+		if _, err := io.Copy(hash, bytes.NewBufferString(content)); err != nil {
 			return res, err
 		}
 		hashInBytes := hash.Sum(nil)[:16]
@@ -120,10 +124,12 @@ func (o onceLoader) Get(k string) (string, bool) {
 type liveLoader struct{}
 
 func (liveLoader) Get(k string) (string, bool) {
+	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	b, err := os.ReadFile(k)
 	if err != nil {
 		return "", false
 	}
+
 	return string(b), true
 }
 

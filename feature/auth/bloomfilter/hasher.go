@@ -1,10 +1,13 @@
 package bloomfilter
 
 import (
-	"crypto/md5"  // skipcq: GSC-G501
+	// #nosec G501 -- not used for security: checksum or key identifier only
+	"crypto/md5" // skipcq: GSC-G501
+	"errors"
+
+	// #nosec G505 -- not used for security: checksum or key identifier only
 	"crypto/sha1" // skipcq: GSC-G505
 	"encoding/binary"
-	"fmt"
 	"hash"
 	"hash/crc64"
 	"hash/fnv"
@@ -32,9 +35,11 @@ var (
 		HASHER_OPTIMAL: OptimalHashFactory,
 	}
 
-	ErrImpossibleToTreat = fmt.Errorf("unable to union")
+	ErrImpossibleToTreat = errors.New("unable to union")
 
-	MD5    = HashWrapper(md5.New())  // skipcq: GO-S1023, GSC-G401
+	// #nosec G401 -- not used for security: checksum or key identifier only
+	MD5 = HashWrapper(md5.New()) // skipcq: GO-S1023, GSC-G401
+	// #nosec G401 -- not used for security: checksum or key identifier only
 	SHA1   = HashWrapper(sha1.New()) // skipcq: GO-S1025, GSC-G401
 	CRC64  = HashWrapper(crc64.New(crc64.MakeTable(crc64.ECMA)))
 	FNV64  = HashWrapper(fnv.New64())
@@ -45,6 +50,7 @@ func DefaultHashFactory(k uint) []Hash {
 	if k > uint(len(defaultHashers)) {
 		k = uint(len(defaultHashers))
 	}
+
 	return defaultHashers[:k]
 }
 
@@ -57,6 +63,7 @@ func OptimalHashFactory(k uint) []Hash {
 			for i := range out {
 				out[i] = hs[0] + uint(i)*hs[1]
 			}
+
 			return out
 		},
 	}
@@ -68,9 +75,10 @@ func HashWrapper(h hash.Hash) Hash {
 		h.Write(elem)
 		result := h.Sum(nil)
 		out := make([]uint, len(result)/8)
-		for i := 0; i < len(result)/8; i++ {
+		for i := range len(result) / 8 {
 			out[i] = uint(binary.LittleEndian.Uint64(result[i*8 : (i+1)*8]))
 		}
+
 		return out
 	}
 }

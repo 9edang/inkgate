@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewPluginMiddleware_logger(t *testing.T) {
-	plugin.LoadWithLogger("./plugin/tests", ".so", plugin.RegisterModifier, logging.NoOp)
+	plugin.LoadWithLogger("../../tests/plugins/proxy", ".so", plugin.RegisterModifier, logging.NoOp)
 
 	validator := func(ctx context.Context, r *Request) (*Response, error) {
 		if r.Path != "/bar/fooo/fooo" {
@@ -74,7 +74,7 @@ func TestNewPluginMiddleware_logger(t *testing.T) {
 }
 
 func TestNewPluginMiddleware_error_request(t *testing.T) {
-	plugin.LoadWithLogger("./plugin/tests", ".so", plugin.RegisterModifier, logging.NoOp)
+	plugin.LoadWithLogger("../../tests/plugins/proxy", ".so", plugin.RegisterModifier, logging.NoOp)
 
 	validator := func(ctx context.Context, r *Request) (*Response, error) {
 		t.Error("the backend should not be called")
@@ -128,7 +128,7 @@ func TestNewPluginMiddleware_error_request(t *testing.T) {
 }
 
 func TestNewPluginMiddleware_error_response(t *testing.T) {
-	plugin.LoadWithLogger("./plugin/tests", ".so", plugin.RegisterModifier, logging.NoOp)
+	plugin.LoadWithLogger("../../tests/plugins/proxy", ".so", plugin.RegisterModifier, logging.NoOp)
 
 	var hit bool
 

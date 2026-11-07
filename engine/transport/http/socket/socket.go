@@ -3,7 +3,7 @@
 /*
 Package socket proxies WebSocket connections between a client and a backend.
 
-The endpoint handler (engine/router/mux) puts an Upgrade in the request
+The endpoint handler (engine/router) puts an Upgrade in the request
 context when the endpoint is configured with "router/stream" mode "socket".
 The backend step (BackendFactory) finds it after the pipeline has picked the
 backend host: it opens the WebSocket to the backend first, and only when the
@@ -19,13 +19,16 @@ package socket
 
 import (
 	"errors"
-	"github.com/9edang/inkgate/context"
 	"io"
 	"net/http"
 	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/9edang/inkgate/internal/constant"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/gorilla/websocket"
 
@@ -85,23 +88,24 @@ func BackendFactory(next proxy.BackendFactory) proxy.BackendFactory {
 			if u := From(ctx); u != nil {
 				return Proxy(ctx, u, r)
 			}
+
 			return n(ctx, r)
 		}
 	}
 }
 
 // not forwarded to the backend: the handshake of each side is its own, or
-// gorilla refuses them in the request headers
+// gorilla refuses them in the request headers.
 var skipHeaders = map[string]bool{
-	"Upgrade":                  true,
-	"Connection":               true,
-	"Sec-Websocket-Key":        true,
-	"Sec-Websocket-Version":    true,
-	"Sec-Websocket-Extensions": true,
-	"Sec-Websocket-Protocol":   true, // sent through Dialer.Subprotocols
-	"Sec-Websocket-Accept":     true,
-	"Content-Length":           true,
-	"Host":                     true,
+	"Upgrade":                    true,
+	"Connection":                 true,
+	"Sec-Websocket-Key":          true,
+	"Sec-Websocket-Version":      true,
+	"Sec-Websocket-Extensions":   true,
+	"Sec-Websocket-Protocol":     true, // sent through Dialer.Subprotocols
+	"Sec-Websocket-Accept":       true,
+	constant.HeaderContentLength: true,
+	"Host":                       true,
 }
 
 // ErrNoHijack is returned when the client connection cannot be upgraded, for
@@ -110,6 +114,8 @@ var ErrNoHijack = errors.New("the client connection does not support upgrades")
 
 // Proxy opens the WebSocket to the backend URL of req, upgrades the client
 // and relays messages until one side closes the connection.
+//
+//nolint:cyclop,gocyclo // the handshake steps stay in one place to read in order
 func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response, error) {
 	if req.URL == nil {
 		return nil, errors.New("socket: the request has no backend URL")
@@ -142,6 +148,7 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 			relayRefusal(u, resp)
 			return &proxy.Response{}, nil
 		}
+
 		return nil, err
 	}
 
@@ -158,9 +165,11 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 
 	hw := hijackable(u.W)
 	if hw == nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		backend.Close()
 		u.handled.Store(true)
 		http.Error(u.W, ErrNoHijack.Error(), http.StatusNotImplemented)
+
 		return nil, ErrNoHijack
 	}
 
@@ -176,6 +185,7 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 	client, err := upgrader.Upgrade(hw, u.R, answer)
 	u.handled.Store(true)
 	if err != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		backend.Close()
 		return nil, err
 	}
@@ -184,6 +194,7 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 	}
 
 	relay(client, backend, u.IdleTimeout, u.MaxMessageSize)
+
 	return &proxy.Response{IsComplete: true}, nil
 }
 
@@ -196,6 +207,7 @@ func wsURL(u *url.URL) string {
 	default:
 		c.Scheme = "ws"
 	}
+
 	return c.String()
 }
 
@@ -225,12 +237,15 @@ func hijackable(w http.ResponseWriter) http.ResponseWriter {
 		}
 		w = uw.Unwrap()
 	}
+
 	return nil
 }
 
 const controlWait = 5 * time.Second
 
 // relay copies messages both ways until one side ends, then closes both.
+//
+//nolint:cyclop,gocognit,gocyclo // one loop per direction, split it when it is next changed
 func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64) {
 	if maxMessage > 0 {
 		client.SetReadLimit(maxMessage)
@@ -244,7 +259,9 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 	var once sync.Once
 	closeAll := func() {
 		once.Do(func() {
+			// #nosec G104 -- closing is best effort, the error is not actionable
 			client.Close()
+			// #nosec G104 -- closing is best effort, the error is not actionable
 			backend.Close()
 		})
 	}
@@ -297,6 +314,7 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 				} else {
 					closeAll()
 				}
+
 				return
 			}
 			touch()
@@ -306,8 +324,10 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 				return
 			}
 			if _, err := io.Copy(w, r); err != nil {
+				// #nosec G104 -- closing is best effort, the error is not actionable
 				w.Close()
 				closeAll()
+
 				return
 			}
 			if err := w.Close(); err != nil {

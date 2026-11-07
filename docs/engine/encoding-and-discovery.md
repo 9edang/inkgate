@@ -15,7 +15,7 @@ The backend `encoding` decides how a response body becomes `Response.Data`:
 | `string` | raw text | `{"content": "<body>"}` |
 | `no-op` | none | body streamed as-is in `Response.Io`; no merge, no manipulation |
 
-The **output** side (what the client receives) is the endpoint `output_encoding`, rendered by the router: `engine/router/mux/render.go` (+ `negotiate.go`).
+The **output** side (what the client receives) is the endpoint `output_encoding`, rendered by the router: `engine/router/render.go` (+ `negotiate.go`).
 
 ## Service discovery — finding backend hosts
 

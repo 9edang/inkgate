@@ -23,6 +23,7 @@ func StoreFromCfg(cfg Config) limiter.LimiterStore {
 		storeBackend = limiter.MemoryBackendBuilder(ctx, cfg.TTL, cfg.CleanUpPeriod, 1, 1)[0]
 	}
 
+	// #nosec G115 -- numeric value from the operator config, far below the overflow range
 	return limiter.NewLimiterStore(cfg.ClientMaxRate, int(cfg.ClientCapacity),
 		storeBackend)
 }

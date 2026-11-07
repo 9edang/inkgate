@@ -38,7 +38,7 @@ docker run --rm -p 8080:8080 \
 "plugin": { "folder": "/opt/inkgate/plugins", "pattern": ".so" }
 ```
 Plugins must be built with the same Go version, dependency versions and glibc as the image
-(Go 1.26, Debian bookworm, glibc 2.36). Check them with `inkgate test-plugin`.
+(Go 1.27, Debian bookworm, glibc 2.36). Check them with `inkgate test-plugin`.
 
 ## Links
 - Source, docs and releases: https://github.com/9edang/inkgate

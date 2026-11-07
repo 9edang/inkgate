@@ -2,11 +2,12 @@ package pubsub
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
+
 	"github.com/9edang/inkgate/context"
 	"github.com/9edang/inkgate/internal/json"
-	"io"
-	"io/ioutil"
 
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/awssnssqs"
@@ -21,7 +22,7 @@ import (
 	"github.com/9edang/inkgate/engine/proxy"
 )
 
-var errNoBackendHostDefined = fmt.Errorf("no host backend defined")
+var errNoBackendHostDefined = errors.New("no host backend defined")
 
 const (
 	publisherNamespace  = "inkgate/feature/connector/pubsub/publisher"
@@ -63,9 +64,11 @@ func (f *BackendFactory) initPublisher(ctx context.Context, remote *config.Backe
 	cfg := &publisherCfg{}
 
 	if err := getConfig(remote, publisherNamespace, cfg); err != nil {
-		if _, ok := err.(*NamespaceNotFoundErr); !ok {
-			f.logger.Error(fmt.Sprintf("[BACKEND][PubSub] Error initializing publisher: %s", err.Error()))
+		namespaceNotFoundErr := &NamespaceNotFoundErr{}
+		if errors.As(err, &namespaceNotFoundErr) {
+			f.logger.Error("[BACKEND][PubSub] Error initializing publisher: " + err.Error())
 		}
+
 		return proxy.NoopProxy, err
 	}
 
@@ -76,15 +79,16 @@ func (f *BackendFactory) initPublisher(ctx context.Context, remote *config.Backe
 		return proxy.NoopProxy, err
 	}
 
-	f.logger.Debug(logPrefix, "Publisher initialized sucessfully")
+	f.logger.Debug(logPrefix, "Publisher initialized successfully")
 
 	go func() {
 		<-ctx.Done()
-		t.Shutdown(context.Background())
+		// #nosec G104 -- best-effort shutdown, the error is not actionable
+		_ = t.Shutdown(context.Background())
 	}()
 
 	return func(ctx context.Context, r *proxy.Request) (*proxy.Response, error) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -100,6 +104,7 @@ func (f *BackendFactory) initPublisher(ctx context.Context, remote *config.Backe
 		if err := t.Send(ctx, msg); err != nil {
 			return nil, err
 		}
+
 		return &proxy.Response{IsComplete: true}, nil
 	}, nil
 }
@@ -113,9 +118,11 @@ func (f *BackendFactory) initSubscriber(ctx context.Context, remote *config.Back
 	cfg := &subscriberCfg{}
 
 	if err := getConfig(remote, subscriberNamespace, cfg); err != nil {
-		if _, ok := err.(*NamespaceNotFoundErr); !ok {
-			f.logger.Error(fmt.Sprintf("[BACKEND][PubSub] Error initializing subscriber: %s", err.Error()))
+		namespaceNotFoundErr := &NamespaceNotFoundErr{}
+		if errors.As(err, &namespaceNotFoundErr) {
+			f.logger.Error("[BACKEND][PubSub] Error initializing subscriber: " + err.Error())
 		}
+
 		return proxy.NoopProxy, err
 	}
 
@@ -128,11 +135,12 @@ func (f *BackendFactory) initSubscriber(ctx context.Context, remote *config.Back
 		return proxy.NoopProxy, err
 	}
 
-	f.logger.Debug(logPrefix, "Subscriber initialized sucessfully")
+	f.logger.Debug(logPrefix, "Subscriber initialized successfully")
 
 	go func() {
 		<-ctx.Done()
-		sub.Shutdown(context.Background())
+		// #nosec G104 -- best-effort shutdown, the error is not actionable
+		_ = sub.Shutdown(context.Background())
 	}()
 
 	ef := proxy.NewEntityFormatter(remote)
@@ -144,7 +152,7 @@ func (f *BackendFactory) initSubscriber(ctx context.Context, remote *config.Back
 		}
 
 		var data map[string]any
-		if err := remote.Decoder(bytes.NewBuffer(msg.Body), &data); err != nil && err != io.EOF {
+		if err := remote.Decoder(bytes.NewBuffer(msg.Body), &data); err != nil && !errors.Is(err, io.EOF) {
 			// TODO: figure out how to Nack if possible
 			// msg.Nack()
 			return nil, err
@@ -154,6 +162,7 @@ func (f *BackendFactory) initSubscriber(ctx context.Context, remote *config.Back
 
 		newResponse := proxy.Response{Data: data, IsComplete: true}
 		newResponse = ef.Format(newResponse)
+
 		return &newResponse, nil
 	}, nil
 }
@@ -178,6 +187,7 @@ func getConfig(remote *config.Backend, namespace string, v any) error {
 	if err != nil {
 		return err
 	}
+
 	return json.Unmarshal(b, &v)
 }
 

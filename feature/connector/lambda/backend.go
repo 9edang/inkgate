@@ -2,21 +2,22 @@ package lambda
 
 import (
 	"bytes"
-	"encoding/base64"
 	"errors"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
+	"net/http"
 	"strings"
 
-	"github.com/9edang/inkgate/engine/config"
-	"github.com/9edang/inkgate/engine/core"
-	"github.com/9edang/inkgate/engine/logging"
-	"github.com/9edang/inkgate/engine/proxy"
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
+
+	"github.com/9edang/inkgate/engine/config"
+	"github.com/9edang/inkgate/engine/logging"
+	"github.com/9edang/inkgate/engine/proxy"
 )
 
 const (
@@ -27,7 +28,6 @@ var (
 	errBadStatusCode = errors.New("aws lambda: bad status code")
 	errNoConfig      = errors.New("aws lambda: no extra config defined")
 	errBadConfig     = errors.New("aws lambda: unable to parse the defined extra config")
-	clientContext    = base64.StdEncoding.EncodeToString([]byte(`{"client":"Inkgate", "version":"` + core.InkgateVersion + `"}`))
 )
 
 type Invoker interface {
@@ -42,6 +42,7 @@ func invokerFactory(o *Options) Invoker {
 	if o.Config == nil {
 		return lambda.New(session.New())
 	}
+
 	return lambda.New(session.Must(session.NewSession(o.Config)))
 }
 
@@ -50,9 +51,10 @@ func BackendFactoryWithInvoker(logger logging.Logger, bf proxy.BackendFactory, i
 		logPrefix := "[BACKEND: " + remote.URLPattern + "][Lambda]"
 		ecfg, err := getOptions(remote)
 		if err != nil {
-			if err != errNoConfig {
+			if !errors.Is(err, errNoConfig) {
 				logger.Error(logPrefix, err)
 			}
+
 			return bf(remote)
 		}
 
@@ -135,7 +137,7 @@ func getOptions(remote *config.Backend) (*Options, error) {
 	cfg := &Options{
 		FunctionExtractor: funcExtractor,
 	}
-	if remote.Method == "GET" {
+	if remote.Method == http.MethodGet {
 		cfg.PayloadExtractor = fromParams
 	} else {
 		cfg.PayloadExtractor = fromBody
@@ -178,6 +180,7 @@ func fromParams(r *proxy.Request) ([]byte, error) {
 		params[strings.ToLower(k)] = v
 	}
 	err := json.NewEncoder(buf).Encode(params)
+
 	return buf.Bytes(), err
 }
 

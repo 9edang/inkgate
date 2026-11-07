@@ -8,10 +8,11 @@ import (
 	"net/textproto"
 	"net/url"
 
+	glua "github.com/yuin/gopher-lua"
+
 	"github.com/9edang/inkgate/engine/proxy"
 	lua "github.com/9edang/inkgate/feature/transform/lua"
 	"github.com/9edang/inkgate/internal/binder"
-	glua "github.com/yuin/gopher-lua"
 )
 
 func registerRequestTable(req *proxy.Request, b *binder.Binder) {
@@ -102,6 +103,7 @@ func (*ProxyRequest) url(c *binder.Context) error {
 	}
 
 	c.Push().String(req.URL.String())
+
 	return nil
 }
 
@@ -206,6 +208,7 @@ func (*ProxyRequest) body(c *binder.Context) error {
 	var b []byte
 	if req.Body != nil {
 		b, _ = io.ReadAll(req.Body)
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		req.Body.Close()
 	}
 	req.Body = io.NopCloser(bytes.NewBuffer(b))

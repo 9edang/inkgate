@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/9edang/inkgate/feature/auth/bloomfilter/rotate"
-	"github.com/9edang/inkgate/feature/auth/bloomfilter/testutils"
+	"github.com/9edang/inkgate/tests/testutils"
 )
 
 func TestBFAdd_ok(t *testing.T) {

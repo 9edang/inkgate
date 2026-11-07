@@ -26,7 +26,7 @@ func ExampleLoadWithLoggerAndContext() {
 		fmt.Println(err.Error())
 		return
 	}
-	total, err := LoadWithLoggerAndContext(context.Background(), "./tests", ".so", RegisterModifier, logger)
+	total, err := LoadWithLoggerAndContext(context.Background(), "../../../tests/plugins/proxy", ".so", RegisterModifier, logger)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -116,7 +116,7 @@ func ExampleLoadWithLoggerAndContext() {
 }
 
 func TestLoad(t *testing.T) {
-	total, err := LoadWithLogger("./tests", ".so", RegisterModifier, logging.NoOp)
+	total, err := LoadWithLogger("../../../tests/plugins/proxy", ".so", RegisterModifier, logging.NoOp)
 	if err != nil {
 		t.Error(err.Error())
 		t.Fail()

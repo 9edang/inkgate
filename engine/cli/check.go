@@ -2,12 +2,14 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/internal/json"
-	"github.com/santhosh-tekuri/jsonschema/v6"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
+
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/9edang/inkgate/engine/cli/dumper"
 	"github.com/9edang/inkgate/internal/env"
@@ -24,6 +26,7 @@ func errorMsg(content string) string {
 	if !IsTTY {
 		return content
 	}
+
 	return dumper.ColorRed + content + dumper.ColorReset
 }
 
@@ -36,10 +39,12 @@ func NewCheckCmd(rawSchema string) Command {
 	return CheckCommand
 }
 
+//nolint:cyclop,gocognit,gocyclo // long carried-over function, split when it is next changed
 func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 	if cfgFile == "" {
 		cmd.Println(errorMsg("Please, provide the path to the configuration file with --config or see all the options with --help"))
 		os.Exit(1) // skipcq: RVV-A0003
+
 		return
 	}
 
@@ -49,22 +54,25 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 	if err != nil {
 		cmd.Println(errorMsg("ERROR parsing the configuration file:") + fmt.Sprintf("\t%s\n", err.Error()))
 		os.Exit(1) // skipcq: RVV-A0003
+
 		return
 	}
 
 	if customErrs := CustomValidationFunc(v); len(customErrs) > 0 {
 		eb := strings.Builder{}
 		for _, err := range customErrs {
-			eb.WriteString(fmt.Sprintf("\t%s\n", err.Error()))
+			fmt.Fprintf(&eb, "\t%s\n", err.Error())
 		}
 
 		cmd.Println(errorMsg("ERROR validating the configuration file:\n") + eb.String())
 		os.Exit(1) // skipcq: RVV-A0003
+
 		return
 	}
 
 	shouldLint := lintCurrentSchema || lintNoNetwork || (lintCustomSchemaPath != "")
 
+	//nolint:nestif // nested config handling, split when it is next changed
 	if shouldLint {
 		var data []byte
 		var err error
@@ -77,6 +85,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		if err != nil {
 			cmd.Println(errorMsg("ERROR loading the configuration content:") + fmt.Sprintf("\t%s\n", err.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 
@@ -84,6 +93,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		if err := json.Unmarshal(data, &raw); err != nil {
 			cmd.Println(errorMsg("ERROR converting configuration content to JSON:") + fmt.Sprintf("\t%s\n", err.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 
@@ -94,11 +104,13 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 			if parseError != nil {
 				cmd.Println(errorMsg("ERROR parsing the embed schema:") + fmt.Sprintf("\t%s\n", parseError.Error()))
 				os.Exit(1) // skipcq: RVV-A0003
+
 				return
 			}
 
 			compiler := jsonschema.NewCompiler()
-			compiler.AddResource("schema.json", rawSchema)
+			// #nosec G104 -- static schema, adding it cannot fail
+			_ = compiler.AddResource("schema.json", rawSchema)
 
 			sch, compilationErr = compiler.Compile("schema.json")
 		} else {
@@ -106,6 +118,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 				if SchemaURL == "" {
 					cmd.Println(errorMsg("ERROR linting the configuration file:") + "\tno online schema configured: set INKGATE_SCHEMA_URL or use --lint-schema\n")
 					os.Exit(1) // skipcq: RVV-A0003
+
 					return
 				}
 				lintCustomSchemaPath = SchemaURL
@@ -129,12 +142,14 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		if compilationErr != nil {
 			cmd.Println(errorMsg("ERROR compiling the schema:") + fmt.Sprintf("\t%s\n", compilationErr.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 
 		if err = sch.Validate(raw); err != nil {
 			cmd.Println(errorMsg("ERROR linting the configuration file:") + fmt.Sprintf("\t%s\n", err.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 	}
@@ -144,6 +159,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		if err := cc.Dump(v); err != nil {
 			cmd.Println(errorMsg("ERROR checking the configuration file:") + fmt.Sprintf("\t%s\n", err.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 	}
@@ -152,6 +168,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		if RunRouterFunc == nil {
 			cmd.Println(errorMsg("ERROR testing the configuration file:") + "\tthis build has no router to test against\n")
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 		v.Debug = v.Debug || debug > 0
@@ -161,6 +178,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		if err := RunRouterFunc(v); err != nil {
 			cmd.Println(errorMsg("ERROR testing the configuration file:") + fmt.Sprintf("\t%s\n", err.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
+
 			return
 		}
 	}
@@ -184,6 +202,7 @@ type SchemaHttpLoader http.Client
 
 func (l *SchemaHttpLoader) Load(url string) (any, error) {
 	client := (*http.Client)(l)
+	//nolint:noctx // no request context is available at this point
 	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
@@ -195,6 +214,7 @@ func (l *SchemaHttpLoader) Load(url string) (any, error) {
 
 	body, err := jsonschema.UnmarshalJSON(resp.Body)
 	if err != nil {
+		// #nosec G104 -- closing is best effort, the error is not actionable
 		resp.Body.Close()
 		return nil, err
 	}

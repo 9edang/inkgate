@@ -110,7 +110,7 @@ func TestJWK_file(t *testing.T) {
 			SecretProviderConfig{
 				URI:           "",
 				AllowInsecure: true,
-				LocalPath:     "./fixtures/" + tc.Name + ".json",
+				LocalPath:     "../../../tests/fixtures/jose/" + tc.Name + ".json",
 			},
 			nil,
 		)
@@ -149,14 +149,14 @@ func TestJWK_cyperfile(t *testing.T) {
 		return
 	}
 
-	b, _ := os.ReadFile("./fixtures/private.json")
+	b, _ := os.ReadFile("../../../tests/fixtures/jose/private.json")
 	cypherText, err := cypher.Encrypt(ctx, b, cypherKey)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	os.WriteFile("./fixtures/private.txt", cypherText, 0600)
-	defer os.Remove("./fixtures/private.txt")
+	os.WriteFile("../../../tests/fixtures/jose/private.txt", cypherText, 0600)
+	defer os.Remove("../../../tests/fixtures/jose/private.txt")
 
 	for k, tc := range []struct {
 		Alg string
@@ -174,7 +174,7 @@ func TestJWK_cyperfile(t *testing.T) {
 			SecretProviderConfig{
 				URI:           "",
 				AllowInsecure: true,
-				LocalPath:     "./fixtures/private.txt",
+				LocalPath:     "../../../tests/fixtures/jose/private.txt",
 				CipherKey:     cypherKey,
 				SecretURL:     url,
 			},
@@ -322,7 +322,7 @@ func TestNewFileKeyCacher(t *testing.T) {
 			Alg:  "HS256",
 		},
 	} {
-		b, err := os.ReadFile("./fixtures/" + tc.Name + ".json")
+		b, err := os.ReadFile("../../../tests/fixtures/jose/" + tc.Name + ".json")
 		if err != nil {
 			t.Error(err)
 		}
@@ -337,7 +337,7 @@ func TestNewFileKeyCacher(t *testing.T) {
 }
 
 func TestNewFileKeyCacher_unknownKey(t *testing.T) {
-	b, err := os.ReadFile("./fixtures/symmetric.json")
+	b, err := os.ReadFile("../../../tests/fixtures/jose/symmetric.json")
 	if err != nil {
 		t.Error(err)
 	}
@@ -357,7 +357,7 @@ func TestNewFileKeyCacher_unknownKey(t *testing.T) {
 }
 
 func jwkEndpoint(name string) http.HandlerFunc {
-	data, err := os.ReadFile("./fixtures/" + name + ".json")
+	data, err := os.ReadFile("../../../tests/fixtures/jose/" + name + ".json")
 	return func(rw http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			rw.WriteHeader(500)
@@ -373,7 +373,7 @@ func jwkEndpoint(name string) http.HandlerFunc {
 }
 
 func jwkEndpointWithCounter(name string, hits *uint32) http.HandlerFunc {
-	data, err := os.ReadFile("./fixtures/" + name + ".json")
+	data, err := os.ReadFile("../../../tests/fixtures/jose/" + name + ".json")
 	return func(rw http.ResponseWriter, _ *http.Request) {
 		if err != nil {
 			rw.WriteHeader(500)

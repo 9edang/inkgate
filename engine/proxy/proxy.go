@@ -7,23 +7,24 @@ package proxy
 
 import (
 	"errors"
-	"github.com/9edang/inkgate/context"
 	"io"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
 )
 
-// Namespace to be used in extra config
+// Namespace to be used in extra config.
 const Namespace = "inkgate/engine/proxy"
 
-// Metadata is the Metadata of the Response which contains Headers and StatusCode
+// Metadata is the Metadata of the Response which contains Headers and StatusCode.
 type Metadata struct {
 	Headers    map[string][]string
 	StatusCode int
 }
 
-// Response is the entity returned by the proxy
+// Response is the entity returned by the proxy.
 type Response struct {
 	Data       map[string]any
 	IsComplete bool
@@ -31,16 +32,17 @@ type Response struct {
 	Io         io.Reader
 }
 
-// readCloserWrapper is Io.Reader which is closed when the Context is closed or canceled
+// readCloserWrapper is Io.Reader which is closed when the Context is closed or canceled.
 type readCloserWrapper struct {
 	ctx context.Context
 	rc  io.ReadCloser
 }
 
-// NewReadCloserWrapper Creates a new closeable io.Read
+// NewReadCloserWrapper Creates a new closeable io.Read.
 func NewReadCloserWrapper(ctx context.Context, in io.ReadCloser) io.Reader {
 	wrapper := readCloserWrapper{ctx, in}
 	go wrapper.closeOnCancel()
+
 	return wrapper
 }
 
@@ -48,27 +50,28 @@ func (w readCloserWrapper) Read(b []byte) (int, error) {
 	return w.rc.Read(b)
 }
 
-// closeOnCancel closes the io.Reader when the context is Done
+// closeOnCancel closes the io.Reader when the context is Done.
 func (w readCloserWrapper) closeOnCancel() {
 	<-w.ctx.Done()
+	// #nosec G104 -- closing is best effort, the error is not actionable
 	w.rc.Close()
 }
 
 var (
-	// ErrNoBackends is the error returned when an endpoint has no backends defined
+	// ErrNoBackends is the error returned when an endpoint has no backends defined.
 	ErrNoBackends = errors.New("all endpoints must have at least one backend")
-	// ErrTooManyBackends is the error returned when an endpoint has too many backends defined
+	// ErrTooManyBackends is the error returned when an endpoint has too many backends defined.
 	ErrTooManyBackends = errors.New("too many backends for this proxy")
-	// ErrTooManyProxies is the error returned when a middleware has too many proxies defined
+	// ErrTooManyProxies is the error returned when a middleware has too many proxies defined.
 	ErrTooManyProxies = errors.New("too many proxies for this proxy middleware")
-	// ErrNotEnoughProxies is the error returned when an endpoint has not enough proxies defined
+	// ErrNotEnoughProxies is the error returned when an endpoint has not enough proxies defined.
 	ErrNotEnoughProxies = errors.New("not enough proxies for this endpoint")
 )
 
-// Proxy processes a request in a given context and returns a response and an error
+// Proxy processes a request in a given context and returns a response and an error.
 type Proxy func(ctx context.Context, request *Request) (*Response, error)
 
-// BackendFactory creates a proxy based on the received backend configuration
+// BackendFactory creates a proxy based on the received backend configuration.
 type BackendFactory func(remote *config.Backend) Proxy
 
 // Middleware adds a middleware, decorator or wrapper over a collection of proxies,
@@ -81,12 +84,13 @@ type BackendFactory func(remote *config.Backend) Proxy
 //	response, err := p(ctx, r)
 type Middleware func(next ...Proxy) Proxy
 
-// EmptyMiddlewareWithLoggger is a dummy middleware, useful for testing and fallback
+// EmptyMiddlewareWithLoggger is a dummy middleware, useful for testing and fallback.
 func EmptyMiddlewareWithLogger(logger logging.Logger, next ...Proxy) Proxy {
 	if len(next) > 1 {
 		logger.Fatal("too many proxies for this proxy middleware: EmptyMiddleware only accepts 1 proxy, got %d", len(next))
 		return nil
 	}
+
 	return next[0]
 }
 
@@ -100,5 +104,7 @@ func emptyMiddlewareFallback(logger logging.Logger) Middleware {
 	}
 }
 
-// NoopProxy is a do nothing proxy, useful for testing
+// NoopProxy is a do nothing proxy, useful for testing.
+//
+//nolint:nilnil // nil, nil means "no value, no error" here
 func NoopProxy(_ context.Context, _ *Request) (*Response, error) { return nil, nil }
