@@ -1,7 +1,7 @@
 package binder
 
 import (
-	"io/ioutil"
+	"os"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -40,7 +40,7 @@ func (b *Binder) DoFile(f string) error {
 	b.load()
 	return b.do(b.state.DoFile(f), func(problem int) *source {
 		// #nosec G304 -- path comes from the operator config or the CLI, not from request data
-		s, _ := ioutil.ReadFile(f)
+		s, _ := os.ReadFile(f)
 		return newSource(string(s), problem)
 	})
 }

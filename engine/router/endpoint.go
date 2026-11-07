@@ -276,8 +276,7 @@ type headerResponseError interface {
 // writeError writes the status of err (its own, or errF's mapping), the headers
 // it carries and, with return_error_msg, its message.
 func writeError(w http.ResponseWriter, err error, errF server.ToHTTPError) {
-	var withHeaders headerResponseError
-	if errors.As(err, &withHeaders) {
+	if withHeaders, ok := errors.AsType[headerResponseError](err); ok {
 		for k, vs := range withHeaders.Headers() {
 			for _, v := range vs {
 				w.Header().Add(k, v)
@@ -285,8 +284,7 @@ func writeError(w http.ResponseWriter, err error, errF server.ToHTTPError) {
 		}
 	}
 	status := errF(err)
-	var withStatus responseError
-	if errors.As(err, &withStatus) {
+	if withStatus, ok := errors.AsType[responseError](err); ok {
 		status = withStatus.StatusCode()
 	}
 	if !ReturnErrorMsg {
@@ -294,8 +292,7 @@ func writeError(w http.ResponseWriter, err error, errF server.ToHTTPError) {
 		return
 	}
 	contentType := "text/plain; charset=utf-8"
-	var withEncoding encodedResponseError
-	if errors.As(err, &withEncoding) {
+	if withEncoding, ok := errors.AsType[encodedResponseError](err); ok {
 		contentType = withEncoding.Encoding()
 	}
 	w.Header().Set(constant.HeaderContentType, contentType)

@@ -60,13 +60,12 @@ func (p parser) Parse(configFile string) (ServiceConfig, error) {
 
 // CheckErr returns a proper documented error.
 func CheckErr(err error, configFile string) error {
-	var pathErr *os.PathError
 
 	if failure, ok := json.DecodeError(err); ok {
 		return NewParseError(errors.New(failure.Message), configFile, failure.Offset)
 	}
 
-	if errors.As(err, &pathErr) {
+	if pathErr, ok := errors.AsType[*os.PathError](err); ok {
 		return fmt.Errorf(
 			"'%s' (%s): %s",
 			configFile,
