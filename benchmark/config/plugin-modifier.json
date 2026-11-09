@@ -1,0 +1,43 @@
+{
+  "version": 3,
+  "name": "benchmark",
+  "port": 8080,
+  "timeout": "3s",
+  "cache_ttl": "0s",
+  "plugin": {
+    "pattern": ".so",
+    "folder": "/opt/plugins/"
+  },
+  "extra_config": {
+    "telemetry/logging": {
+      "level": "ERROR",
+      "prefix": "[BENCH]",
+      "syslog": false,
+      "stdout": true
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/plugin-modifier",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "host": [
+            "http://bench-backend:80"
+          ],
+          "url_pattern": "/echo",
+          "encoding": "json"
+        }
+      ],
+      "extra_config": {
+        "plugin/req-resp-modifier": {
+          "name": [
+            "bench-modifier-request",
+            "bench-modifier-response"
+          ]
+        }
+      }
+    }
+  ]
+}

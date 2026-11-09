@@ -12,3 +12,4 @@ tests/fixtures/
 Dockerfile
 .dockerignore
 docker/
+benchmark/

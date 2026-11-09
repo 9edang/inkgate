@@ -1,7 +1,7 @@
 VERSION ?= 0.1.0
 LDFLAGS := -X github.com/9edang/inkgate/engine/core.InkgateVersion=$(VERSION)
 
-.PHONY: build test test-plugins test-certs bench-ratelimit tools lint sec vuln check-all docker-version docker-build docker-push
+.PHONY: build test test-plugins test-certs bench-ratelimit bench tools lint sec vuln check-all docker-version docker-build docker-push
 
 GOBIN := $(shell go env GOPATH)/bin
 export PATH := $(GOBIN):$(PATH)
@@ -84,6 +84,9 @@ BUMP ?= beta
 
 docker-version:
 	@scripts/docker-release.sh version $(BUMP)
+
+bench:
+	benchmark/run.sh
 
 docker-build:
 	scripts/docker-release.sh build $(BUMP)
