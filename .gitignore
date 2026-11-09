@@ -32,3 +32,8 @@ feature/auth/jose/key.pem
 
 # plugins built by `make test-plugins`
 tests/plugins/**/*.so
+
+# raw per-run numbers of the benchmark; the report, summary.json and rps.svg are kept
+benchmark/results/raw/
+# plugins built by benchmark/run.sh
+/benchmark/.plugins/

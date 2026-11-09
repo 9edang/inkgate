@@ -1,0 +1,66 @@
+{
+  "version": 3,
+  "name": "benchmark",
+  "port": 8080,
+  "timeout": "3s",
+  "cache_ttl": "0s",
+  "extra_config": {
+    "telemetry/logging": {
+      "level": "ERROR",
+      "prefix": "[BENCH]",
+      "syslog": false,
+      "stdout": true
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/passthrough",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "host": [
+            "http://bench-backend:80"
+          ],
+          "url_pattern": "/ping",
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/json",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "host": [
+            "http://bench-backend:80"
+          ],
+          "url_pattern": "/user",
+          "encoding": "json"
+        }
+      ]
+    },
+    {
+      "endpoint": "/merge",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "host": [
+            "http://bench-backend:80"
+          ],
+          "url_pattern": "/user",
+          "encoding": "json"
+        },
+        {
+          "host": [
+            "http://bench-backend:80"
+          ],
+          "url_pattern": "/orders",
+          "encoding": "json"
+        }
+      ]
+    }
+  ]
+}
