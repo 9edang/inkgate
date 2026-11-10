@@ -38,8 +38,9 @@ globals, fresh locals, no response in `pre`, 200 concurrent requests under `-rac
 error messages and status codes identical to a fresh state; deliberately breaking the reset or the sources re-run
 makes the isolation tests fail. Per request (`BenchmarkProxyFactory`): 199 µs, 370 KB, 1,745 allocations → 15.5 µs,
 18 KB, 150 allocations; with `custom_error` 139 µs → 10 µs. End to end, a post-script adding one field, gateway on two
-cores, median of 3 × 10 s: 7,249 → 23,754 req/s, 27% → 90% of the same endpoint without Lua. Still building a state per
-request: the router-level module (`modifier/lua-endpoint`, `feature/transform/lua/router`), a follow-up.
+cores, median of 3 × 10 s: 7,249 → 23,754 req/s, 27% → 90% of the same endpoint without Lua. The router-level module
+(`modifier/lua-endpoint`, `feature/transform/lua/router`) uses the same pool since: 79 µs, 206 KB, 651 allocations →
+4.7 µs, 3.9 KB, 60 allocations per request. Both share the compilation and error mapping (`lua.Compile`).
 
 ## 2.2 Pass large responses through untouched
 

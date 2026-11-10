@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"errors"
-	"strings"
 	"sync"
 
 	"github.com/9edang/inkgate/context"
@@ -26,52 +25,19 @@ var errNoResponse = errors.New("the response is not available before the backend
 // What survives on a state: tables a script reached through a global it did not create and modified in place, and
 // modules loaded with require (their cache, as in any Lua program).
 type vmPool struct {
-	cfg                     lua.Config
-	sources, pre, post      *binder.Chunk
-	srcMap, preMap, postMap lua.SourceMap
-	pool                    sync.Pool
+	cfg  lua.Config
+	code *lua.Compiled
+	pool sync.Pool
 }
 
-// newVMPool compiles the code of cfg. It fails when a source is missing or does not compile; the caller then keeps
-// the per-request path, which reports the same error on every request as before.
+// newVMPool compiles the code of cfg; see lua.Compile for when it fails.
 func newVMPool(cfg lua.Config) (*vmPool, error) {
-	p := &vmPool{cfg: cfg, srcMap: lua.NewSourceMap()}
-
-	srcs := make([]string, 0, len(cfg.Sources))
-	for _, name := range cfg.Sources {
-		src, ok := cfg.Get(name)
-		if !ok {
-			return nil, lua.ErrUnknownSource(name)
-		}
-		srcs = append(srcs, src)
-		p.srcMap.Append(name, src)
-	}
-
-	var err error
-	if p.sources, err = compileIf(strings.Join(srcs, "\n")); err != nil {
+	code, err := lua.Compile(cfg)
+	if err != nil {
 		return nil, err
 	}
-	if p.pre, err = compileIf(cfg.PreCode); err != nil {
-		return nil, err
-	}
-	if p.post, err = compileIf(cfg.PostCode); err != nil {
-		return nil, err
-	}
-	// built once and only read afterwards: requests run concurrently
-	p.preMap = append(lua.SourceMap{}, p.srcMap...)
-	p.preMap.Append("pre-script", cfg.PreCode)
-	p.postMap = append(lua.SourceMap{}, p.srcMap...)
-	p.postMap.Append("post-script", cfg.PostCode)
 
-	return p, nil
-}
-
-func compileIf(src string) (*binder.Chunk, error) {
-	if strings.TrimSpace(src) == "" {
-		return nil, nil //nolint:nilnil // no code to run
-	}
-
-	return binder.Compile(src)
+	return &vmPool{cfg: cfg, code: code}, nil
 }
 
 // vm is one reused Lua state and the request it serves.
@@ -131,10 +97,10 @@ func (p *vmPool) proxy(next proxy.Proxy) proxy.Proxy {
 }
 
 func (p *vmPool) serve(v *vm, ctx context.Context, req *proxy.Request, next proxy.Proxy) (*proxy.Response, error) {
-	if err := run(v.b, p.sources, &p.srcMap); err != nil {
+	if err := p.code.RunSources(v.b); err != nil {
 		return nil, err
 	}
-	if err := run(v.b, p.pre, &p.preMap); err != nil {
+	if err := p.code.RunPre(v.b); err != nil {
 		return nil, err
 	}
 
@@ -150,17 +116,9 @@ func (p *vmPool) serve(v *vm, ctx context.Context, req *proxy.Request, next prox
 	}
 
 	v.resp = newProxyResponse(resp)
-	if err := run(v.b, p.post, &p.postMap); err != nil {
+	if err := p.code.RunPost(v.b); err != nil {
 		return nil, err
 	}
 
 	return resp, nil
-}
-
-func run(b *binder.Binder, c *binder.Chunk, m *lua.SourceMap) error {
-	if c == nil {
-		return nil
-	}
-
-	return lua.ToError(b.Run(c), m)
 }

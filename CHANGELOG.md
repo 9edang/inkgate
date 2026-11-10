@@ -26,7 +26,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Built with Go 1.27.3.
 
 ### Performance
-- Lua proxy and backend scripts run on reused, isolated Lua states with code compiled once: about 13× less work per
+- Lua endpoint, proxy and backend scripts run on reused, isolated Lua states with code compiled once: about 13× less work per
   request, 3.3× the throughput end to end. `response.load()` in a `pre` script now fails with a clear error, and code
   that cannot be compiled is reported at startup.
 - The per-request `[FLOW]` log line is no longer built below DEBUG (half the cost of the entry wrapper), and the
