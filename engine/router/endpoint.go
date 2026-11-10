@@ -91,6 +91,8 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 					return
 				}
 				defer limit.release()
+				// the shutdown waits for this stream, and tells it to end (see below)
+				defer server.DrainFrom(r.Context()).Track()()
 			}
 
 			var requestCtx context.Context
@@ -102,6 +104,10 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 				// stream itself ends with the backend or when the client leaves
 				requestCtx, cancel = context.WithCancel(r.Context())
 				headerTimer = time.AfterFunc(configuration.Timeout, cancel)
+				// on shutdown an SSE stream ends: cancelling the backend request ends the copy, and the client
+				// gets the end of a complete response
+				drain := server.DrainFrom(r.Context())
+				defer context.AfterFunc(drain.Context(), cancel)()
 				if socketMode {
 					upgrade = &socket.Upgrade{
 						W:                w,
@@ -110,6 +116,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 						IdleTimeout:      sc.idleTimeout,
 						MaxMessageSize:   sc.maxMessageSize,
 						Established:      func() { headerTimer.Stop() },
+						GoingAway:        drain.Done(),
 					}
 					requestCtx = socket.WithUpgrade(requestCtx, upgrade)
 				}

@@ -55,6 +55,9 @@ type Upgrade struct {
 	// Established is called once, when both connections are open and before
 	// the relay starts. The endpoint uses it to stop its handshake timeout.
 	Established func()
+	// GoingAway, when closed, ends the relay with a close frame 1001 (going away) to both sides: the server is
+	// shutting down. Nil means never.
+	GoingAway <-chan struct{}
 
 	handled atomic.Bool
 }
@@ -193,7 +196,7 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 		u.Established()
 	}
 
-	relay(client, backend, u.IdleTimeout, u.MaxMessageSize)
+	relay(client, backend, u.IdleTimeout, u.MaxMessageSize, u.GoingAway)
 
 	return &proxy.Response{IsComplete: true}, nil
 }
@@ -246,7 +249,7 @@ const controlWait = 5 * time.Second
 // relay copies messages both ways until one side ends, then closes both.
 //
 //nolint:cyclop,gocognit,gocyclo // one loop per direction, split it when it is next changed
-func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64) {
+func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64, goingAway <-chan struct{}) {
 	if maxMessage > 0 {
 		client.SetReadLimit(maxMessage)
 		backend.SetReadLimit(maxMessage)
@@ -295,6 +298,21 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 						return
 					}
 				}
+			}
+		}()
+	}
+
+	if goingAway != nil {
+		go func() {
+			select {
+			case <-finished:
+			case <-goingAway:
+				// the server is shutting down: both sides learn it with 1001; their close answers end the pipes,
+				// and the connections are dropped after controlWait whatever they do
+				msg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down")
+				_ = client.WriteControl(websocket.CloseMessage, msg, time.Now().Add(controlWait))
+				_ = backend.WriteControl(websocket.CloseMessage, msg, time.Now().Add(controlWait))
+				time.AfterFunc(controlWait, closeAll)
 			}
 		}()
 	}
