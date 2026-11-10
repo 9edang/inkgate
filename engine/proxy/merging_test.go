@@ -4,11 +4,12 @@ package proxy
 
 import (
 	"errors"
-	"github.com/9edang/inkgate/context"
 	"io"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -821,5 +822,21 @@ func testNewMergeDataMiddleware_sequentialFiltering(t *testing.T) {
 		if !out.IsComplete {
 			t.Errorf("We were expecting a completed response but we got an incompleted one!\n")
 		}
+	}
+}
+
+// A merged response keeps a status only when every part reports the same one.
+func Test_combineData_status(t *testing.T) {
+	part := func(status int) *Response {
+		return &Response{Data: map[string]any{}, IsComplete: true, Metadata: Metadata{StatusCode: status}}
+	}
+	if got := combineData(2, []*Response{part(200), part(200)}).Metadata.StatusCode; got != 200 {
+		t.Errorf("same status: got %d, want 200", got)
+	}
+	if got := combineData(2, []*Response{part(200), part(201)}).Metadata.StatusCode; got != 0 {
+		t.Errorf("mixed status: got %d, want 0", got)
+	}
+	if got := combineData(2, []*Response{part(200), nil}).Metadata.StatusCode; got != 200 {
+		t.Errorf("one part missing: got %d, want 200 (completeness is reported by IsComplete)", got)
 	}
 }

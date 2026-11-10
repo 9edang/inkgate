@@ -292,7 +292,7 @@ func writeError(w http.ResponseWriter, err error, errF server.ToHTTPError) {
 		return
 	}
 	contentType := "text/plain; charset=utf-8"
-	if withEncoding, ok := errors.AsType[encodedResponseError](err); ok {
+	if withEncoding, ok := errors.AsType[encodedResponseError](err); ok && withEncoding.Encoding() != "" {
 		contentType = withEncoding.Encoding()
 	}
 	w.Header().Set(constant.HeaderContentType, contentType)

@@ -61,3 +61,19 @@ Endpoint-level options live under `extra_config["inkgate/engine/proxy"]` (alias 
 - Backends that fail or time out contribute nothing. The client still gets 200 with the partial data.
 - Field collisions overwrite in arrival order, so use `group` to keep backends apart.
 - For non-GET/HEAD multi-backend endpoints the request body is cloned per backend, so each one reads the full body.
+
+## Status and headers of a response
+
+`Response.Metadata` carries a status and headers. Who fills them decides what a CEL rule (`resp_metadata_status`), a
+response modifier plugin or the flow summary sees:
+
+| Response | `Metadata.StatusCode` | `Metadata.Headers` |
+|---|---|---|
+| decoded backend (`json`, `xml`, ...) | the backend status | empty: the body is encoded again, so backend headers such as `Content-Length` would be wrong |
+| `no-op` backend | the backend status | the backend headers, sent to the client as they are |
+| merged (several backends) | the status of the parts when they all agree, otherwise 0 | empty |
+
+A merged response with mixed statuses has no single honest status, so it reports 0; whether every backend answered is
+in `IsComplete` (`resp_completed` in CEL). The client gets 200 for a decoded response and the backend status for
+`no-op`. Exception: an endpoint with `auth/signer` renders through the signer, which sends the backend status (a
+backend 201 reaches the client as 201).

@@ -70,7 +70,7 @@ func applyClientRateLimit(logger logging.Logger, logPrefix string, cfg Config, n
 		return next
 	}
 	if cfg.ClientCapacity == 0 {
-		if cfg.MaxRate < 1 {
+		if cfg.ClientMaxRate < 1 {
 			cfg.ClientCapacity = 1
 		} else {
 			cfg.ClientCapacity = uint64(cfg.ClientMaxRate)

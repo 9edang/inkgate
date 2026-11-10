@@ -7,10 +7,12 @@ import (
 	"io"
 	"net/http"
 
+	glua "github.com/yuin/gopher-lua"
+
 	"github.com/9edang/inkgate/engine/proxy"
 	lua "github.com/9edang/inkgate/feature/transform/lua"
+	"github.com/9edang/inkgate/feature/transform/lua/decorator"
 	"github.com/9edang/inkgate/internal/binder"
-	glua "github.com/yuin/gopher-lua"
 )
 
 func registerResponseTable(resp *proxy.Response, b *binder.Binder) {
@@ -167,6 +169,14 @@ func (*ProxyResponse) data(c *binder.Context) error {
 	resp, ok := c.Arg(1).Data().(*ProxyResponse)
 	if !ok {
 		return errResponseExpected
+	}
+	if resp.Data == nil {
+		resp.Data = map[string]any{}
+	}
+	// resp:data(key, value) sets one field; resp:data() returns the table
+	if c.Top() == 3 {
+		decorator.SetValue(c, &lua.Table{Data: resp.Data}, c.Arg(2).String(), 3)
+		return nil
 	}
 	c.Push().Data(&lua.Table{Data: resp.Data}, "luaTable")
 

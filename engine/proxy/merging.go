@@ -4,13 +4,14 @@ package proxy
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -522,6 +523,8 @@ func getResponseCombiner(extra config.ExtraConfig) ResponseCombiner {
 	return c
 }
 
+// combineData merges the data of the parts. The merged response keeps a status only when every part reports the
+// same one; backend headers are never merged.
 func combineData(total int, parts []*Response) *Response {
 	isComplete := len(parts) == total
 	var retResponse *Response
@@ -532,8 +535,15 @@ func combineData(total int, parts []*Response) *Response {
 		}
 		isComplete = isComplete && part.IsComplete
 		if retResponse == nil {
-			retResponse = &Response{Data: part.Data, IsComplete: isComplete}
+			retResponse = &Response{
+				Data:       part.Data,
+				IsComplete: isComplete,
+				Metadata:   Metadata{StatusCode: part.Metadata.StatusCode},
+			}
 			continue
+		}
+		if part.Metadata.StatusCode != retResponse.Metadata.StatusCode {
+			retResponse.Metadata.StatusCode = 0
 		}
 		for k, v := range part.Data {
 			retResponse.Data[k] = v

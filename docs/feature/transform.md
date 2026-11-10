@@ -29,6 +29,18 @@ flowchart TD
 The Lua VM is `gopher-lua`, and Go types are exposed through `internal/binder`. Helpers available to scripts are in
 `lua/decorator` (http, json, logging, etc.). A script can stop the request with `custom_error(msg, status)`.
 
+The response body is a table: read it with `resp:data()` and change it with the table methods, or set one field with
+the two-argument form. Both forms convert strings, numbers, booleans and tables the same way.
+
+```lua
+local resp = response.load()
+local data = resp:data()          -- the body as a table
+data:set("id", data:get("id") + 1)
+data:del("internal")
+resp:data("source", "lua")        -- same as resp:data():set("source", "lua")
+resp:headers("X-Lua", "yes")      -- one response header (nil removes it)
+```
+
 ## martian — declarative HTTP modifiers
 
 | Namespace | `inkgate/feature/transform/martian` (alias `modifier/martian`), backend level |
