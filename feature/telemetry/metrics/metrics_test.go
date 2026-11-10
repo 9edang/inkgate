@@ -2,14 +2,16 @@ package metrics
 
 import (
 	"bytes"
-	"github.com/9edang/inkgate/context"
 	"math"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/9edang/inkgate/engine/logging"
+	"github.com/9edang/inkgate/context"
+
 	"github.com/rcrowley/go-metrics"
+
+	"github.com/9edang/inkgate/engine/logging"
 )
 
 func TestConfigGetter(t *testing.T) {
@@ -156,10 +158,16 @@ func TestMetrics_process(t *testing.T) {
 		if !strings.HasPrefix(name, "service.") && !isRouterMetric {
 			t.Errorf("Unexpected metric: %s", name)
 		}
+		delete(expected, name)
 		*tm = *tm + 1
 	})
-	if totalMetrics < 31 {
-		t.Error("Not enough metrics")
+	// The runtime stats are not counted: go-metrics registers them into the first registry of the process only
+	// (registerRuntimeMetricsOnce), so their number depends on which test ran first.
+	for name := range expected {
+		t.Errorf("missing router metric %s", name)
+	}
+	if totalMetrics == 0 {
+		t.Error("no metrics registered")
 	}
 }
 

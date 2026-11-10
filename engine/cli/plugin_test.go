@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/9edang/inkgate/engine/cli/plugin"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
+
+	"github.com/9edang/inkgate/engine/cli/plugin"
 )
 
 func Test_pluginFuncErr(t *testing.T) {
@@ -35,15 +36,15 @@ func Test_pluginFuncErr(t *testing.T) {
 		err      string
 	}{
 		"missing": {
-			goSum: "./testdata/missing-go.sum",
-			err:   "open ./testdata/missing-go.sum: no such file or directory",
+			goSum: "../../tests/fixtures/cli/missing-go.sum",
+			err:   "open ../../tests/fixtures/cli/missing-go.sum: no such file or directory",
 		},
 		"matching": {
-			goSum:    "./testdata/match-go.sum",
+			goSum:    "../../tests/fixtures/cli/match-go.sum",
 			expected: "No incompatibilities found!\n",
 		},
 		"changes": {
-			goSum: "./testdata/changes-go.sum",
+			goSum: "../../tests/fixtures/cli/changes-go.sum",
 			expected: `cloud.google.com/go
 	have: v0.100.3
 	want: v0.100.2
@@ -57,7 +58,7 @@ golang.org/x/mod
 			err: "3 incompatibilities found",
 		},
 		"fix": {
-			goSum: "./testdata/changes-go.sum",
+			goSum: "../../tests/fixtures/cli/changes-go.sum",
 			fix:   true,
 			expected: `go mod edit --replace cloud.google.com/go=cloud.google.com/go@v0.100.2
 go mod edit --replace github.com/Azure/azure-sdk-for-go=github.com/Azure/azure-sdk-for-go@v59.3.0+incompatible

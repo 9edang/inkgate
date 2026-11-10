@@ -3,12 +3,13 @@ package jsonschema
 import (
 	"bytes"
 	"errors"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -203,7 +204,9 @@ func TestProxyFactory_validationOK(t *testing.T) {
 }
 
 func TestProxyFactory_invalidJSON(t *testing.T) {
-	errExpected := "invalid character '\\n' in string literal"
+	// only the stable part of the message: Go 1.27's encoding/json (json v2) says "in string", older Go said
+	// "in string literal"; the status code is what the client relies on
+	errExpected := "invalid character '\\n' in string"
 	statusExpected := http.StatusBadRequest
 	pf := ProxyFactory(logging.NoOp, proxy.FactoryFunc(func(cfg *config.EndpointConfig) (proxy.Proxy, error) {
 		return func(_ context.Context, _ *proxy.Request) (*proxy.Response, error) {
