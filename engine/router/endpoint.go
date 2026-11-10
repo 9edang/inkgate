@@ -53,6 +53,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 		}
 		stream := sc.mode != ""
 		socketMode := sc.mode == StreamModeSocket
+		limit := newConnectionLimit(sc.maxConnections)
 
 		headersToSend := configuration.HeadersToPass
 		if len(headersToSend) == 0 {
@@ -78,6 +79,18 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 				w.WriteHeader(http.StatusUpgradeRequired)
 
 				return
+			}
+
+			if stream {
+				// the handler runs as long as the stream or the socket: the slot is held for its whole life
+				if !limit.acquire() {
+					w.Header().Set("Retry-After", "1")
+					w.Header().Set(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
+					w.WriteHeader(http.StatusServiceUnavailable)
+
+					return
+				}
+				defer limit.release()
 			}
 
 			var requestCtx context.Context

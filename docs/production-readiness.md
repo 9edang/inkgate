@@ -37,10 +37,10 @@ Use [toxiproxy](https://github.com/Shopify/toxiproxy) between inkgate and the ba
 - [ ] One bad backend does not stall other routes
 - [ ] Graceful shutdown: SIGTERM with requests in flight drops zero of them, within the ECS `stopTimeout`
 - [ ] SSE and WebSocket: a slow client, a client disconnect and a backend disconnect are all cleaned up
-- [ ] Limits on the number of streams and connections exist
+- [x] Limits on the number of streams and connections exist: `max_connections` in `router/stream`
 
-Today: streams have no limits, no metrics and no shutdown drain yet; that is
-[milestone M3](milestones/m3-streaming.md) (3.1 adds the connection limit).
+Today: streams have a per-endpoint connection limit (M3 3.1), but no metrics and no shutdown drain yet; that is the
+rest of [milestone M3](milestones/m3-streaming.md).
 
 ## 4. Security
 

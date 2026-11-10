@@ -54,6 +54,7 @@ type streamConfig struct {
 	mode           string // "" when the endpoint does not stream
 	idleTimeout    time.Duration
 	maxMessageSize int64
+	maxConnections int // open streams or sockets of the endpoint at once; 0 means no limit
 }
 
 // parseStream reads the router/stream section of the endpoint. An invalid
@@ -101,7 +102,46 @@ func parseStream(cfg *config.EndpointConfig) (streamConfig, error) {
 		sc.maxMessageSize = int64(n)
 	}
 
+	if raw, ok := m["max_connections"]; ok {
+		n, ok := config.Float64(raw)
+		if !ok || n < 0 || n != float64(int(n)) {
+			return streamConfig{}, fmt.Errorf("endpoint %s: router/stream max_connections must be a whole number, got %v", cfg.Endpoint, raw)
+		}
+		sc.maxConnections = int(n)
+	}
+
 	return sc, nil
+}
+
+// connectionLimit counts the open streams of one endpoint. Taking a slot never waits: a client over the limit is
+// refused at once, before the backend is called.
+type connectionLimit chan struct{}
+
+func newConnectionLimit(n int) connectionLimit {
+	if n <= 0 {
+		return nil // no limit
+	}
+
+	return make(connectionLimit, n)
+}
+
+// acquire takes a slot and reports whether it got one; a nil limit always does.
+func (l connectionLimit) acquire() bool {
+	if l == nil {
+		return true
+	}
+	select {
+	case l <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (l connectionLimit) release() {
+	if l != nil {
+		<-l
+	}
 }
 
 // streamBufferSize is the size of the chunk read from the backend before each flush.
