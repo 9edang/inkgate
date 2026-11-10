@@ -14,6 +14,12 @@ import (
 )
 
 func RegisterHTTPRequest(ctx context.Context, b *binder.Binder) {
+	RegisterHTTPRequestFunc(func() context.Context { return ctx }, b)
+}
+
+// RegisterHTTPRequestFunc is RegisterHTTPRequest for a binder reused across requests: ctx is called on every
+// http_response.new, so each call uses the context of the request being served.
+func RegisterHTTPRequestFunc(ctx func() context.Context, b *binder.Binder) {
 	t := b.Table("http_response")
 
 	t.Static("new", newHttpResponse(ctx))
@@ -25,7 +31,7 @@ func RegisterHTTPRequest(ctx context.Context, b *binder.Binder) {
 	t.Dynamic("close", httpClose)
 }
 
-func newHttpResponse(ctx context.Context) func(*binder.Context) error {
+func newHttpResponse(ctx func() context.Context) func(*binder.Context) error {
 	return func(c *binder.Context) error {
 		if c.Top() == 0 || c.Top() == 2 {
 			return errors.New("need 1, 3 or 4 arguments")
@@ -67,7 +73,10 @@ func newHttpResponse(ctx context.Context) func(*binder.Context) error {
 			}
 		}
 
-		resp, err := executeHttpRequest(req.WithContext(ctx))
+		// the body is handed to the script, which closes it with resp:close(); if it does not, the request context
+		// ends the connection when the gateway request is done
+		//nolint:bodyclose // ownership passes to the Lua script
+		resp, err := executeHttpRequest(req.WithContext(ctx()))
 		if err != nil {
 			return err
 		}

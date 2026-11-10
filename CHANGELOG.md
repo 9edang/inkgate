@@ -26,6 +26,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Built with Go 1.27.3.
 
 ### Performance
+- Lua proxy and backend scripts run on reused, isolated Lua states with code compiled once: about 13× less work per
+  request, 3.3× the throughput end to end. `response.load()` in a `pre` script now fails with a clear error, and code
+  that cannot be compiled is reported at startup.
 - The per-request `[FLOW]` log line is no longer built below DEBUG (half the cost of the entry wrapper), and the
   logstash logger no longer formats records for levels it drops. Loggers may implement `Enabled(level int) bool`
   (`logging.LevelChecker`); `logging.Enabled` asks a logger before building a message.
@@ -33,6 +36,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   (and an 8 KB sample allocated) on every call, and no goroutine is started per backend call.
 
 ### Fixed
+- JSON-schema validation errors listed their causes in a random order; the same body now always gets the same message.
 - Data races in the metrics collector: the `/__stats` snapshot was replaced while being read.
 - `client_max_rate` without `client_capacity` allowed a burst of 1 per client instead of the client rate.
 - CEL `resp_metadata_status` was always 0 for decoded backends.

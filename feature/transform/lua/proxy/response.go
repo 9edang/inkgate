@@ -16,6 +16,12 @@ import (
 )
 
 func registerResponseTable(resp *proxy.Response, b *binder.Binder) {
+	r := newProxyResponse(resp)
+	registerResponseTableFunc(func() *ProxyResponse { return r }, b)
+}
+
+// newProxyResponse wraps resp for the scripts, with empty headers and data instead of nil.
+func newProxyResponse(resp *proxy.Response) *ProxyResponse {
 	r := &ProxyResponse{resp}
 	if r.Metadata.Headers == nil {
 		r.Metadata.Headers = map[string][]string{}
@@ -24,13 +30,24 @@ func registerResponseTable(resp *proxy.Response, b *binder.Binder) {
 		r.Data = map[string]any{}
 	}
 
+	return r
+}
+
+// registerResponseTableFunc registers the response table; response.load() returns current(), which is nil until the
+// backend answered.
+func registerResponseTableFunc(current func() *ProxyResponse, b *binder.Binder) {
 	t := b.Table("response")
 
 	t.Static("load", func(c *binder.Context) error {
+		r := current()
+		if r == nil {
+			return errNoResponse
+		}
 		c.Push().Data(r, "response")
 		return nil
 	})
 
+	var r *ProxyResponse // the methods read the response from their first argument, not from the receiver
 	t.Dynamic("isComplete", r.isComplete)
 	t.Dynamic("statusCode", r.statusCode)
 	t.Dynamic("data", r.data)

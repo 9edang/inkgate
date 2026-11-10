@@ -7,7 +7,7 @@ the job before changing anything.
 
 | # | Item | Today | Target | Size |
 |---|---|---|---|---|
-| 2.1 | Reuse Lua VMs instead of building one per request | 3,790 req/s, 250 µs | above 8,000 req/s | M |
+| 2.1 | Reuse Lua VMs instead of building one per request (**done**) | 3,790 req/s, 250 µs | above 8,000 req/s | M |
 | 2.2 | Pass large responses through without decoding when nothing reads them | 893 req/s at 100 KB, 160 MB | 3× or more | M |
 | 2.3 | Remove the goroutine started for every `no-op` response (**dropped: measured, not the cause**) | 8,598 req/s at 16 KB | above 11,000 req/s | S |
 | 2.4 | Skip work for log lines that will not be printed (**done** for INFO and above) | DEBUG costs 27% vs INFO | no cost at INFO and above | S |
@@ -28,6 +28,18 @@ router and backend Lua modules for the same pattern.
 
 **Done when**: `lua-proxy-script` above 8,000 req/s, and a test proves that a global set by one request is not visible
 to the next.
+
+**Result** (November 2026): `feature/transform/lua/proxy/pool.go`. A state is built once (decorators, tables) and
+reused; sources, pre and post code are compiled once to shared `FunctionProto`s. Isolation goes further than the plan:
+resetting globals alone would keep state a source holds in a `local` (an upvalue of its functions), so the compiled
+sources chunk runs again on every request. Request, response and the context of `http_response.new` are read from the
+state's current request; `response.load()` fails before the backend answered, as it did. Tests cover leaking
+globals, fresh locals, no response in `pre`, 200 concurrent requests under `-race`, recovery after an error, and
+error messages and status codes identical to a fresh state; deliberately breaking the reset or the sources re-run
+makes the isolation tests fail. Per request (`BenchmarkProxyFactory`): 199 µs, 370 KB, 1,745 allocations → 15.5 µs,
+18 KB, 150 allocations; with `custom_error` 139 µs → 10 µs. End to end, a post-script adding one field, gateway on two
+cores, median of 3 × 10 s: 7,249 → 23,754 req/s, 27% → 90% of the same endpoint without Lua. Still building a state per
+request: the router-level module (`modifier/lua-endpoint`, `feature/transform/lua/router`), a follow-up.
 
 ## 2.2 Pass large responses through untouched
 
