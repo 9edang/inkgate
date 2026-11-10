@@ -6,13 +6,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/proxy"
@@ -303,4 +304,27 @@ func startMuxServer(handlerFunc http.HandlerFunc) *http.ServeMux {
 	router := http.NewServeMux()
 	router.Handle("/_mux_endpoint", handlerFunc)
 	return router
+}
+
+func TestWriteErrorBodyTooLarge(t *testing.T) {
+	w := httptest.NewRecorder()
+	err := fmt.Errorf("backend call: %w", &http.MaxBytesError{Limit: 10})
+	writeError(w, err, server.DefaultToHTTPError)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status %d, want 413", w.Code)
+	}
+}
+
+type listedErrors []error
+
+func (l listedErrors) Error() string   { return "merged" }
+func (l listedErrors) Errors() []error { return l }
+
+func TestWriteErrorBodyTooLargeInMergedError(t *testing.T) {
+	w := httptest.NewRecorder()
+	err := listedErrors{errors.New("other backend"), fmt.Errorf("call: %w", &http.MaxBytesError{Limit: 10})}
+	writeError(w, err, server.DefaultToHTTPError)
+	if w.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status %d, want 413", w.Code)
+	}
 }

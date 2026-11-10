@@ -33,6 +33,15 @@ const (
 	DefaultMaxIdleConnsPerHost = 250
 	// DefaultTimeout is the default value to use for the ServiceConfig.Timeout param
 	DefaultTimeout = 2 * time.Second
+	// DefaultReadHeaderTimeout bounds how long a client may take to send the request headers (slow clients).
+	DefaultReadHeaderTimeout = 10 * time.Second
+	// DefaultReadTimeout bounds how long reading a whole request, body included, may take. It does not cut
+	// streamed responses or WebSocket connections: Go clears the deadline when a connection is hijacked.
+	DefaultReadTimeout = 30 * time.Second
+	// DefaultIdleTimeout bounds how long a keep-alive connection may stay idle.
+	DefaultIdleTimeout = 120 * time.Second
+	// DefaultMaxBodyBytes is the largest request body accepted (10 MB).
+	DefaultMaxBodyBytes int64 = 10 << 20
 
 	// ConfigVersion is the current version of the config struct
 	ConfigVersion = 3
@@ -95,6 +104,9 @@ type ServiceConfig struct {
 	// size of the request body.
 	// If zero, DefaultMaxHeaderBytes (1MB) is used.
 	MaxHeaderBytes int `mapstructure:"max_header_bytes"`
+	// MaxBodyBytes is the largest request body accepted; a larger one is refused with 413. Zero means
+	// DefaultMaxBodyBytes, a negative value means no limit.
+	MaxBodyBytes int64 `mapstructure:"max_body_bytes"`
 
 	// DisableKeepAlives, if true, prevents re-use of TCP connections
 	// between different HTTP requests.
@@ -460,6 +472,7 @@ func (s *ServiceConfig) initGlobalParams() error {
 	if s.Timeout == 0 {
 		s.Timeout = DefaultTimeout
 	}
+	s.applyServerLimitDefaults()
 
 	var err error
 	s.Host, err = s.uriParser.SafeCleanHosts(s.Host)
@@ -468,6 +481,29 @@ func (s *ServiceConfig) initGlobalParams() error {
 	}
 	s.ExtraConfig.sanitize()
 	return nil
+}
+
+// applyServerLimitDefaults protects the server against slow and oversized requests unless the config says
+// otherwise. An unset limit gets its default; a negative one means no limit. write_timeout keeps no default: it
+// would cut long responses and streams.
+func (s *ServiceConfig) applyServerLimitDefaults() {
+	s.ReadHeaderTimeout = withDefault(s.ReadHeaderTimeout, DefaultReadHeaderTimeout)
+	s.ReadTimeout = withDefault(s.ReadTimeout, DefaultReadTimeout)
+	s.IdleTimeout = withDefault(s.IdleTimeout, DefaultIdleTimeout)
+	if s.MaxBodyBytes == 0 {
+		s.MaxBodyBytes = DefaultMaxBodyBytes
+	}
+}
+
+func withDefault(d, def time.Duration) time.Duration {
+	switch {
+	case d == 0:
+		return def
+	case d < 0:
+		return 0 // net/http: no limit
+	default:
+		return d
+	}
 }
 
 func (s *ServiceConfig) initAsyncAgents() error {
