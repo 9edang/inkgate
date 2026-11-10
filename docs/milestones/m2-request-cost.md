@@ -55,6 +55,11 @@ decoded into `map[string]any` and then encoded again. The `no-op` path is far ch
 **Done when**: `proxy-json-100k` at 3× or more with the same response bytes, and every response-changing feature
 still turns the fast path off (a table-driven test per feature).
 
+**Design** (November 2026): [design/json-passthrough.md](../design/json-passthrough.md), for review. Checking the plan
+against the code changed it: the `no-op` path forwards backend headers, keeps the backend status and forwards invalid
+JSON, so it cannot be switched on automatically; and "nothing reads the data" has to be an allow-list of safe
+settings, since any feature or plugin can read the body.
+
 ## 2.3 No goroutine per `no-op` response
 
 **Evidence**: `engine/proxy/proxy.go` `NewReadCloserWrapper` starts a goroutine for every response
