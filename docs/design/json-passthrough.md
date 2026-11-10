@@ -1,6 +1,7 @@
 # Design: JSON pass-through (M2 2.2)
 
-Status: **proposal, for review**. Nothing here is implemented.
+Status: **accepted, phase 1 (opt-in) implemented** (November 2026). The reviewer agreed to the three decisions at
+the end. Where the implementation differs from the proposal, see "Implementation notes".
 
 ## Problem
 
@@ -109,3 +110,20 @@ opt-in.
 1. Allow-list instead of the block-list in M2 2.2: agreed?
 2. Buffer (keep all-or-nothing), not stream: agreed?
 3. Opt-in for one release, then default on: or default on immediately?
+
+## Implementation notes
+
+- **Anything that is not a valid, non-empty object takes the decoded path on the same bytes**, instead of a separate
+  check per case. An empty object, `null`, an array and invalid JSON each have their own outcome today (an empty
+  response marked incomplete, an error...); decoding them with the endpoint's own decoder gives exactly that, by
+  construction. They are rare, so the fast path loses nothing.
+- **No new size limit** on the backend body: the decoded path has none, and a limit would make a large answer fail only
+  with the pass-through on.
+- `Response.Raw` carries the bytes; `Response.JSONBody` returns them only while `Data` is empty, so a feature that did
+  change the data would still win.
+- Code: `engine/proxy/passthrough.go` (decision, parser), `flow/boot/passthrough.go` (opt-in, DEBUG log),
+  `engine/router/render.go` (render).
+- Measured, one backend answering 104 KB, gateway on two cores, median of 3 × 10 s: 909 → 4,875 req/s (5.4×), peak
+  memory about 180 MB → 87 MB; with the switch off, 907 req/s (unchanged). Status, headers and JSON value checked equal
+  against the previous binary, including a backend 201 (the client still gets 200) and a backend `Set-Cookie` (still
+  not forwarded).

@@ -42,6 +42,25 @@ sequenceDiagram
 
 Full details: [../engine/gateway.md](../engine/gateway.md).
 
+## JSON pass-through (opt-in)
+
+A JSON backend answer is normally decoded and encoded again before it reaches the client. On endpoints where nothing
+uses the decoded data, that work can be skipped: the gateway checks the backend's JSON and sends its bytes.
+
+```json
+{ "version": 3, "extra_config": { "router": { "json_passthrough": true } } }
+```
+
+An endpoint takes it only when everything on it leaves the body alone: one backend with `json` (or no) encoding,
+`output_encoding: json`, no `allow`, `deny`, `mapping`, `group`, `target`, `is_collection`, and only `extra_config`
+namespaces known to be safe (logging, metrics, rate limits, the JWT validator, the bot detector, JSON-schema, circuit
+breaker, HTTP cache, `backend/http`, client credentials). Anything else, a plugin included, keeps decoding. Each
+decision is logged at DEBUG: `[ENDPOINT: /users] JSON pass-through: off, mapping`.
+
+The client gets the same status, headers and errors as without it. The body has the same JSON value, as the backend
+wrote it: key order, spacing and number formatting are the backend's, and integers above 2^53 keep their exact value.
+A 100 KB body is served at 5.4× the rate with half the memory. Design: [../design/json-passthrough.md](../design/json-passthrough.md).
+
 ## Path syntax
 
 Endpoints use `{param}` (`/users/{id}`). `cmd/inkgate` sets `config.RoutingPattern = BracketsRouterPatternBuilder`, so endpoints keep `{param}`

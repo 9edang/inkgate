@@ -30,6 +30,9 @@ type Response struct {
 	IsComplete bool
 	Metadata   Metadata
 	Io         io.Reader
+	// Raw is the backend's JSON object, unchanged, on endpoints that take the JSON pass-through (see
+	// JSONPassthrough). Data is then empty; JSONBody uses Raw only while Data stays empty.
+	Raw []byte
 }
 
 // readCloserWrapper is Io.Reader which is closed when the Context is closed or canceled.

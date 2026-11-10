@@ -77,7 +77,7 @@ func jsonRender(w http.ResponseWriter, response *proxy.Response) {
 		return
 	}
 
-	js, err := json.Marshal(response.Data)
+	js, err := response.JSONBody() // the backend's bytes on a JSON pass-through endpoint
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

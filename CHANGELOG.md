@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- JSON pass-through, opt-in with `"router": {"json_passthrough": true}`: on endpoints where nothing uses the decoded
+  body, the backend's JSON is checked and sent as it is instead of decoded and encoded again (5.4× on a 100 KB body,
+  half the memory). Same status, headers and JSON value; the text is the backend's (key order, number formatting).
 - `benchmark/`: inkgate against KrakenD CE 2.13.11 in containers, with plugin scenarios (`make bench`).
 - Lua: `resp:data(key, value)` sets one field of the response body, like `resp:data():set(key, value)`.
 

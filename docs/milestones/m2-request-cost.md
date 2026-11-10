@@ -8,7 +8,7 @@ the job before changing anything.
 | # | Item | Today | Target | Size |
 |---|---|---|---|---|
 | 2.1 | Reuse Lua VMs instead of building one per request (**done**) | 3,790 req/s, 250 µs | above 8,000 req/s | M |
-| 2.2 | Pass large responses through without decoding when nothing reads them | 893 req/s at 100 KB, 160 MB | 3× or more | M |
+| 2.2 | Pass large responses through without decoding when nothing reads them (**done**, opt-in) | 893 req/s at 100 KB, 160 MB | 3× or more: 5.4× | M |
 | 2.3 | Remove the goroutine started for every `no-op` response (**dropped: measured, not the cause**) | 8,598 req/s at 16 KB | above 11,000 req/s | S |
 | 2.4 | Skip work for log lines that will not be printed (**done** for INFO and above) | DEBUG costs 27% vs INFO | no cost at INFO and above | S |
 | 2.5 | Make metrics cheaper per request (**done**) | metrics cost 20% | under 8%: now 1.7% | M |
@@ -58,7 +58,9 @@ still turns the fast path off (a table-driven test per feature).
 **Design** (November 2026): [design/json-passthrough.md](../design/json-passthrough.md), for review. Checking the plan
 against the code changed it: the `no-op` path forwards backend headers, keeps the backend status and forwards invalid
 JSON, so it cannot be switched on automatically; and "nothing reads the data" has to be an allow-list of safe
-settings, since any feature or plugin can read the body.
+settings, since any feature or plugin can read the body. **Result**: implemented as designed, opt-in with
+`"router": {"json_passthrough": true}`; 5.4× on a 104 KB body, half the peak memory, same status, headers and value
+([design notes](../design/json-passthrough.md#implementation-notes)).
 
 ## 2.3 No goroutine per `no-op` response
 

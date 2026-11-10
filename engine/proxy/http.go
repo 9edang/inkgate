@@ -47,6 +47,9 @@ func NewHTTPProxyWithHTTPExecutor(remote *config.Backend, re client.HTTPRequestE
 
 	ef := NewEntityFormatter(remote)
 	rp := DefaultHTTPResponseParserFactory(HTTPResponseParserConfig{dec, ef})
+	if remote.JSONPassthrough {
+		rp = RawJSONHTTPResponseParserFactory(HTTPResponseParserConfig{dec, ef})
+	}
 
 	return NewHTTPProxyDetailed(remote, re, client.GetHTTPStatusHandler(remote), rp)
 }
