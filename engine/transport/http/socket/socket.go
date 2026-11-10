@@ -58,6 +58,12 @@ type Upgrade struct {
 	// GoingAway, when closed, ends the relay with a close frame 1001 (going away) to both sides: the server is
 	// shutting down. Nil means never.
 	GoingAway <-chan struct{}
+	// OnMessage, when set, is called for every message relayed, with its direction and size, from the relay
+	// goroutines: it must be safe for concurrent use.
+	OnMessage func(toClient bool, n int)
+	// OnClose, when set, is called once when the relay ended, from the goroutine that called Proxy, with the close
+	// code: the one of the first close frame, 1001 when the server shut down, 1006 when a side dropped without one.
+	OnClose func(code int)
 
 	handled atomic.Bool
 }
@@ -196,7 +202,12 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 		u.Established()
 	}
 
-	relay(client, backend, u.IdleTimeout, u.MaxMessageSize, u.GoingAway)
+	code := relay(client, backend, relayOptions{
+		idle: u.IdleTimeout, maxMessage: u.MaxMessageSize, goingAway: u.GoingAway, onMessage: u.OnMessage,
+	})
+	if u.OnClose != nil {
+		u.OnClose(code)
+	}
 
 	return &proxy.Response{IsComplete: true}, nil
 }
@@ -246,10 +257,20 @@ func hijackable(w http.ResponseWriter) http.ResponseWriter {
 
 const controlWait = 5 * time.Second
 
-// relay copies messages both ways until one side ends, then closes both.
+type relayOptions struct {
+	idle       time.Duration
+	maxMessage int64
+	goingAway  <-chan struct{}
+	onMessage  func(toClient bool, n int)
+}
+
+// relay copies messages both ways until one side ends, then closes both. It returns the close code: the first close
+// frame seen, 1001 when the server shut down, 1006 (abnormal) when a side dropped without one.
 //
 //nolint:cyclop,gocognit,gocyclo // one loop per direction, split it when it is next changed
-func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64, goingAway <-chan struct{}) {
+func relay(client, backend *websocket.Conn, o relayOptions) int {
+	idle, maxMessage, goingAway := o.idle, o.maxMessage, o.goingAway
+	var closeCode atomic.Int64 // first one wins
 	if maxMessage > 0 {
 		client.SetReadLimit(maxMessage)
 		backend.SetReadLimit(maxMessage)
@@ -309,6 +330,7 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 			case <-goingAway:
 				// the server is shutting down: both sides learn it with 1001; their close answers end the pipes,
 				// and the connections are dropped after controlWait whatever they do
+				closeCode.CompareAndSwap(0, websocket.CloseGoingAway)
 				msg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down")
 				_ = client.WriteControl(websocket.CloseMessage, msg, time.Now().Add(controlWait))
 				_ = backend.WriteControl(websocket.CloseMessage, msg, time.Now().Add(controlWait))
@@ -321,9 +343,16 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 	wg.Add(2)
 	pipe := func(from, to *websocket.Conn) {
 		defer wg.Done()
+		toClient := to == client
 		for {
 			typ, r, err := from.NextReader()
 			if err != nil {
+				var ce *websocket.CloseError
+				if errors.As(err, &ce) {
+					closeCode.CompareAndSwap(0, int64(ce.Code))
+				} else {
+					closeCode.CompareAndSwap(0, websocket.CloseAbnormalClosure)
+				}
 				propagateClose(to, err)
 				if websocket.IsCloseError(err) || websocket.IsUnexpectedCloseError(err) {
 					// a close frame was forwarded: give the other side the time to
@@ -341,12 +370,16 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 				closeAll()
 				return
 			}
-			if _, err := io.Copy(w, r); err != nil {
+			n, err := io.Copy(w, r)
+			if err != nil {
 				// #nosec G104 -- closing is best effort, the error is not actionable
 				w.Close()
 				closeAll()
 
 				return
+			}
+			if o.onMessage != nil {
+				o.onMessage(toClient, int(n))
 			}
 			if err := w.Close(); err != nil {
 				closeAll()
@@ -358,6 +391,8 @@ func relay(client, backend *websocket.Conn, idle time.Duration, maxMessage int64
 	go pipe(backend, client)
 	wg.Wait()
 	close(finished)
+
+	return int(closeCode.Load())
 }
 
 // propagateClose tells the other side how this one ended: a close frame keeps

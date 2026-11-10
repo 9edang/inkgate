@@ -40,8 +40,8 @@ Use [toxiproxy](https://github.com/Shopify/toxiproxy) between inkgate and the ba
 - [x] SSE and WebSocket end cleanly on SIGTERM (1001 for sockets, a complete response for streams)
 - [x] Limits on the number of streams and connections exist: `max_connections` in `router/stream`
 
-Today: streams have a per-endpoint connection limit (M3 3.1) and drain on shutdown (M3 3.2); metrics for them are the
-rest of [milestone M3](milestones/m3-streaming.md).
+Today: streams have a per-endpoint connection limit (M3 3.1), drain on shutdown (M3 3.2) and metrics (M3 3.3,
+`router.stream.<endpoint>.*`); the rest of [milestone M3](milestones/m3-streaming.md) is hardening beyond that.
 
 ## 4. Security
 

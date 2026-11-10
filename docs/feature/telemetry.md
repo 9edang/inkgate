@@ -30,6 +30,7 @@ HTTP client.
 Selection (`flow/boot/logging.go`): logstash if configured, otherwise gologging (with GELF as an extra writer),
 otherwise a plain DEBUG logger on stdout.
 
+
 ## Metrics
 
 | Alias | Namespace | Options |
@@ -39,6 +40,23 @@ otherwise a plain DEBUG logger on stdout.
 
 The collector counts requests, statuses and latency per endpoint and backend, plus Go runtime stats. It serves a
 JSON snapshot on its own port. Influx pushes the same data periodically.
+
+### Stream and socket metrics
+
+With `telemetry/metrics` on (and router metrics not disabled), every streaming endpoint (`router/stream`) reports
+under `router.stream.<endpoint>.`:
+
+| Metric | Kind | Meaning |
+|---|---|---|
+| `open` | counter, up and down | streams or sockets open now |
+| `opened`, `refused` | counters | started, and refused over `max_connections` |
+| `duration` | histogram (ns) | how long each lasted |
+| `messages.to_client`, `messages.from_client` | counters | socket messages, event-stream chunks |
+| `bytes.to_client`, `bytes.from_client` | counters | their size |
+| `close.<code>` | counters | how sockets ended: `1000` normal, `1001` server shutdown, `1006` dropped without a close frame |
+
+Not exported through OpenTelemetry yet: the engine reports to a `router.StreamObserver`, and only the metrics layer
+implements one so far.
 
 ## Tracing and metrics export
 

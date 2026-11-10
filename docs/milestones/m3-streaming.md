@@ -8,7 +8,7 @@ is what keeps long-lived connections safe in production.
 |---|---|---|
 | 3.1 | A limit on open streams and sockets per endpoint (**done**) | S |
 | 3.2 | Drain on shutdown (**done**) | M |
-| 3.3 | Metrics for open connections and messages | S |
+| 3.3 | Metrics for open connections and messages (**done** for telemetry/metrics; OpenTelemetry open) | S |
 | 3.4 | SSE keep-alive comments | S |
 | 3.5 | Origin and subprotocol allow-lists at the gateway | S |
 | 3.6 | Message rate limit per WebSocket connection | M |
@@ -47,6 +47,12 @@ ends cleanly at once; before, the sockets got no close frame and the stream held
 
 Open streams and sockets per endpoint (a gauge), messages and bytes each way, connection length, close codes. Through
 the existing metrics and OpenTelemetry layers.
+
+**Result** (November 2026): the engine reports to a `router.StreamObserver` (opened, refused, closed with duration and
+close code, every message or chunk with its size); `feature/telemetry/metrics` implements it under
+`router.stream.<endpoint>.*`, with the handles of an endpoint resolved once (no allocation per message, tested).
+Checked through `/__stats` with the binary: `open = 2` with two sockets connected. Still to do: an OpenTelemetry
+implementation of the same interface.
 
 ## 3.4 SSE keep-alive
 

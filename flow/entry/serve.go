@@ -30,6 +30,10 @@ var Router = boot.Router{
 // endpoint pipeline from boot, then runs the server until ctx is done.
 func Serve(ctx context.Context, s boot.Services) {
 	handlerFactory := request.NewHandlerFactory(s.Logger, &metrics.HTTPMetrics{Metrics: s.Metrics}, s.TokenRejecter)
+	if s.Metrics != nil && s.Metrics.Config != nil && !s.Metrics.Config.RouterDisabled {
+		// streams and sockets of the streaming endpoints, under router.stream.<endpoint>.*
+		router.RegisterStreamObserver(metrics.NewStreamMetrics(s.Metrics.Router))
+	}
 
 	routerFactory := router.NewFactory(router.Config{
 		Engine:         router.NewEngine(s.Config),
