@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/9edang/inkgate/context"
@@ -104,11 +105,27 @@ func (v *validationError) Error() string {
 	s := v.error.Error()
 	if strings.HasPrefix(s, "jsonschema validation failed with") {
 		if ss := strings.SplitN(s, "\n", 2); len(ss) == 2 {
-			return ss[1]
+			return sortCauses(ss[1])
 		}
 	}
 
 	return s
+}
+
+// sortCauses orders the top-level causes ("- at ..." lines, each with its indented sub-causes) by their text: the
+// validator lists them in map order, and the same body must always get the same message.
+func sortCauses(s string) string {
+	var blocks []string
+	for line := range strings.SplitSeq(s, "\n") {
+		if strings.HasPrefix(line, "- ") || len(blocks) == 0 {
+			blocks = append(blocks, line)
+			continue
+		}
+		blocks[len(blocks)-1] += "\n" + line
+	}
+	slices.Sort(blocks)
+
+	return strings.Join(blocks, "\n")
 }
 
 func (*validationError) StatusCode() int {

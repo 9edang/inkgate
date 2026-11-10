@@ -309,3 +309,17 @@ type statusCodeError interface {
 	error
 	StatusCode() int
 }
+
+// The library lists the causes in no fixed order; clients must get the same message for the same body.
+func TestValidationErrorIsSorted(t *testing.T) {
+	err := &validationError{errors.New("jsonschema validation failed with 'x'\n" +
+		"- at '/b': missing property 'c'\n" +
+		"  - at '/b/c': nested\n" +
+		"- at '/a': got number, want string")}
+	want := "- at '/a': got number, want string\n" +
+		"- at '/b': missing property 'c'\n" +
+		"  - at '/b/c': nested"
+	if got := err.Error(); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
