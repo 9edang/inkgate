@@ -111,8 +111,16 @@ func (l *Logger) format(logLevel LogLevel, v ...any) ([]byte, error) {
 	return json.Marshal(record)
 }
 
+// Enabled implements logging.LevelChecker: the inner logger decides.
+func (l *Logger) Enabled(level int) bool {
+	return logging.Enabled(l.logger, level)
+}
+
 // Debug implements the logger interface
 func (l *Logger) Debug(v ...any) {
+	if !logging.Enabled(l.logger, logging.LEVEL_DEBUG) {
+		return // do not build a JSON record the inner logger would drop
+	}
 	data, err := l.format(LEVEL_DEBUG, v...)
 	if err != nil {
 		return
@@ -122,6 +130,9 @@ func (l *Logger) Debug(v ...any) {
 
 // Info implements the logger interface
 func (l *Logger) Info(v ...any) {
+	if !logging.Enabled(l.logger, logging.LEVEL_INFO) {
+		return // do not build a JSON record the inner logger would drop
+	}
 	data, err := l.format(LEVEL_INFO, v...)
 	if err != nil {
 		return
@@ -131,6 +142,9 @@ func (l *Logger) Info(v ...any) {
 
 // Warning implements the logger interface
 func (l *Logger) Warning(v ...any) {
+	if !logging.Enabled(l.logger, logging.LEVEL_WARNING) {
+		return // do not build a JSON record the inner logger would drop
+	}
 	data, err := l.format(LEVEL_WARNING, v...)
 	if err != nil {
 		return
@@ -140,6 +154,9 @@ func (l *Logger) Warning(v ...any) {
 
 // Error implements the logger interface
 func (l *Logger) Error(v ...any) {
+	if !logging.Enabled(l.logger, logging.LEVEL_ERROR) {
+		return // do not build a JSON record the inner logger would drop
+	}
 	data, err := l.format(LEVEL_ERROR, v...)
 	if err != nil {
 		return
@@ -149,6 +166,9 @@ func (l *Logger) Error(v ...any) {
 
 // Critical implements the logger interface
 func (l *Logger) Critical(v ...any) {
+	if !logging.Enabled(l.logger, logging.LEVEL_CRITICAL) {
+		return // do not build a JSON record the inner logger would drop
+	}
 	data, err := l.format(LEVEL_CRITICAL, v...)
 	if err != nil {
 		return

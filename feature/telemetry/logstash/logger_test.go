@@ -240,3 +240,26 @@ func sameValue(want, have any) bool {
 
 	return reflect.DeepEqual(want, have)
 }
+
+// M2 2.4: a level the inner logger drops is not formatted into a JSON record at all.
+func TestLoggerSkipsDisabledLevels(t *testing.T) {
+	buf := new(bytes.Buffer)
+	l, err := NewLogger(config.ExtraConfig{
+		Namespace:           map[string]any{},
+		gologging.Namespace: map[string]any{"level": "ERROR", "stdout": false},
+	}, buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if logging.Enabled(l, logging.LEVEL_DEBUG) || !logging.Enabled(l, logging.LEVEL_ERROR) {
+		t.Error("Enabled must follow the inner logger's level (ERROR)")
+	}
+	l.Debug("dropped")
+	if buf.Len() != 0 {
+		t.Errorf("a DEBUG line was written at ERROR: %q", buf.String())
+	}
+	l.Error("kept")
+	if !strings.Contains(buf.String(), "kept") {
+		t.Errorf("the ERROR line is missing: %q", buf.String())
+	}
+}

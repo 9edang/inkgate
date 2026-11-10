@@ -38,8 +38,12 @@ func NewRunServer(logger logging.Logger) corerouter.RunServerFunc {
 func withFlowContext(next corerouter.RunServerFunc, logger logging.Logger) corerouter.RunServerFunc {
 	return func(ctx context.Context, cfg config.ServiceConfig, handler http.Handler) error {
 		mw := context.Middleware(context.ParseOptions(cfg.ExtraConfig))
+		debug := logging.Enabled(logger, logging.LEVEL_DEBUG)
 		summary := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			handler.ServeHTTP(w, r)
+			if !debug {
+				return // the line would be dropped: do not build it
+			}
 			c := context.From(r.Context())
 			endpoint, method := c.Endpoint()
 			logger.Debug(fmt.Sprintf("[FLOW][%s] %s %s endpoint=%q method=%s backends=%d elapsed=%s",

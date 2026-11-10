@@ -21,8 +21,8 @@ Each finding was then checked against the code. The status column says what that
 | 1 | Metrics allocate a new sample on every call: `Histogram()` evaluates `defaultSample()` as an argument, so `NewUniformSample(1028)` (an 8 KB slice) is allocated per call even when the histogram exists. A goroutine is started and label strings are built per backend call. | confirmed: `feature/telemetry/metrics/proxy.go:66-72, 97`, `metrics.go:179` | [M2 2.5](milestones/m2-request-cost.md#25-cheaper-metrics-check-first): **fixed**, metrics cost 30% → 1.7% |
 | 2 | Lua builds a new VM per request, registers every decorator and recompiles the sources. 28% of base. | tracked: `feature/transform/lua/proxy/proxy.go:71-89` | [M2 2.1](milestones/m2-request-cost.md#21-reuse-lua-vms) |
 | 3 | JSON is decoded into `map[string]any` and encoded again; 100 KB costs 17× CPU and 160 MB peak. | tracked | [M2 2.2](milestones/m2-request-cost.md#22-pass-large-responses-through-untouched) |
-| 4 | One goroutine per `no-op` response to close the body on cancel. | tracked: `engine/proxy/proxy.go:42-47` | [M2 2.3](milestones/m2-request-cost.md#23-no-goroutine-per-no-op-response) |
-| 5 | The `[FLOW]` summary line is formatted with `fmt.Sprintf` on every request, also when DEBUG is off, and copies the backend-call slice. | tracked: `flow/entry/server.go:45-46` | [M2 2.4](milestones/m2-request-cost.md#24-free-log-calls-below-the-level) |
+| 4 | One goroutine per `no-op` response to close the body on cancel. | measured: 0.37 µs per response, 0.3% of a request; AfterFunc is slower | [M2 2.3](milestones/m2-request-cost.md#23-no-goroutine-per-no-op-response): **dropped**, not the cause |
+| 5 | The `[FLOW]` summary line is formatted with `fmt.Sprintf` on every request, also when DEBUG is off, and copies the backend-call slice. | tracked: `flow/entry/server.go:45-46` | [M2 2.4](milestones/m2-request-cost.md#24-free-log-calls-below-the-level): **fixed** at INFO and above |
 | 6 | Merge clones each backend request with `url.Parse(r.URL.String())`, plus a goroutine and two channels per call. | unverified | [M2 2.7](milestones/m2-request-cost.md#27-lighter-merge-check-first) |
 | 7 | Backend request setup copies the URL, the headers and the request more than once; the flow middleware copies the header map to add the request ID. | unverified | M2 2.7 |
 | 8 | `gzip.NewReader` per response, not pooled. Matters only when a backend sends `Content-Encoding: gzip` itself, since Go's transport decompresses otherwise. | unverified, likely minor | none |
@@ -85,7 +85,7 @@ change. The checklist entry is in [production-readiness.md](production-readiness
 | 1 | ~~Fix the client rate-limit burst~~ (done) | 21 | a wrong answer to a correct config, one line |
 | 2 | ~~Safety defaults: body limit and server timeouts~~ (done) | 17, 18 | protects every deployment; small |
 | 3 | ~~Metrics: one sample per histogram, handles resolved at startup, no goroutine per call~~ (done) | 1 | 20% measured cost, root cause known |
-| 4 | Log guard and `context.AfterFunc` | 4, 5 | small, already planned |
+| 4 | ~~Log guard~~ (done); `context.AfterFunc` measured slower, dropped | 4, 5 | small, already planned |
 | 5 | Lua VM pool | 2 | largest measured cost, needs the isolation test of M2 2.1 |
 | 6 | Pass-through for unread large bodies | 3 | largest memory cost |
 | 7 | Profile merge and backend setup, then decide | 6, 7, 9, 10 | unverified; profile first ([M5 5.3](milestones/m5-operability.md#53-pprof)) |
