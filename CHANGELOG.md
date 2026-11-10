@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- `router/stream` `keep_alive`: an SSE stream silent for that long gets a `: keep-alive` comment, so proxies in front do
+  not close it. Only for `text/event-stream`, only between events.
 - Stream and socket metrics under `router.stream.<endpoint>.*`: open, opened, refused, duration, messages and bytes
   each way, close codes.
 - `router/stream` `max_connections`: a cap on the streams or sockets open on an endpoint at once; over it, `503` with

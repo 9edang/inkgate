@@ -9,7 +9,7 @@ is what keeps long-lived connections safe in production.
 | 3.1 | A limit on open streams and sockets per endpoint (**done**) | S |
 | 3.2 | Drain on shutdown (**done**) | M |
 | 3.3 | Metrics for open connections and messages (**done** for telemetry/metrics; OpenTelemetry open) | S |
-| 3.4 | SSE keep-alive comments | S |
+| 3.4 | SSE keep-alive comments (**done**) | S |
 | 3.5 | Origin and subprotocol allow-lists at the gateway | S |
 | 3.6 | Message rate limit per WebSocket connection | M |
 | 3.7 | permessage-deflate | M |
@@ -59,6 +59,12 @@ implementation of the same interface.
 Proxies and load balancers in front often close a connection that stays silent for 60 s. Optional
 `keep_alive: "15s"`: when the backend has sent nothing for that long, the gateway writes a `: keep-alive` comment line,
 which every SSE client ignores.
+
+**Result** (November 2026): `keep_alive` in `router/stream`. Two rules beyond the plan, each with a test: a comment is
+written only for `text/event-stream` (on NDJSON or another chunked stream it would be data), and only between events
+(a comment inside a paused event would break it; the end of an event is found also when its blank line is split
+across chunks). The backend is read on a separate goroutine so the silence can be timed; all writes to the client stay
+on one goroutine, and a client that leaves still ends the backend stream.
 
 ## 3.5 Origin and subprotocol allow-lists
 
