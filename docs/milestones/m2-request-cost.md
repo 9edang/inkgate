@@ -66,10 +66,14 @@ per-request lines with it. At DEBUG, write through a buffered writer.
 ## 2.5 Cheaper metrics (check first)
 
 **Evidence**: turning metrics on costs 20% (10,997 vs 13,674 req/s). The collector uses named counters and histograms
-from `rcrowley/go-metrics`; a lookup by name per request is the likely cost.
+from `rcrowley/go-metrics`. The code review ([performance-review.md](../performance-review.md) #1) found the main cause:
+`ProxyMetrics.Histogram()` passes `defaultSample()` as an argument, so a new `NewUniformSample(1028)` (an 8 KB slice)
+is allocated on every call, even when the histogram already exists. On top of that, `NewProxyMiddleware` starts a
+goroutine and builds the label strings per backend call (`feature/telemetry/metrics/proxy.go:66-72`).
 
-**Plan**: after a profile confirms it, resolve the counters and histograms of each endpoint and backend once at
-startup and keep the handles; consider a sampled histogram.
+**Plan**: resolve the counters and histograms of each endpoint and backend once at startup (all four
+complete/error combinations are already registered there) and keep the handles; update them inline instead of in a
+goroutine. A profile before and after confirms the gain.
 
 **Done when**: metrics cost under 8% in `telemetry-metrics`.
 

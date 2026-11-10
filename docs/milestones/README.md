@@ -17,7 +17,9 @@ M1 and the quick items of M2 can start at once; M3 to M5 can run in parallel aft
 
 From the benchmark harness (a sibling directory of this repository), final run of 4 November 2026:
 inkgate on **one CPU core and 2 GB of RAM**, 128 connections, median of 3 runs. "% of base" compares with the
-plainest job, forwarding a 1 KB JSON document.
+plainest job, forwarding a 1 KB JSON document. This is not the setup of [benchmark/](../../benchmark/README.md) (inkgate
+against KrakenD CE, 2 CPUs and 512m each), so do not compare these numbers with that report; see
+[guides/benchmarking.md](../guides/benchmarking.md#11-reconcile-the-docs).
 
 | Job | Requests/s | % of base | CPU µs per request | Peak MB |
 |---|--:|--:|--:|--:|

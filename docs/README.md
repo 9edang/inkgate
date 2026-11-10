@@ -19,6 +19,9 @@ Diagrams are [Mermaid](https://mermaid.js.org); they render on GitHub, GitLab an
 | writing a custom plugin (.so) | [guides/custom-plugins.md](guides/custom-plugins.md) |
 | writing an `inkgate.json` | [guides/config-reference.md](guides/config-reference.md) |
 | planning the next work | [milestones/](milestones/README.md) |
+| benchmarking against KrakenD CE | [guides/benchmarking.md](guides/benchmarking.md) |
+| getting ready for production | [production-readiness.md](production-readiness.md) |
+| looking for performance and resource risks | [performance-review.md](performance-review.md) |
 
 ## Map
 
@@ -36,8 +39,10 @@ docs/
 ├── feature/             one page per business domain
 │   ├── auth.md  security.md  validation.md  traffic.md  transform.md  connector.md  telemetry.md
 ├── guides/              how-to
-│   ├── add-a-feature.md  config-reference.md  testing.md
+│   ├── add-a-feature.md  config-reference.md  custom-plugins.md  testing.md  benchmarking.md
 ├── milestones/          what to fix, speed up and add next, with the evidence for each item
 │   ├── README.md  m1-confirmed-bugs.md  m2-request-cost.md  m3-streaming.md  m4-traffic-resilience.md  m5-operability.md
+├── production-readiness.md  checklist before serving production traffic
+├── performance-review.md    request-path review: findings, status and order of work
 └── known-issues.md      unit tests that fail and why
 ```

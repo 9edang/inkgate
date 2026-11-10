@@ -7,6 +7,35 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- `benchmark/`: inkgate against KrakenD CE 2.13.11 in containers, with plugin scenarios (`make bench`).
+- Lua: `resp:data(key, value)` sets one field of the response body, like `resp:data():set(key, value)`.
+
+### Changed
+- **Breaking:** the server has request limits by default: `read_header_timeout` 10s, `read_timeout` 30s,
+  `idle_timeout` 120s and the new `max_body_bytes` 10 MB (a larger body gets 413). A config that relies on no limit
+  sets a negative value (`"read_timeout": "-1s"`, `"max_body_bytes": -1`). Streams and WebSocket connections are not
+  affected. The config hash (the anonymous cluster ID of the usage reporter) changes with them.
+- Fixed sleeps and random ports in the HTTP server tests are replaced by waiting for the port and asking the OS for
+  a free one; `make test` is green.
+- Request IDs are UUID v7 (time ordered). `trust_request_id` now defaults to `false` (an incoming `X-Request-Id`
+  is ignored unless enabled) and `propagate_request_id` to `true` (the ID is sent to the backends).
+- Config files are parsed with sonic: parse errors read `invalid JSON: ...` with the offset, row and column.
+- Decoded backend responses carry the backend status in `Metadata.StatusCode`; a merged response keeps it when all
+  backends agree. An `auth/signer` endpoint now sends the backend status (a backend 201 is no longer turned into 200).
+- Built with Go 1.27.3.
+
+### Fixed
+- `client_max_rate` without `client_capacity` allowed a burst of 1 per client instead of the client rate.
+- CEL `resp_metadata_status` was always 0 for decoded backends.
+- Lua `resp:data(key, value)` was silently ignored.
+- A CORS preflight listing allowed headers in another spelling or order than browsers use (`Origin, Content-Type`)
+  was refused.
+- PubSub logged two false errors for every backend that does not use it, and stayed silent on a broken PubSub config.
+- An error response with an empty encoding was sent with an empty `Content-Type`.
+- Numeric settings (`options_success_status`, `router/stream` `max_message_size`, audit settings) were ignored or
+  rejected when the config was decoded with `internal/json`.
+
 ## [0.1.0-beta.2] - 2026-11-04
 
 ### Added
