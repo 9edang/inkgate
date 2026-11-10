@@ -47,6 +47,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   (and an 8 KB sample allocated) on every call, and no goroutine is started per backend call.
 
 ### Fixed
+- With CORS `debug` on, every CORS middleware leaked a goroutine and its log lines could arrive after the request they
+  describe; they are now written synchronously.
 - JSON-schema validation errors listed their causes in a random order; the same body now always gets the same message.
 - Data races in the metrics collector: the `/__stats` snapshot was replaced while being read.
 - `client_max_rate` without `client_capacity` allowed a burst of 1 per client instead of the client rate.

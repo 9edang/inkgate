@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/9edang/inkgate/context"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
 	"strings"
@@ -40,8 +41,9 @@ func TestDefaultFactory_ok(t *testing.T) {
 	r := DefaultFactory(noopProxyFactory(map[string]any{"supu": "tupu"}), logger).NewWithContext(ctx)
 	expectedBody := "{\"supu\":\"tupu\"}"
 
+	port := freePort(t)
 	serviceCfg := config.ServiceConfig{
-		Port: 8062,
+		Port: port,
 		Endpoints: []*config.EndpointConfig{
 			{
 				Endpoint: "/get",
@@ -96,10 +98,10 @@ func TestDefaultFactory_ok(t *testing.T) {
 
 	go func() { r.Run(serviceCfg) }()
 
-	time.Sleep(5 * time.Millisecond)
+	waitListening(t, port)
 
 	for _, endpoint := range serviceCfg.Endpoints {
-		req, _ := http.NewRequest(strings.ToTitle(endpoint.Method), fmt.Sprintf("http://127.0.0.1:8062%s", endpoint.Endpoint), http.NoBody)
+		req, _ := http.NewRequest(strings.ToTitle(endpoint.Method), fmt.Sprintf("http://127.0.0.1:%d%s", port, endpoint.Endpoint), http.NoBody)
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
@@ -158,9 +160,10 @@ func TestDefaultFactory_ko(t *testing.T) {
 		RunServer:      server.RunServer,
 	}).NewWithContext(ctx)
 
+	port := freePort(t)
 	serviceCfg := config.ServiceConfig{
 		Debug: true,
-		Port:  8063,
+		Port:  port,
 		Endpoints: []*config.EndpointConfig{
 			{
 				Endpoint: "/ignored",
@@ -179,14 +182,14 @@ func TestDefaultFactory_ko(t *testing.T) {
 
 	go func() { r.Run(serviceCfg) }()
 
-	time.Sleep(5 * time.Millisecond)
+	waitListening(t, port)
 
 	for _, subject := range [][]string{
 		{"GET", "ignored"},
 		{"GET", "empty"},
 		{"PUT", "also-ignored"},
 	} {
-		req, _ := http.NewRequest(subject[0], fmt.Sprintf("http://127.0.0.1:8063/%s", subject[1]), http.NoBody)
+		req, _ := http.NewRequest(subject[0], fmt.Sprintf("http://127.0.0.1:%d/%s", port, subject[1]), http.NoBody)
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		checkResponseIs404(t, req)
 	}
@@ -208,9 +211,10 @@ func TestDefaultFactory_proxyFactoryCrash(t *testing.T) {
 
 	r := DefaultFactory(erroredProxyFactory{fmt.Errorf("%s", "crash!!!")}, logger).NewWithContext(ctx)
 
+	port := freePort(t)
 	serviceCfg := config.ServiceConfig{
 		Debug: true,
-		Port:  8064,
+		Port:  port,
 		Endpoints: []*config.EndpointConfig{
 			{
 				Endpoint: "/ignored",
@@ -225,10 +229,10 @@ func TestDefaultFactory_proxyFactoryCrash(t *testing.T) {
 
 	go func() { r.Run(serviceCfg) }()
 
-	time.Sleep(5 * time.Millisecond)
+	waitListening(t, port)
 
 	for _, subject := range [][]string{{"GET", "ignored"}, {"PUT", "also-ignored"}} {
-		req, _ := http.NewRequest(subject[0], fmt.Sprintf("http://127.0.0.1:8064/%s", subject[1]), http.NoBody)
+		req, _ := http.NewRequest(subject[0], fmt.Sprintf("http://127.0.0.1:%d/%s", port, subject[1]), http.NoBody)
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 		checkResponseIs404(t, req)
 	}
@@ -325,4 +329,17 @@ type identityMiddleware struct{}
 
 func (identityMiddleware) Handler(h http.Handler) http.Handler {
 	return h
+}
+
+// waitListening waits until the server accepts connections on port, instead of sleeping a fixed time.
+func waitListening(t *testing.T, port int) {
+	t.Helper()
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	for deadline := time.Now().Add(5 * time.Second); time.Now().Before(deadline); time.Sleep(5 * time.Millisecond) {
+		if c, err := net.Dial("tcp", addr); err == nil {
+			c.Close()
+			return
+		}
+	}
+	t.Fatalf("nothing listening on %s", addr)
 }
