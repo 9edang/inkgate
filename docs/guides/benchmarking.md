@@ -45,7 +45,9 @@ within that spread.
 
 Give each container its own cores with `--cpuset-cpus` (gateway, nginx, `oha`) and avoid SMT sibling threads, so two
 containers never share a physical core. `--cpus` is a time quota: it limits how much CPU a container uses, not which
-cores, so today the gateway, nginx and `oha` can land on the same core.
+cores, so today the gateway, nginx and `oha` can land on the same core. With rootless podman, `--cpuset-cpus` fails (the `cpuset`
+cgroup controller is not delegated to the user); pin with `taskset -c <cores> docker run ...` instead, which the
+container inherits.
 
 ### 3. GOMAXPROCS=2 on both gateways
 

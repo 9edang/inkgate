@@ -25,7 +25,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   backends agree. An `auth/signer` endpoint now sends the backend status (a backend 201 is no longer turned into 200).
 - Built with Go 1.27.3.
 
+### Performance
+- Metrics cost about 2% of throughput instead of 30%: counters and histograms are resolved once instead of looked up
+  (and an 8 KB sample allocated) on every call, and no goroutine is started per backend call.
+
 ### Fixed
+- Data races in the metrics collector: the `/__stats` snapshot was replaced while being read.
 - `client_max_rate` without `client_capacity` allowed a burst of 1 per client instead of the client rate.
 - CEL `resp_metadata_status` was always 0 for decoded backends.
 - Lua `resp:data(key, value)` was silently ignored.

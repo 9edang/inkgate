@@ -18,7 +18,7 @@ Each finding was then checked against the code. The status column says what that
 
 | # | Finding | Status | Where it goes |
 |---|---|---|---|
-| 1 | Metrics allocate a new sample on every call: `Histogram()` evaluates `defaultSample()` as an argument, so `NewUniformSample(1028)` (an 8 KB slice) is allocated per call even when the histogram exists. A goroutine is started and label strings are built per backend call. | confirmed: `feature/telemetry/metrics/proxy.go:66-72, 97`, `metrics.go:179` | [M2 2.5](milestones/m2-request-cost.md#25-cheaper-metrics-check-first): root cause found |
+| 1 | Metrics allocate a new sample on every call: `Histogram()` evaluates `defaultSample()` as an argument, so `NewUniformSample(1028)` (an 8 KB slice) is allocated per call even when the histogram exists. A goroutine is started and label strings are built per backend call. | confirmed: `feature/telemetry/metrics/proxy.go:66-72, 97`, `metrics.go:179` | [M2 2.5](milestones/m2-request-cost.md#25-cheaper-metrics-check-first): **fixed**, metrics cost 30% → 1.7% |
 | 2 | Lua builds a new VM per request, registers every decorator and recompiles the sources. 28% of base. | tracked: `feature/transform/lua/proxy/proxy.go:71-89` | [M2 2.1](milestones/m2-request-cost.md#21-reuse-lua-vms) |
 | 3 | JSON is decoded into `map[string]any` and encoded again; 100 KB costs 17× CPU and 160 MB peak. | tracked | [M2 2.2](milestones/m2-request-cost.md#22-pass-large-responses-through-untouched) |
 | 4 | One goroutine per `no-op` response to close the body on cancel. | tracked: `engine/proxy/proxy.go:42-47` | [M2 2.3](milestones/m2-request-cost.md#23-no-goroutine-per-no-op-response) |
@@ -84,7 +84,7 @@ change. The checklist entry is in [production-readiness.md](production-readiness
 |---|---|---|---|
 | 1 | ~~Fix the client rate-limit burst~~ (done) | 21 | a wrong answer to a correct config, one line |
 | 2 | ~~Safety defaults: body limit and server timeouts~~ (done) | 17, 18 | protects every deployment; small |
-| 3 | Metrics: one sample per histogram, handles resolved at startup, no goroutine per call | 1 | 20% measured cost, root cause known |
+| 3 | ~~Metrics: one sample per histogram, handles resolved at startup, no goroutine per call~~ (done) | 1 | 20% measured cost, root cause known |
 | 4 | Log guard and `context.AfterFunc` | 4, 5 | small, already planned |
 | 5 | Lua VM pool | 2 | largest measured cost, needs the isolation test of M2 2.1 |
 | 6 | Pass-through for unread large bodies | 3 | largest memory cost |

@@ -7,6 +7,8 @@ package metrics
 import (
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/9edang/inkgate/context"
@@ -39,11 +41,10 @@ func New(ctx context.Context, e config.ExtraConfig, l logging.Logger) *Metrics {
 	}
 
 	m := Metrics{
-		Config:         cfg,
-		Router:         NewRouterMetrics(&registry),
-		Proxy:          NewProxyMetrics(&registry),
-		Registry:       &registry,
-		latestSnapshot: NewStats(),
+		Config:   cfg,
+		Router:   NewRouterMetrics(&registry),
+		Proxy:    NewProxyMetrics(&registry),
+		Registry: &registry,
 	}
 
 	m.processMetrics(ctx, m.Config.CollectionTime, logger{l})
@@ -117,13 +118,18 @@ type Metrics struct {
 	// Router is the metrics collector for the router package
 	Router *RouterMetrics
 	// Registry is the metrics register
-	Registry       *metrics.Registry
-	latestSnapshot Stats
+	Registry *metrics.Registry
+	// latestSnapshot is replaced by the collector goroutine and read by the stats endpoint
+	latestSnapshot atomic.Pointer[Stats]
 }
 
 // Snapshot returns the last calculted snapshot.
 func (m *Metrics) Snapshot() Stats {
-	return m.latestSnapshot
+	if s := m.latestSnapshot.Load(); s != nil {
+		return *s
+	}
+
+	return NewStats()
 }
 
 // TakeSnapshot takes a snapshot of the current state.
@@ -163,10 +169,10 @@ func (m *Metrics) processMetrics(ctx context.Context, d time.Duration, _ metrics
 		for {
 			select {
 			case <-ticker.C:
-				metrics.CaptureDebugGCStatsOnce(r)
-				metrics.CaptureRuntimeMemStatsOnce(r)
+				captureRuntimeStats(r)
 				m.Router.Aggregate()
-				m.latestSnapshot = m.TakeSnapshot()
+				snapshot := m.TakeSnapshot()
+				m.latestSnapshot.Store(&snapshot)
 			case <-ctx.Done():
 				return
 			}
@@ -203,4 +209,15 @@ func (DummyRegistry) UnregisterAll()                    {}
 
 func NewDummyRegistry() metrics.Registry {
 	return DummyRegistry{}
+}
+
+// captureMu serializes the runtime captures: go-metrics keeps their state in package globals, so two collectors in
+// one process (tests, or a future config reload) would race on it.
+var captureMu sync.Mutex
+
+func captureRuntimeStats(r metrics.Registry) {
+	captureMu.Lock()
+	defer captureMu.Unlock()
+	metrics.CaptureDebugGCStatsOnce(r)
+	metrics.CaptureRuntimeMemStatsOnce(r)
 }

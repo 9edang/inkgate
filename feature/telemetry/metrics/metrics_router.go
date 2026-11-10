@@ -6,7 +6,10 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
+
+	"github.com/rcrowley/go-metrics"
 
 	"github.com/9edang/inkgate/context"
 
@@ -83,13 +86,49 @@ func (m *HTTPMetrics) NewHTTPHandlerFactory(defaultHandlerFactory router.Handler
 // NewHTTPHandler wraps an http.Handler adding some simple instrumentation to the handler.
 func NewHTTPHandler(name string, h http.Handler, rm *RouterMetrics) http.HandlerFunc {
 	rm.RegisterResponseWriterMetrics(name)
+	em := &endpointMetrics{
+		name: name,
+		rm:   rm,
+		size: rm.Histogram("response", name, "size"),
+		time: rm.Histogram("response", name, "time"),
+	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		rm.Connection(r.TLS)
 		rw := newHTTPResponseWriter(name, w, rm)
 		h.ServeHTTP(rw, r)
-		rw.end()
+		em.record(rw)
 		rm.Disconnection()
 	}
+}
+
+// endpointMetrics holds the metrics of one endpoint, resolved once instead of looked up by name per request.
+type endpointMetrics struct {
+	name     string
+	rm       *RouterMetrics
+	size     metrics.Histogram
+	time     metrics.Histogram
+	byStatus sync.Map // int status -> metrics.Counter
+}
+
+func (em *endpointMetrics) record(w *responseWriter) {
+	em.statusCounter(w.status).Inc(1)
+	em.size.Update(int64(w.responseSize))
+	em.time.Update(int64(time.Since(w.begin)))
+}
+
+func (em *endpointMetrics) statusCounter(status int) metrics.Counter {
+	if c, ok := em.byStatus.Load(status); ok {
+		if counter, ok := c.(metrics.Counter); ok {
+			return counter
+		}
+	}
+	c, _ := em.byStatus.LoadOrStore(status, em.rm.Counter("response", em.name, "status", strconv.Itoa(status), "count"))
+	if counter, ok := c.(metrics.Counter); ok {
+		return counter
+	}
+
+	return metrics.NilCounter{} // unreachable: only counters are stored
 }
 
 func newHTTPResponseWriter(name string, rw http.ResponseWriter, rm *RouterMetrics) *responseWriter {
@@ -148,11 +187,4 @@ func (w *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 
 	return nil, nil, errors.New("not supported")
-}
-
-func (w *responseWriter) end() {
-	duration := time.Since(w.begin)
-	w.rm.Counter("response", w.name, "status", strconv.Itoa(w.status), "count").Inc(1)
-	w.rm.Histogram("response", w.name, "size").Update(int64(w.responseSize))
-	w.rm.Histogram("response", w.name, "time").Update(int64(duration))
 }

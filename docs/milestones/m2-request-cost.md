@@ -11,7 +11,7 @@ the job before changing anything.
 | 2.2 | Pass large responses through without decoding when nothing reads them | 893 req/s at 100 KB, 160 MB | 3× or more | M |
 | 2.3 | Remove the goroutine started for every `no-op` response | 8,598 req/s at 16 KB | above 11,000 req/s | S |
 | 2.4 | Skip work for log lines that will not be printed | DEBUG costs 27% vs INFO | no cost at INFO and above | S |
-| 2.5 | Make metrics cheaper per request (check first) | metrics cost 20% | under 8% | M |
+| 2.5 | Make metrics cheaper per request (**done**) | metrics cost 20% | under 8%: now 1.7% | M |
 | 2.6 | Cache validated JWTs (check first) | JWT costs 40% | under 15% | M |
 | 2.7 | Lighter merge of several backends (check first) | 4 backends: 39% of base | 50% | M |
 | 2.8 | Fewer allocations per WebSocket message | 60,124 round trips/s | 90,000 | S |
@@ -76,6 +76,15 @@ complete/error combinations are already registered there) and keep the handles; 
 goroutine. A profile before and after confirms the gain.
 
 **Done when**: metrics cost under 8% in `telemetry-metrics`.
+
+**Result** (November 2026): the proxy middleware resolves the counter and histogram of its four outcomes once and
+updates them inline (no goroutine per call); the router resolves the size and time histograms once per endpoint and
+caches status counters; `ProxyMetrics.Histogram` builds its sample lazily. Per call: proxy middleware 2,050 ns,
+10 KB, 10 allocations → 78 ns, 0 B, 0 allocations; router 3,450 ns, 19.6 KB, 20 allocations → 310 ns, 354 B,
+7 allocations (`go test -bench . ./feature/telemetry/metrics`). End to end, one JSON backend, gateway pinned to two
+cores, median of 3 × 10 s: metrics cost 30% before (26,537 → 18,655 req/s), 1.7% after (26,451 → 26,007 req/s).
+Two data races went with it: the stats snapshot was replaced while `/__stats` read it, and go-metrics' runtime
+captures share package globals between collectors.
 
 ## 2.6 Cache validated JWTs (check first)
 
