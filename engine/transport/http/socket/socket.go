@@ -33,6 +33,7 @@ import (
 	"github.com/9edang/inkgate/context"
 
 	"github.com/gorilla/websocket"
+	"golang.org/x/time/rate"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/proxy"
@@ -54,6 +55,10 @@ type Upgrade struct {
 	// MaxMessageSize limits the size of a message read from either side; zero
 	// means no limit.
 	MaxMessageSize int64
+	// MessageRate limits the messages (and pings) a client sends, per second, with MessageBurst more at once; over it
+	// the connection is closed with 1008 (policy violation). Zero means no limit; a burst below 1 means 1.
+	MessageRate  float64
+	MessageBurst int
 	// Subprotocols are offered to the backend, in the client's order of preference; the endpoint keeps there the
 	// ones of the client it allows. Nil offers none.
 	Subprotocols []string
@@ -218,6 +223,7 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 
 	code := relay(client, backend, relayOptions{
 		idle: u.IdleTimeout, maxMessage: u.MaxMessageSize, goingAway: u.GoingAway, onMessage: u.OnMessage,
+		clientRate: newMessageLimit(u.MessageRate, u.MessageBurst),
 	})
 	if u.OnClose != nil {
 		u.OnClose(code)
@@ -276,6 +282,17 @@ type relayOptions struct {
 	maxMessage int64
 	goingAway  <-chan struct{}
 	onMessage  func(toClient bool, n int)
+	clientRate *rate.Limiter // nil means no limit
+}
+
+// newMessageLimit returns the token bucket of one connection, or nil without a limit. It starts full: a client may send
+// burst messages at once right after the upgrade (a subscription, an auth message).
+func newMessageLimit(perSecond float64, burst int) *rate.Limiter {
+	if perSecond <= 0 {
+		return nil
+	}
+
+	return rate.NewLimiter(rate.Limit(perSecond), max(burst, 1))
 }
 
 // relay copies messages both ways until one side ends, then closes both. It returns the close code: the first close
@@ -304,10 +321,33 @@ func relay(client, backend *websocket.Conn, o relayOptions) int {
 		})
 	}
 
+	// a client over its message rate gets 1008, and so does the backend (the reason tells it why); what the client sends
+	// until it answers the close is dropped. Only touched from the client's reading goroutine.
+	overLimit := false
+	allowed := func() bool {
+		if overLimit {
+			return false
+		}
+		if o.clientRate == nil || o.clientRate.Allow() {
+			return true
+		}
+		overLimit = true
+		closeCode.CompareAndSwap(0, websocket.ClosePolicyViolation)
+		msg := websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "message rate exceeded")
+		_ = client.WriteControl(websocket.CloseMessage, msg, time.Now().Add(controlWait))
+		_ = backend.WriteControl(websocket.CloseMessage, msg, time.Now().Add(controlWait))
+		time.AfterFunc(controlWait, closeAll)
+
+		return false
+	}
+
 	// ping and pong are end-to-end: each side's keep-alive reaches the other
 	forwardControl := func(from, to *websocket.Conn) {
 		from.SetPingHandler(func(data string) error {
 			touch()
+			if from == client && !allowed() {
+				return nil // a ping flood is a message flood
+			}
 			return to.WriteControl(websocket.PingMessage, []byte(data), time.Now().Add(controlWait))
 		})
 		from.SetPongHandler(func(data string) error {
@@ -378,6 +418,14 @@ func relay(client, backend *websocket.Conn, o relayOptions) int {
 				return
 			}
 			touch()
+			if !toClient && !allowed() {
+				if _, err := io.Copy(io.Discard, r); err != nil {
+					closeAll()
+					return
+				}
+
+				continue
+			}
 			w, err := to.NextWriter(typ)
 			if err != nil {
 				closeAll()
