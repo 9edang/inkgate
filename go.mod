@@ -1,6 +1,6 @@
 module github.com/9edang/inkgate
 
-go 1.27.3
+go 1.27.4
 
 require (
 	contrib.go.opencensus.io/exporter/aws v0.0.0-20230502192102-15967c811cec
