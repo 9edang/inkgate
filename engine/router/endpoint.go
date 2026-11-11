@@ -182,7 +182,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 			if stream && !socketMode && err == nil && response != nil && response.IsComplete {
 				w.Header().Set(server.CompleteResponseHeaderName, server.HeaderCompleteResponseValue)
 			}
-			if stream && !socketMode && err == nil && streamRender(w, response, func(n int) { observer.StreamMessage(endpoint, true, n) }) {
+			if stream && !socketMode && err == nil && streamRender(w, response, func(n int) { observer.StreamMessage(endpoint, true, n) }, sc.keepAlive) {
 				cancel()
 				return
 			}

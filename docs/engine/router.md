@@ -95,6 +95,11 @@ Common to both modes:
 
 ### `mode: "event"` (SSE)
 
+`keep_alive` (for example `"15s"`): when the backend sent nothing for that long, the gateway writes the SSE comment
+`: keep-alive`, which every client ignores, so proxies and load balancers in front (often 60 s idle) do not close a
+silent stream. Only for `text/event-stream` responses, and only between events: a pause in the middle of an event
+waits for its end. Off by default.
+
 ```json
 {
   "endpoint": "/events",

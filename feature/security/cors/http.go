@@ -1,8 +1,6 @@
 package cors
 
 import (
-	"bufio"
-	"io"
 	"log"
 	"net/http"
 	"slices"
@@ -53,9 +51,8 @@ func NewMiddleware(e config.ExtraConfig, l logging.Logger) Middleware {
 	})
 
 	if l != nil && cfg.Debug {
-		r, w := io.Pipe()
-		c.Log = log.New(w, "", log.LstdFlags)
-		go writeLog(r, l)
+		// written synchronously: rs/cors logs a decision before it answers, so the line is in the log by then
+		c.Log = log.New(logWriter{l}, "", 0)
 	}
 
 	return preflightNormalizer{c}
@@ -111,10 +108,15 @@ func NewRunServerWithLogger(next router.RunServerFunc, l logging.Logger) router.
 	}
 }
 
-func writeLog(r *io.PipeReader, l logging.Logger) {
-	scanner := bufio.NewScanner(r)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		l.Debug("[CORS]", scanner.Text())
+// logWriter writes the debug lines of rs/cors to the gateway logger, one Debug call per line.
+type logWriter struct {
+	l logging.Logger
+}
+
+func (w logWriter) Write(p []byte) (int, error) {
+	for line := range strings.SplitSeq(strings.TrimRight(string(p), "\n"), "\n") {
+		w.l.Debug("[CORS]", strings.TrimSpace(line))
 	}
+
+	return len(p), nil
 }
