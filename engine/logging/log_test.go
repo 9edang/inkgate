@@ -4,6 +4,7 @@ package logging
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -80,4 +81,15 @@ func logSomeStuff(level string) string {
 	logger.Critical(criticalMsg)
 
 	return buff.String()
+}
+
+func TestEnabled(t *testing.T) {
+	info, _ := NewLogger("INFO", io.Discard, "")
+	if Enabled(info, LEVEL_DEBUG) || !Enabled(info, LEVEL_INFO) || !Enabled(info, LEVEL_ERROR) {
+		t.Error("BasicLogger at INFO: wrong Enabled answers")
+	}
+	var unknown Logger = struct{ Logger }{info} // hides Enabled: an unknown logger is assumed to write
+	if !Enabled(unknown, LEVEL_DEBUG) {
+		t.Error("a logger without Enabled must be assumed to write every level")
+	}
 }

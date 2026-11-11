@@ -149,6 +149,26 @@ type Logger struct {
 	logger *gologging.Logger
 }
 
+// Enabled implements logging.LevelChecker.
+func (l Logger) Enabled(level int) bool {
+	return l.logger.IsEnabledFor(goLoggingLevel(level))
+}
+
+func goLoggingLevel(level int) gologging.Level {
+	switch level {
+	case logging.LEVEL_DEBUG:
+		return gologging.DEBUG
+	case logging.LEVEL_INFO:
+		return gologging.INFO
+	case logging.LEVEL_WARNING:
+		return gologging.WARNING
+	case logging.LEVEL_ERROR:
+		return gologging.ERROR
+	default:
+		return gologging.CRITICAL
+	}
+}
+
 // Debug implements the logger interface
 func (l Logger) Debug(v ...any) {
 	if !l.logger.IsEnabledFor(gologging.DEBUG) {

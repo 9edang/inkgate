@@ -51,6 +51,22 @@ var (
 	NoOp, _ = NewLogger("CRITICAL", io.Discard, "")
 )
 
+// LevelChecker is implemented by loggers that can tell whether a level would be written, so callers can skip
+// building a message nobody will see.
+type LevelChecker interface {
+	Enabled(level int) bool
+}
+
+// Enabled reports whether l writes messages at level (LEVEL_DEBUG ... LEVEL_CRITICAL). A logger that cannot tell is
+// assumed to write them, so the caller keeps building the message as before.
+func Enabled(l Logger, level int) bool {
+	if c, ok := l.(LevelChecker); ok {
+		return c.Enabled(level)
+	}
+
+	return true
+}
+
 // NewLogger creates and returns a Logger object
 func NewLogger(level string, out io.Writer, prefix string) (BasicLogger, error) {
 	l, ok := logLevels[strings.ToUpper(level)]
@@ -115,4 +131,9 @@ func (l BasicLogger) prependLog(level string, v ...any) {
 	msg[1] = level
 	copy(msg[2:], v)
 	l.Logger.Println(msg...)
+}
+
+// Enabled implements LevelChecker.
+func (l BasicLogger) Enabled(level int) bool {
+	return level >= l.Level
 }

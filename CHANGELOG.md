@@ -26,6 +26,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Built with Go 1.27.3.
 
 ### Performance
+- The per-request `[FLOW]` log line is no longer built below DEBUG (half the cost of the entry wrapper), and the
+  logstash logger no longer formats records for levels it drops. Loggers may implement `Enabled(level int) bool`
+  (`logging.LevelChecker`); `logging.Enabled` asks a logger before building a message.
 - Metrics cost about 2% of throughput instead of 30%: counters and histograms are resolved once instead of looked up
   (and an 8 KB sample allocated) on every call, and no goroutine is started per backend call.
 

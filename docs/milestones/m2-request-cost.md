@@ -9,8 +9,8 @@ the job before changing anything.
 |---|---|---|---|---|
 | 2.1 | Reuse Lua VMs instead of building one per request | 3,790 req/s, 250 µs | above 8,000 req/s | M |
 | 2.2 | Pass large responses through without decoding when nothing reads them | 893 req/s at 100 KB, 160 MB | 3× or more | M |
-| 2.3 | Remove the goroutine started for every `no-op` response | 8,598 req/s at 16 KB | above 11,000 req/s | S |
-| 2.4 | Skip work for log lines that will not be printed | DEBUG costs 27% vs INFO | no cost at INFO and above | S |
+| 2.3 | Remove the goroutine started for every `no-op` response (**dropped: measured, not the cause**) | 8,598 req/s at 16 KB | above 11,000 req/s | S |
+| 2.4 | Skip work for log lines that will not be printed (**done** for INFO and above) | DEBUG costs 27% vs INFO | no cost at INFO and above | S |
 | 2.5 | Make metrics cheaper per request (**done**) | metrics cost 20% | under 8%: now 1.7% | M |
 | 2.6 | Cache validated JWTs (check first) | JWT costs 40% | under 15% | M |
 | 2.7 | Lighter merge of several backends (check first) | 4 backends: 39% of base | 50% | M |
@@ -51,6 +51,13 @@ still turns the fast path off (a table-driven test per feature).
 
 **Done when**: `proxy-noop-raw` above 11,000 req/s and the SSE tests (which rely on the close on disconnect) pass.
 
+**Result** (November 2026): dropped. `BenchmarkReadCloserWrapper` (`engine/proxy`) measured the wrapper at 0.37 µs and
+225 B per response. Both `context.AfterFunc` variants were slower: 0.79 µs (a request context always ends, and then
+AfterFunc starts its own goroutine) and 0.56 µs with an early close at EOF (registering the callback allocates more
+than a goroutine that only waits). And the whole wrapper is 0.3% of a request at 8,598 req/s, so no change to it can
+reach 11,000 req/s. The cost of `proxy-noop-raw` is elsewhere: take a CPU profile of that job first
+([M5 5.3](m5-operability.md#53-pprof)).
+
 ## 2.4 Free log calls below the level
 
 **Evidence**: `flow/entry/server.go:45` formats the `[FLOW]` line with `fmt.Sprintf` on every request, before
@@ -62,6 +69,14 @@ per-request lines with it. At DEBUG, write through a buffered writer.
 
 **Done when**: an allocation benchmark of the entry handler shows no allocation from logging at INFO, and
 `telemetry-logging-debug` gains at least 10%.
+
+**Result** (November 2026): loggers can now say whether a level is written (`logging.Enabled`, implemented by the
+basic, gologging and logstash loggers; any other logger is assumed to write everything, as before). The `[FLOW]` line
+is skipped below DEBUG: the entry wrapper went from 1,030 ns, 896 B, 13 allocations to 530 ns, 712 B, 6 allocations
+per request at INFO, and an allocation profile shows none of the remaining six comes from logging (they are the flow
+context: `context.New`, `WithContext`, the request-ID header and the UUID v7). The logstash logger also stops
+building a JSON record for a level its inner logger drops. Not done: the buffered writer at DEBUG; DEBUG is for
+development, so the 10% goal there is left open.
 
 ## 2.5 Cheaper metrics (check first)
 
