@@ -125,7 +125,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 			default:
 			}
 
-			if response != nil && len(response.Data) > 0 {
+			if response != nil && (len(response.Data) > 0 || response.Raw != nil) {
 				if response.IsComplete {
 					w.Header().Set(server.CompleteResponseHeaderName, server.HeaderCompleteResponseValue)
 					if isCacheEnabled {

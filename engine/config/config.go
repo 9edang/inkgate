@@ -285,6 +285,9 @@ type Backend struct {
 	Encoding string `mapstructure:"encoding"`
 	// the response to process is a collection
 	IsCollection bool `mapstructure:"is_collection"`
+	// JSONPassthrough is set at startup when the backend's JSON answer can reach the client without being decoded
+	// and encoded again (proxy.JSONPassthrough). Not configurable directly.
+	JSONPassthrough bool `json:"-" mapstructure:"-"`
 	// name of the field to extract to the root. If empty, the formater will do nothing
 	Target string `mapstructure:"target"`
 	// name of the service discovery driver to use

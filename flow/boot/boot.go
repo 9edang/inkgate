@@ -51,6 +51,7 @@ func Run(ctx context.Context, cfg config.ServiceConfig, r Router) {
 
 	// 2. global settings and Go .so plugins
 	dnssrv.SetTTL(cfg.DNSCacheTTL)
+	markJSONPassthrough(cfg, logger)
 	if cfg.Plugin != nil {
 		LoadPluginsWithContext(ctx, cfg.Plugin.Folder, cfg.Plugin.Pattern, logger)
 	}
