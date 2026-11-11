@@ -85,6 +85,9 @@ Common to both modes:
 - the server `write_timeout` is lifted for this response, other endpoints keep it
 - use `"concurrent_calls": 1` and a single backend; response modifiers and merging need the whole body
 - `max_shutdown_wait_time` applies to open `event` streams on SIGTERM; open sockets are dropped when the process exits
+- `max_connections` caps the streams or sockets open on the endpoint at once (default: no limit). Over it, the
+  request gets `503` with `Retry-After: 1` before the backend is called; the open ones are not affected. Each open
+  stream holds a goroutine, two connections and buffers, so set it to what the instance can hold
 - `"enabled": false` in the section turns it off without removing it. An unknown `mode` or a bad option value stops
   the gateway at startup
 

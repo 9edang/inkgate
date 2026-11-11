@@ -6,7 +6,7 @@ is what keeps long-lived connections safe in production.
 
 | # | Item | Size |
 |---|---|---|
-| 3.1 | A limit on open streams and sockets per endpoint | S |
+| 3.1 | A limit on open streams and sockets per endpoint (**done**) | S |
 | 3.2 | Drain on shutdown | M |
 | 3.3 | Metrics for open connections and messages | S |
 | 3.4 | SSE keep-alive comments | S |
@@ -20,6 +20,12 @@ is what keeps long-lived connections safe in production.
 Each open stream holds a goroutine, two connections and buffers, with no upper bound. Add `max_connections` to the
 `router/stream` section; over it, an SSE request gets 503 and an upgrade gets 503 before the backend is called.
 **Done when**: a test opens the limit plus one and the extra one is refused while the others keep working.
+
+**Result** (November 2026): `max_connections` in `router/stream`, for both modes. The handler holds a slot for the
+whole life of the stream or socket and frees it when the stream ends; a request over the limit gets 503 with
+`Retry-After: 1` before the backend is dialed. Tests (`engine/router/stream_limit_test.go`) open the limit plus one for
+SSE and WebSocket: the extra one is refused, the open ones keep receiving, and a slot is free again once one ends. A
+negative, fractional or non-numeric value stops the gateway at startup.
 
 ## 3.2 Drain on shutdown
 
