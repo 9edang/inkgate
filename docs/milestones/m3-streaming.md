@@ -10,7 +10,7 @@ is what keeps long-lived connections safe in production.
 | 3.2 | Drain on shutdown (**done**) | M |
 | 3.3 | Metrics for open connections and messages (**done** for telemetry/metrics; OpenTelemetry open) | S |
 | 3.4 | SSE keep-alive comments (**done**) | S |
-| 3.5 | Origin and subprotocol allow-lists at the gateway | S |
+| 3.5 | Origin and subprotocol allow-lists at the gateway (**done**) | S |
 | 3.6 | Message rate limit per WebSocket connection | M |
 | 3.7 | permessage-deflate | M |
 | 3.8 | Fan-out: one backend stream to many clients | L |
@@ -71,6 +71,14 @@ on one goroutine, and a client that leaves still ends the backend stream.
 Today the gateway accepts any `Origin` on the client side and leaves the check to the backend, and passes any
 subprotocol the client offers. Add `allowed_origins` and `subprotocols` to the socket mode, checked before the backend
 is dialed.
+
+**Result** (November 2026): both options in `router/stream`, socket mode only (on an `event` endpoint they stop the
+gateway at startup: an SSE request is a fetch, which CORS already covers). A refused upgrade gets 403 (origin) or 400
+(no allowed subprotocol) before a connection slot is taken or the backend is dialed. Origins match on scheme, host and
+port, with `https://*.example.com` for subdomains; a request without `Origin` passes, an empty list refuses every
+browser. Found on the way: gorilla's dialer takes any subprotocol the backend answers with, so a backend could hand the
+client one it never offered; the gateway now refuses that, with or without a list. Tests in
+`engine/router/socket_policy_test.go`, each checked to fail with its check removed.
 
 ## 3.6 Message rate limit
 

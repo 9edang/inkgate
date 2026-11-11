@@ -13,6 +13,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `golang:1.27-trixie`.
 
 ### Added
+- `router/stream` `allowed_origins` and `subprotocols` for socket endpoints: an upgrade from another `Origin` gets 403,
+  one offering only other subprotocols gets 400, both before the backend is dialed; only the allowed subprotocols
+  reach the backend. Browsers do not apply CORS to WebSocket, so this is what stops cross-site WebSocket hijacking at
+  the gateway.
 - `router/stream` `keep_alive`: an SSE stream silent for that long gets a `: keep-alive` comment, so proxies in front do
   not close it. Only for `text/event-stream`, only between events.
 - Stream and socket metrics under `router.stream.<endpoint>.*`: open, opened, refused, duration, messages and bytes
@@ -24,6 +28,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   half the memory). Same status, headers and JSON value; the text is the backend's (key order, number formatting).
 - `benchmark/`: inkgate against KrakenD CE 2.13.11 in containers, with plugin scenarios (`make bench`).
 - Lua: `resp:data(key, value)` sets one field of the response body, like `resp:data():set(key, value)`.
+
+### Fixed
+- A WebSocket backend that answers with a subprotocol the client did not offer is refused (500) instead of being
+  passed on to the client, which must fail the connection on it.
 
 ### Changed
 - On SIGTERM open streams end cleanly instead of being cut: WebSocket clients get a close frame 1001 (going away), SSE

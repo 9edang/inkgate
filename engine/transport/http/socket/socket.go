@@ -19,9 +19,11 @@ package socket
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -52,6 +54,9 @@ type Upgrade struct {
 	// MaxMessageSize limits the size of a message read from either side; zero
 	// means no limit.
 	MaxMessageSize int64
+	// Subprotocols are offered to the backend, in the client's order of preference; the endpoint keeps there the
+	// ones of the client it allows. Nil offers none.
+	Subprotocols []string
 	// Established is called once, when both connections are open and before
 	// the relay starts. The endpoint uses it to stop its handshake timeout.
 	Established func()
@@ -84,6 +89,9 @@ func From(ctx context.Context) *Upgrade {
 	u, _ := ctx.Value(ctxKey{}).(*Upgrade)
 	return u
 }
+
+// Subprotocols returns the subprotocols the client offers, in its order of preference.
+func Subprotocols(r *http.Request) []string { return websocket.Subprotocols(r) }
 
 // IsWebSocket tells if r asks for a WebSocket upgrade.
 func IsWebSocket(r *http.Request) bool { return websocket.IsWebSocketUpgrade(r) }
@@ -142,9 +150,7 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 		header.Set("Origin", origin)
 	}
 
-	dialer := websocket.Dialer{
-		Subprotocols: websocket.Subprotocols(u.R),
-	}
+	dialer := websocket.Dialer{Subprotocols: u.Subprotocols}
 	dialCtx := ctx
 	if u.HandshakeTimeout > 0 {
 		var cancel context.CancelFunc
@@ -161,11 +167,19 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 		return nil, err
 	}
 
+	// gorilla takes the backend's choice as it is: one that was not offered would reach the client, which must fail
+	// the connection on it (RFC 6455 4.1), or slip past the endpoint's subprotocols list
+	if p := backend.Subprotocol(); p != "" && !slices.Contains(u.Subprotocols, p) {
+		// #nosec G104 -- closing is best effort, the error is not actionable
+		backend.Close()
+		return nil, fmt.Errorf("socket: the backend chose the subprotocol %q, which was not offered", p)
+	}
+
 	upgrader := websocket.Upgrader{
 		// answer with the subprotocol the backend picked, and no other
 		Subprotocols: []string{backend.Subprotocol()},
-		// the backend already validated the Origin; the gateway enforces its own
-		// policy with the security/cors and bot checks of the request stage
+		// the endpoint already checked the Origin against its allowed_origins (CORS does not apply to WebSocket);
+		// without that list the backend decides, as it sees the same Origin
 		CheckOrigin: func(*http.Request) bool { return true },
 	}
 	if backend.Subprotocol() == "" {
