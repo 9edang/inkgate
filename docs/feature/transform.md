@@ -41,7 +41,7 @@ resp:data("source", "lua")        -- same as resp:data():set("source", "lua")
 resp:headers("X-Lua", "yes")      -- one response header (nil removes it)
 ```
 
-**Lua states are reused** (`modifier/lua-proxy`, `modifier/lua-backend`). Building a Lua state is most of the cost of
+**Lua states are reused** (`modifier/lua-endpoint`, `modifier/lua-proxy`, `modifier/lua-backend`). Building a Lua state is most of the cost of
 a script, so each endpoint keeps a pool of prepared states and compiles its code once. Every request still starts
 clean: the `sources` run again (their `local` variables are new), globals a script created or changed are put back,
 and `request`/`response` are those of the current request. What can survive on a state: a table reached through a

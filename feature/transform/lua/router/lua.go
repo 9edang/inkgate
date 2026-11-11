@@ -36,17 +36,16 @@ func RegisterMiddleware(l logging.Logger, e config.ExtraConfig, pe router.ParamE
 
 	l.Debug(logPrefix, "Middleware is now ready")
 
-	return append(mws, &middleware{pe: pe, cfg: cfg})
+	return append(mws, &middleware{process: newProcessor(l, logPrefix, cfg, pe)})
 }
 
 type middleware struct {
-	pe  router.ParamExtractor
-	cfg lua.Config
+	process processor
 }
 
 func (hm *middleware) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := process(r, hm.pe, &hm.cfg); err != nil {
+		if err := hm.process(r); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -70,9 +69,10 @@ func HandlerFactory(l logging.Logger, next router.HandlerFactory, pe router.Para
 		}
 
 		l.Debug(logPrefix, "Middleware is now ready")
+		run := newProcessor(l, logPrefix, cfg, pe)
 
 		return func(w http.ResponseWriter, r *http.Request) {
-			if err := process(r, pe, &cfg); err != nil {
+			if err := run(r); err != nil {
 				var errhttp errHTTP
 				if errors.As(err, &errhttp) {
 					var e errHTTPWithContentType
@@ -131,14 +131,24 @@ func registerRequestTable(r *http.Request, pe router.ParamExtractor, b *binder.B
 		Request: r,
 		pe:      pe,
 	}
+	registerRequestTableFunc(func() *requestContext { return mctx }, b)
+}
 
+// registerRequestTableFunc registers the ctx table; ctx.load() returns current(), so a reused state serves the
+// request it is running for.
+func registerRequestTableFunc(current func() *requestContext, b *binder.Binder) {
 	t := b.Table("ctx")
 
 	t.Static("load", func(c *binder.Context) error {
+		mctx := current()
+		if mctx == nil {
+			return errContextExpected
+		}
 		c.Push().Data(mctx, "ctx")
 		return nil
 	})
 
+	var mctx *requestContext // the methods read the request from their first argument, not from the receiver
 	t.Dynamic("method", mctx.method)
 	t.Dynamic("url", mctx.url)
 	t.Dynamic("query", mctx.query)
