@@ -35,7 +35,7 @@ func ProxyFactory(l logging.Logger, pf proxy.Factory) proxy.Factory {
 
 		l.Debug(logPrefix, "Middleware is now ready")
 
-		return New(cfg, next), nil
+		return newLogged(l, logPrefix, cfg, next), nil
 	})
 }
 
@@ -52,7 +52,7 @@ func BackendFactory(l logging.Logger, bf proxy.BackendFactory) proxy.BackendFact
 			return next
 		}
 
-		return New(cfg, next)
+		return newLogged(l, logPrefix, cfg, next)
 	}
 }
 
@@ -66,7 +66,35 @@ func RegisterDecorator(f decorator.Decorator) {
 	localRegisterer.decorators = append(localRegisterer.decorators, f)
 }
 
+// New wraps next with the Lua scripts of cfg. The scripts run on reused, isolated Lua states (see vmPool); with
+// "live": true, or when the code cannot be compiled ahead, every request builds a fresh state as before.
 func New(cfg lua.Config, next proxy.Proxy) proxy.Proxy {
+	if !cfg.Live() {
+		if p, err := newVMPool(cfg); err == nil {
+			return p.proxy(next)
+		}
+	}
+
+	return newFresh(cfg, next)
+}
+
+// newLogged is New that reports, once at startup, code that cannot be compiled: otherwise the only sign is an
+// error on every request.
+func newLogged(l logging.Logger, logPrefix string, cfg lua.Config, next proxy.Proxy) proxy.Proxy {
+	if cfg.Live() {
+		return newFresh(cfg, next)
+	}
+	p, err := newVMPool(cfg)
+	if err != nil {
+		l.Error(logPrefix, "The Lua code cannot be loaded, every request will fail:", err.Error())
+		return newFresh(cfg, next)
+	}
+
+	return p.proxy(next)
+}
+
+// newFresh builds a new Lua state for every request.
+func newFresh(cfg lua.Config, next proxy.Proxy) proxy.Proxy {
 	return func(ctx context.Context, req *proxy.Request) (resp *proxy.Response, err error) {
 		b := lua.NewBinderWrapper(binder.Options{
 			SkipOpenLibs:        !cfg.AllowOpenLibs,

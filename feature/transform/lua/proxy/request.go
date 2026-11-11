@@ -17,14 +17,24 @@ import (
 
 func registerRequestTable(req *proxy.Request, b *binder.Binder) {
 	r := &ProxyRequest{req}
+	registerRequestTableFunc(func() *ProxyRequest { return r }, b)
+}
 
+// registerRequestTableFunc registers the request table; request.load() returns current(), so a reused state serves
+// the request it is running for.
+func registerRequestTableFunc(current func() *ProxyRequest, b *binder.Binder) {
 	t := b.Table("request")
 
 	t.Static("load", func(c *binder.Context) error {
+		r := current()
+		if r == nil {
+			return errRequestExpected
+		}
 		c.Push().Data(r, "request")
 		return nil
 	})
 
+	var r *ProxyRequest // the methods read the request from their first argument, not from the receiver
 	t.Dynamic("method", r.method)
 	t.Dynamic("path", r.path)
 	t.Dynamic("query", r.query)

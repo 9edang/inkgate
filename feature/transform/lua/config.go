@@ -123,6 +123,13 @@ func (o onceLoader) Get(k string) (string, bool) {
 
 type liveLoader struct{}
 
+// Live reports whether the sources are read again on every request ("live": true, for development).
+func (c *Config) Live() bool {
+	_, ok := c.SourceLoader.(liveLoader)
+
+	return ok
+}
+
 func (liveLoader) Get(k string) (string, bool) {
 	// #nosec G304 -- path comes from the operator config or the CLI, not from request data
 	b, err := os.ReadFile(k)
