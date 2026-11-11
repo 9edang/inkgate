@@ -115,6 +115,8 @@ func RunServerWithLoggerFactory(l logging.Logger) func(context.Context, config.S
 	return func(ctx context.Context, cfg config.ServiceConfig, handler http.Handler) error {
 		done := make(chan error)
 		s := NewServerWithLogger(cfg, handler, l)
+		drain := NewDrain()
+		s.BaseContext = func(net.Listener) context.Context { return WithDrain(context.Background(), drain) }
 
 		if s.TLSConfig == nil {
 			go func() {
@@ -155,13 +157,21 @@ func RunServerWithLoggerFactory(l logging.Logger) func(context.Context, config.S
 		case err := <-done:
 			return err
 		case <-ctx.Done():
-			if cfg.MaxShutdownDuration <= 0 {
-				return s.Shutdown(context.Background())
+			shutdownCtx := context.Background()
+			if cfg.MaxShutdownDuration > 0 {
+				var cancel context.CancelFunc
+				shutdownCtx, cancel = context.WithTimeout(shutdownCtx, cfg.MaxShutdownDuration)
+				defer cancel()
 			}
-			withTimeout, cancel := context.WithTimeout(context.Background(), cfg.MaxShutdownDuration)
-			defer cancel()
+			// streams and sockets end themselves (SSE cleanly, WebSocket with 1001); Shutdown waits for the
+			// streams, the drain also for the sockets, which Shutdown does not track once hijacked
+			drain.Start()
+			err := s.Shutdown(shutdownCtx)
+			if werr := drain.Wait(shutdownCtx); err == nil {
+				err = werr
+			}
 
-			return s.Shutdown(withTimeout)
+			return err
 		}
 	}
 }

@@ -17,6 +17,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Lua: `resp:data(key, value)` sets one field of the response body, like `resp:data():set(key, value)`.
 
 ### Changed
+- On SIGTERM open streams end cleanly instead of being cut: WebSocket clients get a close frame 1001 (going away), SSE
+  streams finish as a complete response, and the shutdown waits for both within `max_shutdown_wait_time`.
 - **Breaking:** the server has request limits by default: `read_header_timeout` 10s, `read_timeout` 30s,
   `idle_timeout` 120s and the new `max_body_bytes` 10 MB (a larger body gets 413). A config that relies on no limit
   sets a negative value (`"read_timeout": "-1s"`, `"max_body_bytes": -1`). Streams and WebSocket connections are not

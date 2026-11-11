@@ -7,7 +7,7 @@ is what keeps long-lived connections safe in production.
 | # | Item | Size |
 |---|---|---|
 | 3.1 | A limit on open streams and sockets per endpoint (**done**) | S |
-| 3.2 | Drain on shutdown | M |
+| 3.2 | Drain on shutdown (**done**) | M |
 | 3.3 | Metrics for open connections and messages | S |
 | 3.4 | SSE keep-alive comments | S |
 | 3.5 | Origin and subprotocol allow-lists at the gateway | S |
@@ -33,6 +33,15 @@ Hijacked WebSocket connections are not tracked by `http.Server.Shutdown`, so the
 open SSE streams hold the shutdown until `max_shutdown_wait_time`. On SIGTERM, send WebSocket clients a close frame
 1001 (going away) and end SSE streams cleanly, then wait for them within `max_shutdown_wait_time`.
 **Done when**: a test sends SIGTERM with open sockets and every client receives 1001.
+
+**Result** (November 2026): the server puts a drain (`engine/transport/http/server/drain.go`) in every request context.
+On shutdown it is started first: a WebSocket relay sends 1001 "server shutting down" to the client and the backend,
+an SSE stream cancels its backend request so the copy ends and the client gets a complete response. Every open stream
+is tracked, so after `http.Server.Shutdown` the server also waits for the hijacked sockets, which `Shutdown` does not.
+Tests (`engine/router/drain_test.go`) run `RunServer` and stop it: 3 sockets each get 1001, and an SSE stream of 20 s
+ends cleanly at once; before, the sockets got no close frame and the stream held the shutdown until
+`max_shutdown_wait_time`. With the binary and a real SIGTERM, two clients got `1006 unexpected EOF` before and
+`1001 server shutting down` after.
 
 ## 3.3 Metrics
 

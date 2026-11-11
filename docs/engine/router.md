@@ -84,7 +84,9 @@ Common to both modes:
   stream is open it lives until the backend ends it or the client disconnects (the backend side is then closed)
 - the server `write_timeout` is lifted for this response, other endpoints keep it
 - use `"concurrent_calls": 1` and a single backend; response modifiers and merging need the whole body
-- `max_shutdown_wait_time` applies to open `event` streams on SIGTERM; open sockets are dropped when the process exits
+- on SIGTERM open streams end instead of being cut: an `event` stream finishes as a complete response (the client
+  reads to its end), a socket gets a close frame `1001` (going away) on both sides. The shutdown waits for them, up to
+  `max_shutdown_wait_time`
 - `max_connections` caps the streams or sockets open on the endpoint at once (default: no limit). Over it, the
   request gets `503` with `Retry-After: 1` before the backend is called; the open ones are not affected. Each open
   stream holds a goroutine, two connections and buffers, so set it to what the instance can hold
