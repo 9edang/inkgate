@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Added
+- Stream and socket metrics under `router.stream.<endpoint>.*`: open, opened, refused, duration, messages and bytes
+  each way, close codes.
 - `router/stream` `max_connections`: a cap on the streams or sockets open on an endpoint at once; over it, `503` with
   `Retry-After` before the backend is called.
 - JSON pass-through, opt-in with `"router": {"json_passthrough": true}`: on endpoints where nothing uses the decoded

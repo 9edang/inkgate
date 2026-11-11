@@ -66,6 +66,9 @@ func runGateway(t *testing.T, handler http.Handler) (addr string, shutdown func(
 
 // M3 3.2: on shutdown every WebSocket client gets a close frame 1001 (going away), and the shutdown waits for them.
 func TestDrain_SocketsGetGoingAway(t *testing.T) {
+	rec := &recorder{by: map[string]*recordedStream{}}
+	RegisterStreamObserver(rec)
+	defer RegisterStreamObserver(nil)
 	backend := echoBackend()
 	defer backend.Close()
 	u, _ := url.Parse(backend.URL)
@@ -119,6 +122,9 @@ func TestDrain_SocketsGetGoingAway(t *testing.T) {
 	}
 	if took > 3*time.Second {
 		t.Errorf("shutdown took %v", took)
+	}
+	if got := rec.snapshot("/ws"); got.closed != 3 || got.code != websocket.CloseGoingAway {
+		t.Errorf("observed %+v, want 3 sockets closed with 1001", got)
 	}
 }
 

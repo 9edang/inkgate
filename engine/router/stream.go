@@ -151,7 +151,7 @@ const streamBufferSize = 4 * 1024
 // chunk so events reach the client as soon as the backend sends them. It
 // reports whether it handled the response: a response without a body to
 // stream is left to the regular render.
-func streamRender(w http.ResponseWriter, response *proxy.Response) bool {
+func streamRender(w http.ResponseWriter, response *proxy.Response, onChunk func(n int)) bool {
 	if response == nil || response.Io == nil {
 		return false
 	}
@@ -193,6 +193,7 @@ func streamRender(w http.ResponseWriter, response *proxy.Response) bool {
 				return true
 			}
 			flush()
+			onChunk(n)
 		}
 		if err != nil {
 			// io.EOF is the normal end; any other error means the backend or the

@@ -54,6 +54,8 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 		stream := sc.mode != ""
 		socketMode := sc.mode == StreamModeSocket
 		limit := newConnectionLimit(sc.maxConnections)
+		observer := currentStreamObserver()
+		endpoint := configuration.Endpoint
 
 		headersToSend := configuration.HeadersToPass
 		if len(headersToSend) == 0 {
@@ -81,9 +83,11 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 				return
 			}
 
+			closeCode := 0 // the socket relay reports it (OnClose), on this goroutine
 			if stream {
 				// the handler runs as long as the stream or the socket: the slot is held for its whole life
 				if !limit.acquire() {
+					observer.StreamRefused(endpoint, sc.mode)
 					w.Header().Set("Retry-After", "1")
 					w.Header().Set(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
 					w.WriteHeader(http.StatusServiceUnavailable)
@@ -93,6 +97,9 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 				defer limit.release()
 				// the shutdown waits for this stream, and tells it to end (see below)
 				defer server.DrainFrom(r.Context()).Track()()
+				opened := time.Now()
+				observer.StreamOpened(endpoint, sc.mode)
+				defer func() { observer.StreamClosed(endpoint, sc.mode, time.Since(opened), closeCode) }()
 			}
 
 			var requestCtx context.Context
@@ -117,6 +124,8 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 						MaxMessageSize:   sc.maxMessageSize,
 						Established:      func() { headerTimer.Stop() },
 						GoingAway:        drain.Done(),
+						OnMessage:        func(toClient bool, n int) { observer.StreamMessage(endpoint, toClient, n) },
+						OnClose:          func(code int) { closeCode = code },
 					}
 					requestCtx = socket.WithUpgrade(requestCtx, upgrade)
 				}
@@ -173,7 +182,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 			if stream && !socketMode && err == nil && response != nil && response.IsComplete {
 				w.Header().Set(server.CompleteResponseHeaderName, server.HeaderCompleteResponseValue)
 			}
-			if stream && !socketMode && err == nil && streamRender(w, response) {
+			if stream && !socketMode && err == nil && streamRender(w, response, func(n int) { observer.StreamMessage(endpoint, true, n) }) {
 				cancel()
 				return
 			}
