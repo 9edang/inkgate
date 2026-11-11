@@ -160,6 +160,12 @@ waits for its end. Off by default.
   with a subprotocol that was not offered is refused (500) instead of being passed to the client
 - options: `idle_timeout` closes the socket when nothing moves in either direction for that long (the client should ping
   more often); `max_message_size` (bytes) closes the connection on a larger message. Both default to no limit
+- `max_messages_per_second`: the messages a client may send on one socket, pings included (a ping flood is a message
+  flood), with `message_burst` more at once (default: one second of messages, at least 1; each socket starts with a
+  full burst). Over it both sides get a close frame **1008** (policy violation, reason `message rate exceeded`), what
+  the client sends after it is dropped, and the socket counts under `close.1008`. The endpoint rate limit
+  (`qos/ratelimit/router`) counts upgrades, not messages, so without this one connection can send without limit. Messages
+  from the backend are not limited. Default: no limit
 - permessage-deflate is not negotiated: messages cross the gateway uncompressed
 - needs HTTP/1.1 for the client: a WebSocket over HTTP/2 (RFC 8441) is not supported and gets 501
 - the connection to a `wss` backend uses the system CA pool

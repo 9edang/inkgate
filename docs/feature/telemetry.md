@@ -53,7 +53,7 @@ under `router.stream.<endpoint>.`:
 | `duration` | histogram (ns) | how long each lasted |
 | `messages.to_client`, `messages.from_client` | counters | socket messages, event-stream chunks |
 | `bytes.to_client`, `bytes.from_client` | counters | their size |
-| `close.<code>` | counters | how sockets ended: `1000` normal, `1001` server shutdown, `1006` dropped without a close frame |
+| `close.<code>` | counters | how sockets ended: `1000` normal, `1001` server shutdown, `1006` dropped without a close frame, `1008` over `max_messages_per_second` |
 
 Not exported through OpenTelemetry yet: the engine reports to a `router.StreamObserver`, and only the metrics layer
 implements one so far.

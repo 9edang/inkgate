@@ -140,6 +140,8 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 						IdleTimeout:      sc.idleTimeout,
 						MaxMessageSize:   sc.maxMessageSize,
 						Subprotocols:     offer,
+						MessageRate:      sc.messageRate,
+						MessageBurst:     sc.messageBurst,
 						Established:      func() { headerTimer.Stop() },
 						GoingAway:        drain.Done(),
 						OnMessage:        func(toClient bool, n int) { observer.StreamMessage(endpoint, toClient, n) },
