@@ -69,6 +69,8 @@ Put a fault injector such as [toxiproxy](https://github.com/Shopify/toxiproxy) b
 - [ ] The container runs read-only, as non-root (the image's default), without extra capabilities
 - [ ] Rate limits and authentication are tested with bad input, and sized for N replicas (limits are per instance)
 - [ ] TLS terminates where you intend: at the load balancer, or in inkgate with `tls` in the config
+- [ ] Every WebSocket endpoint that browsers reach with cookies has `allowed_origins`, or its backend checks `Origin`:
+      CORS does not apply to WebSocket ([engine/router.md](engine/router.md#mode-socket-websocket))
 
 ### 2.5 Observability
 

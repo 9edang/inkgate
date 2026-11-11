@@ -44,6 +44,10 @@ import (
 //	"enabled":          false turns the section off without removing it
 //	"idle_timeout":     socket only, e.g. "60s": close when nothing moves for that long
 //	"max_message_size": socket only, bytes; larger messages close the connection
+//	"allowed_origins":  socket only, e.g. ["https://app.example.com", "https://*.example.com"]: an upgrade with
+//	                    another Origin gets 403 before the backend is dialed; one without Origin (not a browser) passes
+//	"subprotocols":     socket only, e.g. ["graphql-transport-ws"]: only these reach the backend; a client that offers
+//	                    some and none of these gets 400
 const StreamNamespace = "inkgate/engine/router/stream"
 
 // Streaming modes of the router/stream section.
@@ -56,8 +60,10 @@ type streamConfig struct {
 	mode           string // "" when the endpoint does not stream
 	idleTimeout    time.Duration
 	maxMessageSize int64
-	maxConnections int           // open streams or sockets of the endpoint at once; 0 means no limit
-	keepAlive      time.Duration // an SSE stream silent that long gets a comment line; 0 means never
+	maxConnections int               // open streams or sockets of the endpoint at once; 0 means no limit
+	keepAlive      time.Duration     // an SSE stream silent that long gets a comment line; 0 means never
+	origins        originPolicy      // socket only: who may open a socket; the zero value allows all
+	subprotocols   subprotocolPolicy // socket only: the subprotocols passed to the backend; nil passes all
 }
 
 // parseStream reads the router/stream section of the endpoint. An invalid
@@ -119,6 +125,28 @@ func parseStream(cfg *config.EndpointConfig) (streamConfig, error) {
 			return streamConfig{}, fmt.Errorf("endpoint %s: router/stream max_connections must be a whole number, got %v", cfg.Endpoint, raw)
 		}
 		sc.maxConnections = int(n)
+	}
+	if raw, ok := m["allowed_origins"]; ok {
+		list, ok := stringList(raw)
+		if !ok {
+			return streamConfig{}, fmt.Errorf("endpoint %s: router/stream allowed_origins must be a list of origins, got %v", cfg.Endpoint, raw)
+		}
+		p, err := parseOriginPolicy(list)
+		if err != nil {
+			return streamConfig{}, fmt.Errorf("endpoint %s: router/stream allowed_origins: %w", cfg.Endpoint, err)
+		}
+		sc.origins = p
+	}
+	if raw, ok := m["subprotocols"]; ok {
+		list, ok := stringList(raw)
+		if !ok {
+			return streamConfig{}, fmt.Errorf("endpoint %s: router/stream subprotocols must be a list of names, got %v", cfg.Endpoint, raw)
+		}
+		sc.subprotocols = subprotocolPolicy(list)
+	}
+	if sc.mode != StreamModeSocket && (sc.origins.enabled() || sc.subprotocols != nil) {
+		// an SSE request is a plain fetch, which CORS already covers: a check here would only look like protection
+		return streamConfig{}, fmt.Errorf("endpoint %s: router/stream allowed_origins and subprotocols are for mode %q", cfg.Endpoint, StreamModeSocket)
 	}
 
 	return sc, nil

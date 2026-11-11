@@ -82,6 +82,23 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 
 				return
 			}
+			var offer []string // the subprotocols passed to the backend
+			if socketMode {
+				// refused before a connection slot is taken or the backend is dialed
+				if !sc.origins.allows(r.Header.Get("Origin")) {
+					w.Header().Set(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
+					http.Error(w, "origin not allowed", http.StatusForbidden)
+
+					return
+				}
+				var ok bool
+				if offer, ok = sc.subprotocols.filter(socket.Subprotocols(r)); !ok {
+					w.Header().Set(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
+					http.Error(w, "no allowed subprotocol offered", http.StatusBadRequest)
+
+					return
+				}
+			}
 
 			closeCode := 0 // the socket relay reports it (OnClose), on this goroutine
 			if stream {
@@ -122,6 +139,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 						HandshakeTimeout: configuration.Timeout,
 						IdleTimeout:      sc.idleTimeout,
 						MaxMessageSize:   sc.maxMessageSize,
+						Subprotocols:     offer,
 						Established:      func() { headerTimer.Stop() },
 						GoingAway:        drain.Done(),
 						OnMessage:        func(toClient bool, n int) { observer.StreamMessage(endpoint, toClient, n) },

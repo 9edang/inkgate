@@ -129,7 +129,8 @@ waits for its end. Off by default.
   "concurrent_calls": 1,
   "input_headers": ["Authorization"],
   "input_query_strings": ["lang"],
-  "extra_config": { "router/stream": { "mode": "socket", "idle_timeout": "60s", "max_message_size": 1048576 } },
+  "extra_config": { "router/stream": { "mode": "socket", "idle_timeout": "60s", "max_message_size": 1048576,
+                                       "allowed_origins": ["https://app.example.com"] } },
   "backend": [{ "url_pattern": "/room/{room}", "host": ["http://chat:9100"] }]
 }
 ```
@@ -145,8 +146,18 @@ waits for its end. Off by default.
   and reason, so both sides see each other's keep-alive and shutdown. A lost connection on one side closes the other
   with 1001
 - a request that is not a WebSocket upgrade gets **426** with `Upgrade: websocket`
-- `Authorization`, other `input_headers`, the query string and `Origin` are sent to the backend. The Origin check is the
-  backend's job (the gateway accepts any Origin; use `security/cors` and the request stage to restrict it)
+- `Authorization`, other `input_headers`, the query string and `Origin` are sent to the backend
+- `allowed_origins` (for example `["https://app.example.com", "https://*.example.com"]`): an upgrade whose `Origin` is
+  not in the list gets **403** before a connection slot is taken or the backend is dialed. Browsers do not apply CORS
+  to WebSocket, so `security/cors` does not protect a socket: without this list any site a user visits can open one
+  with the user's cookies (cross-site WebSocket hijacking), unless the backend checks `Origin` itself. Scheme, host and
+  port must match (default ports may be omitted); `*.` matches subdomains, not the domain itself; `"*"` allows all.
+  A request without `Origin` passes: browsers always send it, other clients can send any value. An empty list refuses
+  every browser. Without the option the backend decides, as before
+- `subprotocols` (for example `["graphql-transport-ws"]`): only these of the subprotocols the client offers are passed
+  to the backend, in the client's order. A client that offers some and none of these gets **400** before the backend
+  is dialed; one that offers none connects without a subprotocol. With or without the list, a backend that answers
+  with a subprotocol that was not offered is refused (500) instead of being passed to the client
 - options: `idle_timeout` closes the socket when nothing moves in either direction for that long (the client should ping
   more often); `max_message_size` (bytes) closes the connection on a larger message. Both default to no limit
 - permessage-deflate is not negotiated: messages cross the gateway uncompressed
