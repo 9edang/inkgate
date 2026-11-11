@@ -50,7 +50,7 @@ func negotiatedRender(w http.ResponseWriter, r *http.Request, response *proxy.Re
 // negotiateFormat returns the first offer accepted by the Accept header (the common Accept-matching algorithm).
 func negotiateFormat(accept string, offered ...string) string {
 	var accepted []string
-	for _, part := range strings.Split(accept, ",") {
+	for part := range strings.SplitSeq(accept, ",") {
 		if i := strings.IndexByte(part, ';'); i > 0 {
 			part = part[:i]
 		}

@@ -75,7 +75,7 @@ func BenchmarkProxyFactory(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		resp, _ = prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
 			Path:    "/some-path",
@@ -131,7 +131,7 @@ func BenchmarkProxyFactoryWithCustomError(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		resp, _ = prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
 			Path:    "/some-path",
@@ -187,7 +187,7 @@ func BenchmarkProxyFactoryWithLuaError(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		resp, _ = prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
 			Path:    "/some-path",

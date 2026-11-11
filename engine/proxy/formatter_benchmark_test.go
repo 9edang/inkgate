@@ -20,7 +20,7 @@ func BenchmarkEntityFormatter_allowFilter(b *testing.B) {
 
 	for _, extraFields := range []int{0, 5, 10, 15, 20, 25} {
 		sampleData := data
-		for i := 0; i < extraFields; i++ {
+		for i := range extraFields {
 			sampleData[fmt.Sprintf("%d", i)] = i
 		}
 		for _, testCase := range [][]string{
@@ -38,7 +38,7 @@ func BenchmarkEntityFormatter_allowFilter(b *testing.B) {
 				f := NewEntityFormatter(&config.Backend{AllowList: testCase})
 				b.ResetTimer()
 				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					f.Format(sample)
 				}
 			})
@@ -49,7 +49,7 @@ func BenchmarkEntityFormatter_allowFilter(b *testing.B) {
 
 func benchmarkDeepChilds(depth, extraSiblings int) map[string]any {
 	data := make(map[string]any, extraSiblings+1)
-	for i := 0; i < extraSiblings; i++ {
+	for i := range extraSiblings {
 		data[fmt.Sprintf("extra%d", i)] = "sibling_value"
 	}
 	if depth > 0 {
@@ -63,14 +63,14 @@ func benchmarkDeepChilds(depth, extraSiblings int) map[string]any {
 func benchmarkDeepStructure(numTargets, targetDepth, extraFields, extraSiblings int) (map[string]any, []string) {
 	data := make(map[string]any, numTargets+extraFields)
 	targetKeys := make([]string, numTargets)
-	for i := 0; i < numTargets; i++ {
+	for i := range numTargets {
 		data[fmt.Sprintf("target%d", i)] = benchmarkDeepChilds(targetDepth-1, extraSiblings)
 	}
-	for j := 0; j < extraFields; j++ {
+	for j := range extraFields {
 		data[fmt.Sprintf("extra%d", j)] = benchmarkDeepChilds(targetDepth-1, extraSiblings)
 	}
 	// create the target list
-	for i := 0; i < numTargets; i++ {
+	for i := range numTargets {
 		var buffer bytes.Buffer
 		buffer.WriteString(fmt.Sprintf("target%d", i))
 		for j := targetDepth - 1; j >= 0; j-- {
@@ -96,8 +96,7 @@ func BenchmarkEntityFormatter_deepAllowFilter(b *testing.B) {
 			f := NewEntityFormatter(&config.Backend{AllowList: allow})
 			b.Run(fmt.Sprintf("numTargets:%d,depth:%d,extraFields:%d,extraSiblings:%d", nTargets, depth, extraFields, extraSiblings), func(b *testing.B) {
 				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					f.Format(sample)
 				}
 			})
@@ -114,7 +113,7 @@ func BenchmarkEntityFormatter_denyFilter(b *testing.B) {
 
 	for _, extraFields := range []int{0, 5, 10, 15, 20, 25} {
 		sampleData := data
-		for i := 0; i < extraFields; i++ {
+		for i := range extraFields {
 			sampleData[fmt.Sprintf("%d", i)] = i
 		}
 		for _, testCase := range [][]string{
@@ -132,7 +131,7 @@ func BenchmarkEntityFormatter_denyFilter(b *testing.B) {
 				f := NewEntityFormatter(&config.Backend{DenyList: testCase})
 				b.ResetTimer()
 				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					f.Format(sample)
 				}
 			})
@@ -144,7 +143,7 @@ func BenchmarkEntityFormatter_grouping(b *testing.B) {
 	preffix := "group1"
 	for _, extraFields := range []int{0, 5, 10, 15, 20, 25} {
 		sampleData := make(map[string]any, extraFields)
-		for i := 0; i < extraFields; i++ {
+		for i := range extraFields {
 			sampleData[fmt.Sprintf("%d", i)] = i
 		}
 		sample := Response{
@@ -155,7 +154,7 @@ func BenchmarkEntityFormatter_grouping(b *testing.B) {
 			f := NewEntityFormatter(&config.Backend{Group: preffix})
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				f.Format(sample)
 			}
 		})
@@ -165,7 +164,7 @@ func BenchmarkEntityFormatter_grouping(b *testing.B) {
 func BenchmarkEntityFormatter_mapping(b *testing.B) {
 	for _, extraFields := range []int{0, 5, 10, 15, 20, 25} {
 		sampleData := make(map[string]any, extraFields)
-		for i := 0; i < extraFields; i++ {
+		for i := range extraFields {
 			sampleData[fmt.Sprintf("%d", i)] = i
 		}
 		for _, testCase := range []map[string]string{
@@ -184,7 +183,7 @@ func BenchmarkEntityFormatter_mapping(b *testing.B) {
 				f := NewEntityFormatter(&config.Backend{Mapping: testCase})
 				b.ResetTimer()
 				b.ReportAllocs()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					f.Format(sample)
 				}
 			})
@@ -254,20 +253,20 @@ func BenchmarkEntityFormatter_flatmapAlt(b *testing.B) {
 			}
 			var subCol []any
 
-			for i := 0; i < size; i++ {
+			for i := range size {
 				subCol = append(subCol, i)
 			}
 			sub["e"] = subCol
 			var sampleSubCol []any
 
-			for i := 0; i < size; i++ {
+			for range size {
 				sampleSubCol = append(sampleSubCol, sub)
 			}
 			sample.Data["collection"] = sampleSubCol
 
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				f.Format(sample)
 			}
 		})
@@ -304,8 +303,7 @@ func BenchmarkEntityFormatter_flatmap(b *testing.B) {
 			})
 			b.Run(fmt.Sprintf("numTargets:%d,depth:%d,extraFields:%d,extraSiblings:%d", nTargets, depth, extraFields, extraSiblings), func(b *testing.B) {
 				b.ReportAllocs()
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					f.Format(sample)
 				}
 			})

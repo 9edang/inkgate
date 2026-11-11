@@ -5,7 +5,10 @@ Package register offers tools for creating and managing registers.
 */
 package register
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
 // New returns an initialized Namespaced register
 func New() *Namespaced {
@@ -82,9 +85,7 @@ func (u *Untyped) Get(name string) (any, bool) {
 func (u *Untyped) Clone() map[string]any {
 	u.mutex.RLock()
 	res := make(map[string]any, len(u.data))
-	for k, v := range u.data {
-		res[k] = v
-	}
+	maps.Copy(res, u.data)
 	u.mutex.RUnlock()
 	return res
 }

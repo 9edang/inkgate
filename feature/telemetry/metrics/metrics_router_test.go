@@ -65,7 +65,7 @@ func TestNew(t *testing.T) {
 	// engine.GET("/test", hf(cfg, p))
 	// engine.GET("/__stats", metric.NewExpHandler())
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/test/something", io.NopCloser(strings.NewReader("")))
 		hf(cfg, p)(w, req)
@@ -124,7 +124,7 @@ func TestNewHTTPHandler(t *testing.T) {
 	h := NewHTTPHandler("test", http.HandlerFunc(assertion), rm)
 	ts := httptest.NewServer(h)
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		resp, err := http.Get(ts.URL)
 		if err != nil {
 			t.Error(err)

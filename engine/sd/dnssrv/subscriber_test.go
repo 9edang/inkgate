@@ -201,7 +201,7 @@ func TestSubscriber_LoockupError(t *testing.T) {
 func TestSubscriber_ResolveVeryLarge(t *testing.T) {
 	var srvSet []*net.SRV
 	const max = 1000
-	for i := 0; i < max; i++ {
+	for i := range max {
 		srvSet = append(srvSet, &net.SRV{
 			Port:   uint16(80 + i),
 			Target: "127.0.0.1",

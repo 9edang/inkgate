@@ -71,9 +71,9 @@ func BackendFactoryWithInvoker(logger logging.Logger, bf proxy.BackendFactory, i
 			}
 			input := &lambda.InvokeInput{
 				// ClientContext:  aws.String(clientContext),
-				FunctionName:   aws.String(ecfg.FunctionExtractor(r)),
-				InvocationType: aws.String("RequestResponse"),
-				LogType:        aws.String("None"),
+				FunctionName:   new(ecfg.FunctionExtractor(r)),
+				InvocationType: new("RequestResponse"),
+				LogType:        new("None"),
 				Payload:        payload,
 				// Qualifier:      aws.String("1"),
 			}
@@ -149,7 +149,7 @@ func getOptions(remote *config.Backend) (*Options, error) {
 	}
 
 	cfg.Config = &aws.Config{
-		Region: aws.String(region),
+		Region: new(region),
 	}
 
 	if endpoint, ok := ecfg["endpoint"].(string); ok {

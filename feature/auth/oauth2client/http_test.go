@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/9edang/inkgate/context"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -41,7 +41,7 @@ func TestClient(t *testing.T) {
 			t.Error("unexpected content type:", r.Header.Get("Content-Type"))
 			return
 		}
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		r.Body.Close()
 		if err != nil {
 			log.Println(err)
@@ -102,14 +102,14 @@ func TestClient(t *testing.T) {
 	})
 	client := c(context.Background())
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		resp, err := client.Get(ts.URL)
 		if err != nil {
 			log.Println(err)
 			t.Error(err)
 			return
 		}
-		response, err := ioutil.ReadAll(resp.Body)
+		response, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
 			log.Println(err)

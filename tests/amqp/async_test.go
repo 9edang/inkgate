@@ -35,7 +35,7 @@ func publish(host, exchange string, iterations int, content string) error {
 	defer ch.Close()
 
 	body := fmt.Sprintf(`{"msg":"%s"}`, content)
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		err = ch.Publish(exchange, "foo.bar", false, false, amqp.Publishing{
 			ContentType: "application/json",
 			Body:        []byte(body),
@@ -202,7 +202,7 @@ func TestAgentRateLimited(t *testing.T) {
 	time.Sleep(time.Second) // let the agent declare its queue
 
 	go func() {
-		for i := 0; i < 10; i++ {
+		for i := range 10 {
 			if err := publish(host, "inkgate-testing", 1, fmt.Sprintf("hello %d", i)); err != nil {
 				t.Errorf("cannot publish: %s", err)
 			}

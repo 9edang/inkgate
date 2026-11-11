@@ -49,6 +49,6 @@ func Exporter(_ context.Context, cfg opencensus.Config) (*ocAws.Exporter, error)
 func setupAWSSession(id, secret, region string) *session.Session {
 	return session.Must(session.NewSession(&aws.Config{
 		Credentials: credentials.NewStaticCredentials(id, secret, ""),
-		Region:      aws.String(region),
+		Region:      new(region),
 	}))
 }

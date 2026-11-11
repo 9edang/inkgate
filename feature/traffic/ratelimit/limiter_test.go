@@ -38,20 +38,18 @@ func testBackend(t *testing.T, _ int, f func(context.Context, time.Duration) Bac
 
 	wg := new(sync.WaitGroup)
 
-	for w := 0; w < 10; w++ {
-		wg.Add(1)
-		go func() {
-			for i := 0; i < total; i++ {
+	for range 10 {
+		wg.Go(func() {
+			for i := range total {
 				mb.Store(fmt.Sprintf("key-%d", i), i)
 			}
-			wg.Done()
-		}()
+		})
 	}
 	wg.Wait()
 
 	noResult := func() any { return nil }
 
-	for i := 0; i < total; i++ {
+	for i := range total {
 		v := mb.Load(fmt.Sprintf("key-%d", i), noResult)
 		if v == nil {
 			t.Errorf("key %d not present", i)
@@ -65,7 +63,7 @@ func testBackend(t *testing.T, _ int, f func(context.Context, time.Duration) Bac
 
 	<-time.After(2 * ttl)
 
-	for i := 0; i < total; i++ {
+	for i := range total {
 		if v := mb.Load(fmt.Sprintf("key-%d", i), noResult); v != nil {
 			t.Errorf("key %d present after 2 TTL: %v", i, v)
 			return

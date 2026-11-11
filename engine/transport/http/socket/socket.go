@@ -347,8 +347,7 @@ func relay(client, backend *websocket.Conn, o relayOptions) int {
 		for {
 			typ, r, err := from.NextReader()
 			if err != nil {
-				var ce *websocket.CloseError
-				if errors.As(err, &ce) {
+				if ce, ok := errors.AsType[*websocket.CloseError](err); ok {
 					closeCode.CompareAndSwap(0, int64(ce.Code))
 				} else {
 					closeCode.CompareAndSwap(0, websocket.CloseAbnormalClosure)
@@ -398,9 +397,8 @@ func relay(client, backend *websocket.Conn, o relayOptions) int {
 // propagateClose tells the other side how this one ended: a close frame keeps
 // its code and reason, anything else (connection lost) is an abnormal closure.
 func propagateClose(to *websocket.Conn, err error) {
-	var ce *websocket.CloseError
 	var msg []byte
-	if errors.As(err, &ce) {
+	if ce, ok := errors.AsType[*websocket.CloseError](err); ok {
 		code := ce.Code
 		// codes that must not be sent on the wire (1005, 1006, 1015)
 		if code == websocket.CloseNoStatusReceived || code == websocket.CloseAbnormalClosure || code == websocket.CloseTLSHandshake {

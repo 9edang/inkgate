@@ -47,7 +47,7 @@ func TestNew(t *testing.T) {
 	totalCount := 100000
 	meanReqSize, meanRespSize := 512.0, 768.0
 
-	for i := 0; i < totalCount; i++ {
+	for range totalCount {
 		w := httptest.NewRecorder()
 		data := make([]byte, rand.Intn(1024)) // skipcq: GSC-G404
 		req, err := http.NewRequest("POST", "/some", bytes.NewBuffer(data))

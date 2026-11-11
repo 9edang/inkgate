@@ -45,7 +45,7 @@ func BenchmarkDecoder(b *testing.B) {
 		} {
 			b.Run(dec.name+"/"+tc.name, func(b *testing.B) {
 				var result map[string]any
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					_ = dec.decoder(strings.NewReader(tc.input), &result)
 				}
 			})

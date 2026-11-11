@@ -135,8 +135,7 @@ func NewHTTPProxyDetailed(cfg *config.Backend, re client.HTTPRequestExecutor, ch
 		//nolint:bodyclose // the caller closes the body
 		resp, err = ch(ctx, resp)
 		if err != nil {
-			var t responseError
-			if errors.As(err, &t) {
+			if t, ok := errors.AsType[responseError](err); ok {
 				return &Response{
 					Data: map[string]any{
 						"error_" + t.Name(): t,

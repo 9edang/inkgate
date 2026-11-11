@@ -80,7 +80,7 @@ func (e entityFormatter) Format(entity Response) Response {
 }
 
 func extractTarget(target string, entity *Response) {
-	for _, part := range strings.Split(target, ".") {
+	for part := range strings.SplitSeq(target, ".") {
 		if tmp, ok := entity.Data[part]; ok {
 			entity.Data, ok = tmp.(map[string]any)
 			if !ok {

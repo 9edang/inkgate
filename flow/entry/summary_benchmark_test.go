@@ -25,8 +25,7 @@ func BenchmarkFlowSummaryAtInfo(b *testing.B) {
 	req := httptest.NewRequest(http.MethodGet, "/x", nil)
 	w := httptest.NewRecorder()
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		handler.ServeHTTP(w, req)
 	}
 }

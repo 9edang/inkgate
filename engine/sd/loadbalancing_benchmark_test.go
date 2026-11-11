@@ -24,8 +24,7 @@ func BenchmarkLB(b *testing.B) {
 		for _, testCase := range balancerTestsCases {
 			b.Run(fmt.Sprintf("%s/%d", tc.name, len(testCase)), func(b *testing.B) {
 				balancer := tc.f(testCase)
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
+				for b.Loop() {
 					balancer.Host()
 				}
 			})

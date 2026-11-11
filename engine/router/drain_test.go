@@ -44,7 +44,7 @@ func runGateway(t *testing.T, handler http.Handler) (addr string, shutdown func(
 		done <- server.RunServer(ctx, config.ServiceConfig{Port: port, MaxShutdownDuration: 5 * time.Second}, handler)
 	}()
 	addr = fmt.Sprintf("localhost:%d", port)
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		if c, err := net.Dial("tcp", addr); err == nil {
 			c.Close()
 			break
@@ -99,8 +99,7 @@ func TestDrain_SocketsGetGoingAway(t *testing.T) {
 		go func() {
 			for {
 				if _, _, err := c.ReadMessage(); err != nil {
-					var ce *websocket.CloseError
-					if errors.As(err, &ce) {
+					if ce, ok := errors.AsType[*websocket.CloseError](err); ok {
 						codes <- ce.Code
 					} else {
 						codes <- -1 // dropped without a close frame

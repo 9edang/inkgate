@@ -5,6 +5,7 @@ import (
 	"github.com/9edang/inkgate/internal/json"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -120,10 +121,8 @@ func CanAccess(roleKey string, claims map[string]any, required []string) bool {
 	roless := strings.Split(roleString, " ")
 
 	for _, role := range required {
-		for _, r := range roless {
-			if r == role {
-				return true
-			}
+		if slices.Contains(roless, role) {
+			return true
 		}
 	}
 	return false
@@ -223,10 +222,8 @@ func ScopesAnyMatcher(scopesKey string, claims map[string]any, requiredScopes []
 
 	matchAny := func(required []string, given []string) bool {
 		for _, rScope := range required {
-			for _, pScope := range given {
-				if rScope == pScope {
-					return true // found any of the required scopes --> return
-				}
+			if slices.Contains(given, rScope) {
+				return true // found any of the required scopes --> return
 			}
 		}
 

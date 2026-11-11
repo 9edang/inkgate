@@ -64,15 +64,13 @@ func TestDataIsSharedAndCopied(t *testing.T) {
 func TestConcurrentUse(t *testing.T) {
 	flow := New(Background(), Source{})
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for i := range 50 {
+		wg.Go(func() {
 			flow.AddBackendCall(BackendCall{Backend: "/x"})
 			flow.Set("k", i)
 			flow.Get("k")
 			flow.BackendCalls()
-		}()
+		})
 	}
 	wg.Wait()
 	if n := len(flow.BackendCalls()); n != 50 {
@@ -175,7 +173,7 @@ func TestNewIDIsUUIDv7(t *testing.T) {
 
 func TestNewIDSortsByTime(t *testing.T) {
 	prev := newID()
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		next := newID()
 		if next <= prev {
 			t.Fatalf("%s is not after %s", next, prev)

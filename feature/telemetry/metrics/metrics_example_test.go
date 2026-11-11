@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/9edang/inkgate/context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -31,7 +31,7 @@ func Example_router() {
 	ts1 := httptest.NewServer(h)
 	defer ts1.Close()
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		resp, err := http.Get(ts1.URL)
 		if err != nil {
 			fmt.Println(err)
@@ -52,7 +52,7 @@ func Example_router() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	data, _ := ioutil.ReadAll(resp.Body)
+	data, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	if len(data) < 5000 {
@@ -90,7 +90,7 @@ func Example_proxy() {
 		fmt.Println("Error:", err)
 	}
 	req := proxy.Request{}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		resp, err := p(ctx, &req)
 		if err != nil {
 			fmt.Println("Error:", err)
@@ -107,7 +107,7 @@ func Example_proxy() {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
@@ -142,8 +142,8 @@ func Example_backend() {
 	defer ts1.Close()
 
 	parsedURL, _ := url.Parse(ts1.URL)
-	req := proxy.Request{URL: parsedURL, Method: "GET", Body: ioutil.NopCloser(strings.NewReader(""))}
-	for i := 0; i < 10; i++ {
+	req := proxy.Request{URL: parsedURL, Method: "GET", Body: io.NopCloser(strings.NewReader(""))}
+	for range 10 {
 		resp, err := p(ctx, &req)
 		if err != nil {
 			fmt.Println("Error:", err)
@@ -160,7 +160,7 @@ func Example_backend() {
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
-	data, err := ioutil.ReadAll(resp.Body)
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}

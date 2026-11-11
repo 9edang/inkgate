@@ -33,9 +33,7 @@ func TestJWKClient_globalCache(t *testing.T) {
 
 	defer backend.Close()
 	opts := JWKClientOptions{
-		JWKClientOptions: auth0.JWKClientOptions{
-			URI: backend.URL,
-		},
+		URI: backend.URL,
 	}
 	te := auth0.FromMultiple(
 		auth0.RequestTokenExtractorFunc(auth0.FromHeader),
@@ -49,7 +47,7 @@ func TestJWKClient_globalCache(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		client := NewJWKClientWithCache(
 			opts,
 			te,
@@ -65,7 +63,7 @@ func TestJWKClient_globalCache(t *testing.T) {
 		return
 	}
 	<-time.After(4 * time.Second)
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		client := NewJWKClientWithCache(
 			opts,
 			te,

@@ -12,7 +12,7 @@ import (
 // goroutine-per-response wrapper (~0.37 µs) measured faster than context.AfterFunc variants (0.56-0.79 µs).
 func BenchmarkReadCloserWrapper(b *testing.B) {
 	b.ReportAllocs()
-	for range b.N {
+	for b.Loop() {
 		ctx, cancel := context.WithCancel(context.Background())
 		r := NewReadCloserWrapper(ctx, io.NopCloser(strings.NewReader("body")))
 		_, _ = io.Copy(io.Discard, r)

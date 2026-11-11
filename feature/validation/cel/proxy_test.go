@@ -33,7 +33,7 @@ func TestProxyFactory_reqQuerystring(t *testing.T) {
 		return
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		query, _ := url.ParseQuery(`x=` + strconv.Itoa(i) + `&y=2&y=3;z`)
 		resp, err := prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
@@ -94,7 +94,7 @@ func TestProxyFactory_reqParams_int(t *testing.T) {
 		return
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		resp, err := prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
 			Path:    "/some-path",
@@ -157,7 +157,7 @@ func TestProxyFactory_respParams_int(t *testing.T) {
 		return
 	}
 
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		resp, err := prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
 			Path:    "/some-path",
@@ -215,7 +215,7 @@ func TestProxyFactory_reqParams_string(t *testing.T) {
 			return
 		}
 
-		for i := 0; i < 100; i++ {
+		for i := range 100 {
 			for _, tc := range []struct {
 				success bool
 				nick    string

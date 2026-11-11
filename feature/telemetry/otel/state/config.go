@@ -1,6 +1,8 @@
 package state
 
 import (
+	"slices"
+
 	coreconfig "github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/feature/telemetry/otel/config"
 )
@@ -102,12 +104,7 @@ func (s *StateConfig) mergedBackendOpts(cfg *coreconfig.Backend) *config.Backend
 }
 
 func (s *StateConfig) SkipEndpoint(endpoint string) bool {
-	for _, toSkip := range s.cfgData.SkipPaths {
-		if toSkip == endpoint {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s.cfgData.SkipPaths, endpoint)
 }
 
 func NewConfig(cfgData *config.ConfigData) *StateConfig {

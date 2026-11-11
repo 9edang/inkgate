@@ -16,7 +16,7 @@ func generateTestKeys(num, length int) []string {
 	r := rand.New(rand.NewSource(int64(num))) // skipcq: GSC-G404
 	h := sha256.New()
 
-	for i := 0; i < num; i++ {
+	for range num {
 		fmt.Fprintf(h, "%x", r.Int())
 		res = append(res, fmt.Sprintf("%x", h.Sum(nil))[:length])
 	}
@@ -60,13 +60,10 @@ func BenchmarkMemoryBackend(b *testing.B) {
 	for _, tc := range t {
 		b.Run(fmt.Sprintf("loads_%d_keep_%d_evict_%d", tc.keep*10+tc.evict, tc.keep, tc.evict), func(b *testing.B) {
 			mb := NewMemoryBackend(ctx, ttl)
-			for i := 0; i < b.N; i++ {
-				numMax := tc.keep
-				if tc.evict > tc.keep {
-					numMax = tc.evict
-				}
+			for b.Loop() {
+				numMax := max(tc.evict, tc.keep)
 				// load all one time
-				for k := 0; k < numMax; k++ {
+				for k := range numMax {
 					if k < tc.keep {
 						mb.Load(toKeep[k], bcf)
 					}
@@ -76,8 +73,8 @@ func BenchmarkMemoryBackend(b *testing.B) {
 				}
 				// now keep loading the to keep 9 times
 				// it might or might not evict depending on the time it takes
-				for j := 0; j < 9; j++ {
-					for k := 0; k < tc.keep; k++ {
+				for range 9 {
+					for k := range tc.keep {
 						mb.Load(toKeep[k], bcf)
 					}
 				}

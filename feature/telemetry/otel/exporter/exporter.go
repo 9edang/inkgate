@@ -5,6 +5,7 @@ package exporter
 import (
 	"fmt"
 	"github.com/9edang/inkgate/context"
+	"maps"
 	"sync"
 	"time"
 
@@ -74,9 +75,7 @@ func Instances(ctx context.Context, cfg *config.ConfigData) (map[string]MetricRe
 	if err != nil {
 		return nil, nil, err
 	}
-	for k, v := range pm {
-		m[k] = v
-	}
+	maps.Copy(m, pm)
 	return m, s, nil
 }
 
@@ -86,12 +85,8 @@ func SetGlobalExporterInstances(m map[string]MetricReader, t map[string]SpanExpo
 	mu.Lock()
 	metricsInstances = make(map[string]MetricReader, len(m))
 	tracesInstances = make(map[string]SpanExporter, len(t))
-	for k, v := range m {
-		metricsInstances[k] = v
-	}
-	for k, v := range t {
-		tracesInstances[k] = v
-	}
+	maps.Copy(metricsInstances, m)
+	maps.Copy(tracesInstances, t)
 	mu.Unlock()
 }
 
@@ -100,12 +95,8 @@ func GetGlobalExporterInstances() (map[string]MetricReader, map[string]SpanExpor
 	mu.RLock()
 	m := make(map[string]MetricReader, len(metricsInstances))
 	t := make(map[string]SpanExporter, len(tracesInstances))
-	for k, v := range metricsInstances {
-		m[k] = v
-	}
-	for k, v := range tracesInstances {
-		t[k] = v
-	}
+	maps.Copy(m, metricsInstances)
+	maps.Copy(t, tracesInstances)
 	mu.RUnlock()
 	return m, t
 }

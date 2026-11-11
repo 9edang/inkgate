@@ -597,7 +597,7 @@ func (inkgateCmdBuilder) getEnviron(cfg *Config) []string {
 	environ := []string{}
 
 	var patterns []*regexp.Regexp
-	for _, pattern := range strings.Split(cfg.getEnvironPatterns(), ",") {
+	for pattern := range strings.SplitSeq(cfg.getEnvironPatterns(), ",") {
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			continue

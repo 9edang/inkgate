@@ -30,7 +30,7 @@ func TestNewProxyMiddleware(t *testing.T) {
 
 	mw := NewProxyMiddleware("some", "none", proxyMetric)
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		resp, err := mw(assertion)(ctx, request)
 		if err != nil {
 			t.Error("unexpected error:", err)

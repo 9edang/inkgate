@@ -16,8 +16,7 @@ type DecodeFailure struct {
 // DecodeError describes a failed Unmarshal. ok is false when err is not a syntax or type error of the decoder
 // (for example an error of a custom UnmarshalJSON method).
 func DecodeError(err error) (failure DecodeFailure, ok bool) {
-	var syntaxErr decoder.SyntaxError
-	if errors.As(err, &syntaxErr) {
+	if syntaxErr, ok := errors.AsType[decoder.SyntaxError](err); ok {
 		msg := "invalid JSON: " + syntaxErr.Message()
 		if syntaxErr.Pos >= 0 && syntaxErr.Pos < len(syntaxErr.Src) && syntaxErr.Message() != "eof" {
 			msg += fmt.Sprintf(" %q", syntaxErr.Src[syntaxErr.Pos])
@@ -26,13 +25,11 @@ func DecodeError(err error) (failure DecodeFailure, ok bool) {
 		return DecodeFailure{Offset: syntaxErr.Pos, Message: msg}, true
 	}
 
-	var typeErr decoder.MismatchTypeError
-	if errors.As(err, &typeErr) {
+	if typeErr, ok := errors.AsType[decoder.MismatchTypeError](err); ok {
 		return DecodeFailure{Offset: typeErr.Pos, Message: mismatchMessage(typeErr.Src, typeErr.Pos, typeErr.Type.String())}, true
 	}
 
-	var typePtrErr *decoder.MismatchTypeError
-	if errors.As(err, &typePtrErr) {
+	if typePtrErr, ok := errors.AsType[*decoder.MismatchTypeError](err); ok {
 		return DecodeFailure{Offset: typePtrErr.Pos, Message: mismatchMessage(typePtrErr.Src, typePtrErr.Pos, typePtrErr.Type.String())}, true
 	}
 

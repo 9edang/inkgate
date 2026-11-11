@@ -23,7 +23,7 @@ func BenchmarkRequestGeneratePath(b *testing.B) {
 	} {
 		b.Run(testCase, func(b *testing.B) {
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				r.GeneratePath(testCase)
 			}
 		})

@@ -18,7 +18,7 @@ func BenchmarkNewLoadBalancedMiddleware(b *testing.B) {
 			proxy := newLoadBalancedMiddleware(logging.NoOp, dummyBalancer(veryLargeString[:tc]))(dummyProxy(&Response{}))
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				proxy(context.Background(), &Request{
 					Path: veryLargeString[:tc],
 				})

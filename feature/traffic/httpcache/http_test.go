@@ -268,7 +268,7 @@ func TestClient_backendFactory(t *testing.T) {
 	ctx := context.Background()
 	URL, _ := url.Parse(b.URL())
 
-	for i := 0; i < maxRequests; i++ {
+	for range maxRequests {
 		req := &proxy.Request{
 			Method: "GET",
 			URL:    URL,
@@ -293,7 +293,7 @@ func TestClient_backendFactory(t *testing.T) {
 func testClient(t *testing.T, cfg *config.Backend, URL string, numRequests int) {
 	c := NewHTTPClient(cfg, client.NewHTTPClient)(context.Background())
 
-	for i := 0; i < numRequests; i++ {
+	for range numRequests {
 		resp, err := c.Get(URL)
 		if err != nil {
 			t.Error(err)

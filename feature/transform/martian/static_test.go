@@ -3,7 +3,7 @@ package martian
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path"
@@ -15,10 +15,7 @@ import (
 )
 
 func Test404WhenExplictlyMappedFileDoesNotExist(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_explicit_path_mapping_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
 	//if err := os.MkdirAll(path.Join(tmpdir, "explicit/path"), 0777); err != nil {
 	//	t.Fatalf("os.Mkdir(): got %v, want no error", err)
@@ -57,20 +54,17 @@ func Test404WhenExplictlyMappedFileDoesNotExist(t *testing.T) {
 }
 
 func TestFileExistsInBothExplictlyMappedPathAndInferredPath(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_explicit_path_mapping_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
 	if err := os.MkdirAll(path.Join(tmpdir, "explicit/path"), 0777); err != nil {
 		t.Fatalf("os.Mkdir(): got %v, want no error", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("dont return"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("dont return"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "explicit/path", "sfmtest.txt"), []byte("target"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "explicit/path", "sfmtest.txt"), []byte("target"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
@@ -101,7 +95,7 @@ func TestFileExistsInBothExplictlyMappedPathAndInferredPath(t *testing.T) {
 		t.Errorf("res.Header.Get('Content-Type'): got %v, want %v", got, want)
 	}
 
-	got, err := ioutil.ReadAll(res.Body)
+	got, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}
@@ -117,16 +111,13 @@ func TestFileExistsInBothExplictlyMappedPathAndInferredPath(t *testing.T) {
 }
 
 func TestStaticModifierExplicitPathMapping(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_explicit_path_mapping_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
 	if err := os.MkdirAll(path.Join(tmpdir, "explicit/path"), 0777); err != nil {
 		t.Fatalf("os.Mkdir(): got %v, want no error", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "explicit/path", "sfmtest.txt"), []byte("test file"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "explicit/path", "sfmtest.txt"), []byte("test file"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
@@ -157,7 +148,7 @@ func TestStaticModifierExplicitPathMapping(t *testing.T) {
 		t.Errorf("res.Header.Get('Content-Type'): got %v, want %v", got, want)
 	}
 
-	got, err := ioutil.ReadAll(res.Body)
+	got, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}
@@ -173,12 +164,9 @@ func TestStaticModifierExplicitPathMapping(t *testing.T) {
 }
 
 func TestStaticModifierOnRequest(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_on_request_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("test file"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("test file"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
@@ -207,7 +195,7 @@ func TestStaticModifierOnRequest(t *testing.T) {
 		t.Errorf("res.Header.Get('Content-Type'): got %v, want %v", got, want)
 	}
 
-	got, err := ioutil.ReadAll(res.Body)
+	got, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}
@@ -223,12 +211,9 @@ func TestStaticModifierOnRequest(t *testing.T) {
 }
 
 func TestRequestOverHTTPS(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_on_request_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("test file"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("test file"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
@@ -259,7 +244,7 @@ func TestRequestOverHTTPS(t *testing.T) {
 		t.Errorf("res.Header.Get('Content-Type'): got %v, want %v", got, want)
 	}
 
-	got, err := ioutil.ReadAll(res.Body)
+	got, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}
@@ -275,32 +260,29 @@ func TestRequestOverHTTPS(t *testing.T) {
 }
 
 func TestModifierFromJSON(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_on_request_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
 	tmpdir2 := path.Join(tmpdir, "subdir")
-	err = os.Mkdir(tmpdir2, 0777)
+	err := os.Mkdir(tmpdir2, 0777)
 	if err != nil {
 		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("test file"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("test file"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(tmpdir2, "sfmtest.txt"), []byte("test file2"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir2, "sfmtest.txt"), []byte("test file2"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
-	msg := []byte(fmt.Sprintf(`{
+	msg := fmt.Appendf(nil, `{
 		"static.Modifier": {
 			"scope": ["request", "response"],
 			"explicitPaths": {"/foo/bar.baz": "/subdir/sfmtest.txt"},
 			"rootPath": %q
 		}
-	}`, tmpdir))
+	}`, tmpdir)
 
 	r, err := parse.FromJSON(msg)
 	if err != nil {
@@ -342,7 +324,7 @@ func TestModifierFromJSON(t *testing.T) {
 		t.Errorf("res.Header.Get('Content-Type'): got %v, want %v", got, want)
 	}
 
-	got, err := ioutil.ReadAll(res.Body)
+	got, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}
@@ -381,7 +363,7 @@ func TestModifierFromJSON(t *testing.T) {
 		t.Errorf("res.Header.Get('Content-Type'): got %v, want %v", got, want)
 	}
 
-	got, err = ioutil.ReadAll(res.Body)
+	got, err = io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}
@@ -397,13 +379,10 @@ func TestModifierFromJSON(t *testing.T) {
 }
 
 func TestStaticModifierSingleRangeRequest(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_on_request_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 	mod := NewStaticModifier(tmpdir)
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("0123456789"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("0123456789"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
@@ -440,7 +419,7 @@ func TestStaticModifierSingleRangeRequest(t *testing.T) {
 		t.Errorf("res.Header.Get(%q): got %q, want %q", "Content-Encoding", got, want)
 	}
 
-	got, err := ioutil.ReadAll(res.Body)
+	got, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatalf("ioutil.ReadAll(): got %v, want no error", err)
 	}

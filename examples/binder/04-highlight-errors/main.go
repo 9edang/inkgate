@@ -55,13 +55,11 @@ print(p:email())
 -- be
 -- crashed
     `); err != nil {
-		switch err.(type) {
+		switch e := err.(type) {
 		case *binder.Error:
-			e := err.(*binder.Error)
 			e.Print()
 
 			os.Exit(0)
-			break
 		default:
 			log.Fatalln(err)
 		}

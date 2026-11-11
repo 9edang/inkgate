@@ -37,7 +37,7 @@ func BenchmarkProxyFactory_reqParams_int(b *testing.B) {
 
 	b.ResetTimer()
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for i := range b.N {
 		prxy(context.Background(), &proxy.Request{
 			Method:  "GET",
 			Path:    "/some-path",

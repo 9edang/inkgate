@@ -5,6 +5,7 @@ package proxy
 import (
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -227,7 +228,7 @@ func parallelMerge(
 		}
 
 		acc := newIncrementalMergeAccumulator(proxyCount, rc)
-		for i := 0; i < proxyCount; i++ {
+		for range proxyCount {
 			select {
 			case err := <-failed:
 				acc.Merge(nil, err)
@@ -318,7 +319,7 @@ func sequentialMerge( // skipcq: GO-R1005
 							break
 						}
 						var b strings.Builder
-						for i := 0; i < len(clean)-1; i++ {
+						for i := range len(clean) - 1 {
 							fmt.Fprintf(&b, "%v,", clean[i])
 						}
 						fmt.Fprintf(&b, "%v", clean[len(clean)-1])
@@ -545,9 +546,7 @@ func combineData(total int, parts []*Response) *Response {
 		if part.Metadata.StatusCode != retResponse.Metadata.StatusCode {
 			retResponse.Metadata.StatusCode = 0
 		}
-		for k, v := range part.Data {
-			retResponse.Data[k] = v
-		}
+		maps.Copy(retResponse.Data, part.Data)
 	}
 
 	if nil == retResponse {

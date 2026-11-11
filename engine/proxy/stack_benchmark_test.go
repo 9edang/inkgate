@@ -72,7 +72,7 @@ func BenchmarkProxyStack_single(b *testing.B) {
 	var r *Response
 	b.ResetTimer()
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r, _ = p(context.Background(), request)
 	}
 	result = r
@@ -141,7 +141,7 @@ func BenchmarkProxyStack_multi(b *testing.B) {
 			var r *Response
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				r, _ = p(context.Background(), request)
 			}
 			result = r
@@ -222,7 +222,7 @@ func BenchmarkProxyStack_multipost(b *testing.B) {
 			var r *Response
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				r, _ = p(context.Background(), request)
 			}
 			result = r
@@ -300,7 +300,7 @@ func BenchmarkProxyStack_single_flatmap(b *testing.B) {
 	var r *Response
 	b.ResetTimer()
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		r, _ = p(context.Background(), request)
 	}
 	result = r
@@ -381,7 +381,7 @@ func BenchmarkProxyStack_multi_flatmap(b *testing.B) {
 			var r *Response
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				p(context.Background(), request)
 			}
 			result = r
