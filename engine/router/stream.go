@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -48,6 +49,8 @@ import (
 //	                    another Origin gets 403 before the backend is dialed; one without Origin (not a browser) passes
 //	"subprotocols":     socket only, e.g. ["graphql-transport-ws"]: only these reach the backend; a client that offers
 //	                    some and none of these gets 400
+//	"max_messages_per_second": socket only: messages and pings a client may send per second; over it the socket is
+//	                    closed with 1008 (policy violation). "message_burst" (default: one second of messages) more at once
 const StreamNamespace = "inkgate/engine/router/stream"
 
 // Streaming modes of the router/stream section.
@@ -64,6 +67,8 @@ type streamConfig struct {
 	keepAlive      time.Duration     // an SSE stream silent that long gets a comment line; 0 means never
 	origins        originPolicy      // socket only: who may open a socket; the zero value allows all
 	subprotocols   subprotocolPolicy // socket only: the subprotocols passed to the backend; nil passes all
+	messageRate    float64           // socket only: client messages per second; 0 means no limit
+	messageBurst   int               // socket only: messages above the rate a client may send at once
 }
 
 // parseStream reads the router/stream section of the endpoint. An invalid
@@ -147,6 +152,9 @@ func parseStream(cfg *config.EndpointConfig) (streamConfig, error) {
 	if sc.mode != StreamModeSocket && (sc.origins.enabled() || sc.subprotocols != nil) {
 		// an SSE request is a plain fetch, which CORS already covers: a check here would only look like protection
 		return streamConfig{}, fmt.Errorf("endpoint %s: router/stream allowed_origins and subprotocols are for mode %q", cfg.Endpoint, StreamModeSocket)
+	}
+	if err := parseMessageRate(m, &sc); err != nil {
+		return streamConfig{}, fmt.Errorf("endpoint %s: router/stream %w", cfg.Endpoint, err)
 	}
 
 	return sc, nil
@@ -370,4 +378,36 @@ func (e *eventBoundary) between() bool {
 	b := e.tail[:e.n]
 
 	return bytes.HasSuffix(b, []byte("\n\n")) || bytes.HasSuffix(b, []byte("\r\n\r\n")) || bytes.HasSuffix(b, []byte("\r\r"))
+}
+
+// parseMessageRate reads max_messages_per_second and message_burst (socket only). The burst defaults to one second of
+// messages, at least 1.
+func parseMessageRate(m map[string]any, sc *streamConfig) error {
+	rawRate, hasRate := m["max_messages_per_second"]
+	rawBurst, hasBurst := m["message_burst"]
+	if !hasRate {
+		if hasBurst {
+			return errors.New("message_burst needs max_messages_per_second")
+		}
+
+		return nil
+	}
+	if sc.mode != StreamModeSocket {
+		return fmt.Errorf("max_messages_per_second is for mode %q", StreamModeSocket)
+	}
+	r, ok := config.Float64(rawRate)
+	if !ok || r <= 0 {
+		return fmt.Errorf("max_messages_per_second must be a number above 0, got %v", rawRate)
+	}
+	sc.messageRate = r
+	sc.messageBurst = max(1, int(math.Ceil(r)))
+	if hasBurst {
+		b, ok := config.Float64(rawBurst)
+		if !ok || b < 1 || b != float64(int(b)) {
+			return fmt.Errorf("message_burst must be a whole number from 1, got %v", rawBurst)
+		}
+		sc.messageBurst = int(b)
+	}
+
+	return nil
 }

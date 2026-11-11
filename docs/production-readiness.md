@@ -11,7 +11,7 @@ check before you send it real traffic.
 | Correctness | `make test` (unit and integration suites) and `go test -race ./...` pass. `inkgate check` validates a config without starting |
 | Request limits | on by default: `read_header_timeout` 10s, `read_timeout` 30s, `idle_timeout` 120s, `max_body_bytes` 10 MB (413 above). See [engine/transport.md](engine/transport.md#request-limits) |
 | Graceful shutdown | on SIGTERM, in-flight requests finish within `max_shutdown_wait_time`; SSE streams end as complete responses, WebSockets get a close frame 1001 (going away) |
-| Streams | per-endpoint `max_connections`, `keep_alive` for SSE, metrics under `router.stream.<endpoint>.*`. See [engine/router.md](engine/router.md) |
+| Streams | per-endpoint `max_connections`, `keep_alive` for SSE; for sockets `allowed_origins`, `subprotocols` and a message rate per connection; metrics under `router.stream.<endpoint>.*`. See [engine/router.md](engine/router.md) |
 | Observability | metrics (`telemetry/metrics`, served on its own port at `/__stats`) and OpenTelemetry with a Prometheus exporter; structured logs; a UUID v7 request ID on every request ([overview/flow-context.md](overview/flow-context.md)); a liveness endpoint, `/__health` |
 | Security | the image runs as user 10001 on `debian:trixie-slim`; `govulncheck` and `gosec` report no findings |
 | Images | multi-arch (`linux/amd64`, `linux/arm64/v8`) on Docker Hub as `120200/inkgate` |
@@ -21,8 +21,6 @@ Not there yet, so plan around it:
 - **No readiness endpoint** separate from `/__health`: the process answers it as soon as it listens.
 - **Rate limits are per instance**: N replicas allow N times the configured rate ([known-issues.md](known-issues.md)).
 - **An unknown `extra_config` namespace is ignored silently**: a typo turns a feature off without an error.
-- **No WebSocket message rate limit**: the endpoint rate limit counts upgrades, not messages
-  ([milestone M3](milestones/m3-streaming.md) 3.6).
 - **`GOMEMLIMIT` is not set by the image** (see 2.2). `GOMAXPROCS` needs nothing: Go 1.25 and later read the container's
   CPU limit.
 - **Plugins** (`.so`) load only into a binary built with the same Go version, packages and glibc (Go 1.27, glibc 2.41):
@@ -67,7 +65,8 @@ Put a fault injector such as [toxiproxy](https://github.com/Shopify/toxiproxy) b
 
 - [ ] Your image scanner (Trivy, Grype or your registry's) reports no critical finding on the image you deploy
 - [ ] The container runs read-only, as non-root (the image's default), without extra capabilities
-- [ ] Rate limits and authentication are tested with bad input, and sized for N replicas (limits are per instance)
+- [ ] Rate limits and authentication are tested with bad input, and sized for N replicas (limits are per instance);
+      socket endpoints have `max_messages_per_second`, since the endpoint rate limit counts upgrades, not messages
 - [ ] TLS terminates where you intend: at the load balancer, or in inkgate with `tls` in the config
 - [ ] Every WebSocket endpoint that browsers reach with cookies has `allowed_origins`, or its backend checks `Origin`:
       CORS does not apply to WebSocket ([engine/router.md](engine/router.md#mode-socket-websocket))

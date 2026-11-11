@@ -18,6 +18,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `golang:1.27-trixie`.
 
 ### Added
+- `router/stream` `max_messages_per_second` and `message_burst` for socket endpoints: a token bucket per connection on
+  what the client sends (pings included); over it both sides get close 1008 (policy violation). The endpoint rate
+  limit counts upgrades, not messages.
 - `router/stream` `allowed_origins` and `subprotocols` for socket endpoints: an upgrade from another `Origin` gets 403,
   one offering only other subprotocols gets 400, both before the backend is dialed; only the allowed subprotocols
   reach the backend. Browsers do not apply CORS to WebSocket, so this is what stops cross-site WebSocket hijacking at

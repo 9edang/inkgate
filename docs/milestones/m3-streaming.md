@@ -11,7 +11,7 @@ is what keeps long-lived connections safe in production.
 | 3.3 | Metrics for open connections and messages (**done** for telemetry/metrics; OpenTelemetry open) | S |
 | 3.4 | SSE keep-alive comments (**done**) | S |
 | 3.5 | Origin and subprotocol allow-lists at the gateway (**done**) | S |
-| 3.6 | Message rate limit per WebSocket connection | M |
+| 3.6 | Message rate limit per WebSocket connection (**done**) | M |
 | 3.7 | permessage-deflate | M |
 | 3.8 | Fan-out: one backend stream to many clients | L |
 
@@ -84,6 +84,14 @@ client one it never offered; the gateway now refuses that, with or without a lis
 
 The endpoint rate limit counts upgrades, not messages: one connection can send without limit. A token bucket per
 connection (`max_messages_per_second`, `burst`), closing with 1008 (policy violation) when exceeded.
+
+**Result** (November 2026): `max_messages_per_second` and `message_burst` (named so, not `burst`, next to the other
+`router/stream` options) for socket endpoints, with `golang.org/x/time/rate`. Choices beyond the plan: pings count (a
+ping flood costs the backend like a message flood), backend messages are not limited, the bucket starts full (a
+client may subscribe and authenticate at once), and the burst defaults to one second of messages. Over the limit both
+sides get 1008 with the reason `message rate exceeded` and the client's further messages are dropped; it shows in the
+existing `close.1008` metric. Tests (`engine/router/socket_rate_test.go`): the message over the burst never reaches
+the backend, a ping flood is closed, a client within the rate is never cut; each fails with the check removed.
 
 ## 3.7 permessage-deflate
 
