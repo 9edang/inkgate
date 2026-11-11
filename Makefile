@@ -55,10 +55,11 @@ tools:
 	@test -x $(GOBIN)/gosec -a -z "$(FORCE)" || go install github.com/securego/gosec/v2/cmd/gosec@$(GOSEC_VERSION)
 	@test -x $(GOBIN)/govulncheck -a -z "$(FORCE)" || go install golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
-# static analysis; report in $(REPORT_DIR)/lint.txt
+# static analysis; report in $(REPORT_DIR)/lint.txt. By default only the changes in the working tree are checked;
+# LINT_ALL=1 checks everything; LINT_BASE=origin/main checks what a branch changed since main
 lint:
 	@mkdir -p $(REPORT_DIR)
-	$(SCAN_RUN) golangci-lint run --concurrency $(SCAN_CPUS) $(if $(LINT_ALL),--new=false) ./... 2>&1 | tee $(REPORT_DIR)/lint.txt
+	$(SCAN_RUN) golangci-lint run --concurrency $(SCAN_CPUS) $(if $(LINT_ALL),--new=false) $(if $(LINT_BASE),--new=false --new-from-merge-base=$(LINT_BASE)) ./... 2>&1 | tee $(REPORT_DIR)/lint.txt
 
 # security issues in our own code; report in $(REPORT_DIR)/gosec.txt
 sec:

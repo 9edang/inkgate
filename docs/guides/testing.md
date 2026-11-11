@@ -5,6 +5,8 @@ make build                 # bin/inkgate
 make test                  # build, build the test plugins, go test ./... (includes the integration suite in tests/)
 make test-plugins          # only the test .so plugins (go test of the plugin loaders needs them)
 make test-certs            # the cert.pem and key.pem the jose tests need
+go test -race ./...        # the same under the race detector; it must stay clean
+make lint LINT_BASE=origin/main  # lint what this branch changed since main
 make bench-ratelimit       # rate limiter benchmarks
 go test ./feature/auth/... # one domain
 go test ./tests            # integration only (needs bin/inkgate)
@@ -49,7 +51,38 @@ flowchart TD
 
 3. `make test`.
 
+## Before opening a PR
+
+There is no CI for now: run the checks locally.
+
+```sh
+make test                        # build, test plugins, certificate, go test ./... with the integration suite
+go test -race -count=1 ./...     # must stay free of data races
+make lint LINT_BASE=origin/main  # lint the lines this branch changed since main
+make sec                         # gosec
+make vuln                        # govulncheck: known CVEs in what the code calls
+```
+
+`make lint` alone checks only the uncommitted changes; `LINT_BASE` checks a whole branch. The repository still
+carries about 1,100 older lint findings (mostly function complexity and comment style in carried-over code), which
+`make lint LINT_ALL=1` lists; they are paid down in dedicated refactors.
+
+The AMQP suite (`tests/amqp`) skips itself without a container runtime: start one (with podman,
+`systemctl --user start podman.socket`) when a change touches the AMQP connector.
+
+To test the way the Docker image is built (Go 1.27 and glibc 2.41 of Debian trixie, which the plugins depend on), run
+the suite in the build stage's image:
+
+```sh
+docker run --rm -v "$PWD":/src:z -w /src golang:1.27-trixie make test   # :z for SELinux (Fedora)
+```
+
+Tests that depend on time or ports must not use fixed sleeps or fixed ports: ask the OS for a free port and wait until
+it listens (see `engine/transport/http/server/server_test.go`), and never call a service on the internet (the `rss`
+integration case used to fetch showrss.info; the test backend now serves its feeds). A test that is slow under
+`-race` fails at random; `TestReport` in `feature/telemetry/usage` did, because of a proof of work of a million hashes
+per report, and now uses a small one.
+
 ## Known failures
 
-Some carried-over unit tests fail because of missing fixtures or unbuilt `.so` plugins. They are listed with their
-causes in [../known-issues.md](../known-issues.md).
+The suite is green, also under `-race`. What to know about it is in [../known-issues.md](../known-issues.md).
