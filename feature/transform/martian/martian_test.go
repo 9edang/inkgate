@@ -73,7 +73,7 @@ func TestHTTPRequestExecutor_ok(t *testing.T) {
 		t.Error(err)
 	}
 	if resp == nil {
-		t.Errorf("unexpected response: %v", *resp)
+		t.Fatal("unexpected nil response")
 	}
 	if resp.StatusCode != 200 {
 		t.Errorf("unexpected response status: %d", resp.StatusCode)
@@ -90,7 +90,7 @@ func TestHTTPRequestExecutor_ok(t *testing.T) {
 		t.Error(err)
 	}
 	if resp == nil {
-		t.Errorf("unexpected response: %v", *resp)
+		t.Fatal("unexpected nil response")
 	}
 	if resp.StatusCode != 200 {
 		t.Errorf("unexpected response status: %d", resp.StatusCode)
@@ -367,7 +367,7 @@ func TestHTTPRequestExecutor_static(t *testing.T) {
 		t.Error(err)
 	}
 	if resp == nil {
-		t.Errorf("unexpected response: %v", *resp)
+		t.Fatal("unexpected nil response")
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("unexpected response status: %d", resp.StatusCode)
@@ -382,7 +382,7 @@ func TestHTTPRequestExecutor_static(t *testing.T) {
 		t.Error(err)
 	}
 	if resp == nil {
-		t.Errorf("unexpected response: %v", *resp)
+		t.Fatal("unexpected nil response")
 	}
 	if resp.StatusCode != http.StatusNotFound {
 		t.Errorf("unexpected response status: %d", resp.StatusCode)

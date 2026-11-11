@@ -236,14 +236,21 @@ func NewIntegration(cfg *Config, cb CmdBuilder, bb BackendBuilder) (*Runner, []T
 	if err := cmd.Start(); err != nil {
 		return nil, tcs, err
 	}
+	waited := make(chan error, 1)
+	go func() { waited <- cmd.Wait() }()
 	closeFuncs := []func(){
 		func() {
 			// #nosec G104 -- test harness
 			cmd.Process.Kill()
+			// say how the process ended from here, on the caller's goroutine: printing from the goroutine above
+			// raced with the testing package swapping os.Stdout for an example
+			select {
+			case err := <-waited:
+				fmt.Println(err)
+			case <-time.After(5 * time.Second):
+			}
 		},
 	}
-
-	go func() { fmt.Println(cmd.Wait()) }()
 
 	var err error
 	tcs, err = testCases(*cfg)
@@ -623,6 +630,7 @@ func (mockBackendBuilder) New(cfg *Config) http.Server {
 	mux.HandleFunc("/delayed/", checkXForwardedFor(delayedEndpoint(cfg.getDelay(), http.HandlerFunc(echoEndpoint))))
 	mux.HandleFunc("/redirect/", checkXForwardedFor(http.HandlerFunc(redirectEndpoint)))
 	mux.HandleFunc("/jwk/symmetric", http.HandlerFunc(symmetricJWKEndpoint))
+	mux.HandleFunc("/user/", http.HandlerFunc(rssEndpoint))
 
 	return http.Server{
 		Addr:              fmt.Sprintf(":%v", cfg.getBackendPort()),
@@ -661,6 +669,26 @@ func delayedEndpoint(d time.Duration, h http.Handler) http.HandlerFunc {
 		<-time.After(d)
 		h.ServeHTTP(rw, req)
 	}
+}
+
+// rssEndpoint serves the two feeds of the rss spec: /user/schedule/{id}.rss and /user/{id}.rss. The spec used to fetch
+// them from showrss.info, so the suite failed whenever that site was slow or down.
+func rssEndpoint(rw http.ResponseWriter, r *http.Request) {
+	title := "showRSS personal feed"
+	if strings.HasPrefix(r.URL.Path, "/user/schedule/") {
+		title = "showRSS schedule feed"
+	}
+	rw.Header().Add("Content-Type", "application/rss+xml; charset=utf-8")
+	// #nosec G104 -- test harness
+	fmt.Fprintf(rw, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>%s</title>
+    <link>http://showrss.info/</link>
+    <description>%s</description>
+    <item><title>Episode 1</title><link>http://showrss.info/1</link></item>
+  </channel>
+</rss>`, title, title)
 }
 
 func xmlEndpoint(rw http.ResponseWriter, _ *http.Request) {
