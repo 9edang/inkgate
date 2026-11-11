@@ -44,5 +44,6 @@ docs/
 │   ├── README.md  m1-confirmed-bugs.md  m2-request-cost.md  m3-streaming.md  m4-traffic-resilience.md  m5-operability.md
 ├── production-readiness.md  checklist before serving production traffic
 ├── performance-review.md    request-path review: findings, status and order of work
+├── design/              proposals under review (json-passthrough.md)
 └── known-issues.md      unit tests that fail and why
 ```

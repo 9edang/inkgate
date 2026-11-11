@@ -177,9 +177,9 @@ func (e *Error) Print() {
 }
 
 func newError(err error, h errSourceHandler) error {
-	switch err.(type) {
+	switch err := err.(type) {
 	case *lua.ApiError:
-		e := err.(*lua.ApiError)
+		e := err
 		var (
 			problem = -1
 			text    = e.Error()

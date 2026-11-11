@@ -44,9 +44,9 @@ func TestErrorSourceSyntaxError(t *testing.T) {
 			b := getBinder()
 
 			if err := b.DoString(test.src); err != nil {
-				switch err.(type) {
+				switch err := err.(type) {
 				case *Error:
-					e := err.(*Error)
+					e := err
 					if e.Error() != test.expected {
 						t.Errorf("Error message does not match, expected=\"%s\" got=\"%s\"", test.expected, e.Error())
 					}
@@ -65,9 +65,9 @@ func TestErrorSourceSmall_Func(t *testing.T) {
 local p = person.new('Steeve')
 print(p:email())
     `); err != nil {
-		switch err.(type) {
+		switch err := err.(type) {
 		case *Error:
-			e := err.(*Error)
+			e := err
 			s := strings.Split(e.Source(), "\n")
 			l := len(s)
 
