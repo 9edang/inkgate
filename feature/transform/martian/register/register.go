@@ -1,6 +1,9 @@
 package register
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
 const (
 	// ScopeRequest modifies an HTTP request.
@@ -40,9 +43,7 @@ func Set(name string, scope []Scope, f func(b []byte) (any, error)) {
 func Get() Register {
 	mutex.RLock()
 	r := make(Register, len(register))
-	for k, v := range register {
-		r[k] = v
-	}
+	maps.Copy(r, register)
 	mutex.RUnlock()
 	return r
 }

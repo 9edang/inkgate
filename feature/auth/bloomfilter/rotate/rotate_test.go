@@ -198,7 +198,7 @@ func benchmarkRotate_UnmarshalBinary(b *testing.B, bf bloomfilter.Bloomfilter) {
 	for _, size := range []int{10, 1024, 1000 * 1024, 10 * 1000 * 1024, 100 * 1000 * 1024} {
 		b.Run(fmt.Sprintf("size_%d", size), func(b *testing.B) {
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for i := range b.N {
 				offset := i % (len(buf) - size)
 				bf.Add(buf[offset : offset+size])
 			}

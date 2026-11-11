@@ -2,7 +2,7 @@ package pubsub
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -135,7 +135,7 @@ func TestNew_publisher(t *testing.T) {
 		},
 	})
 
-	prxy(context.Background(), &proxy.Request{Body: ioutil.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`))})
+	prxy(context.Background(), &proxy.Request{Body: io.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`))})
 
 	lines := strings.Split(buff.String(), "\n")
 	if !strings.HasSuffix(lines[0], "DEBUG: [BACKEND: mem://host/publisher-topic-url][PubSub] Publisher initialized successfully") {
@@ -171,7 +171,7 @@ func TestNew_publisher_unknownProvider(t *testing.T) {
 		},
 	})
 
-	prxy(context.Background(), &proxy.Request{Body: ioutil.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`))})
+	prxy(context.Background(), &proxy.Request{Body: io.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`))})
 
 	if !called {
 		t.Error("fallback should be called")

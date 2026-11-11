@@ -325,7 +325,7 @@ func TestAdd(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var err error
 			if test.addingKey == "" {
-				for i := 0; i < 3; i++ {
+				for i := range 3 {
 					_, err = test.mkc.Add(downloadedKeys[i].KeyID, downloadedKeys)
 				}
 			} else {

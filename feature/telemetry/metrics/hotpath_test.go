@@ -23,8 +23,7 @@ func BenchmarkProxyMiddleware(b *testing.B) {
 	})
 	ctx, req := context.Background(), &proxy.Request{}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_, _ = p(ctx, req)
 	}
 }
@@ -39,8 +38,7 @@ func BenchmarkHTTPHandler(b *testing.B) {
 	}), rm)
 	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		h(httptest.NewRecorder(), req)
 	}
 }

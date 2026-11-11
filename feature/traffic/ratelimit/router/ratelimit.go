@@ -115,7 +115,7 @@ func newIPTokenExtractor(header string) TokenExtractor {
 	return func(r *http.Request) string {
 		if header != "" {
 			if v := strings.TrimSpace(strings.Split(r.Header.Get(header), ",")[0]); v != "" {
-				if ip := strings.Split(v, ":")[0]; net.ParseIP(ip) != nil {
+				if ip, _, _ := strings.Cut(v, ":"); net.ParseIP(ip) != nil {
 					return ip
 				}
 			}

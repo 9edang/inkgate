@@ -1042,11 +1042,9 @@ func Test_tableGetSupportsClientErrors(t *testing.T) {
 		Enc:  "text/plain",
 	}
 	errB := client.NamedHTTPResponseError{
-		HTTPResponseError: client.HTTPResponseError{
-			Code: 481,
-			Msg:  "I'm not a teapot",
-			Enc:  "text/plain",
-		},
+		Code: 481,
+		Msg:  "I'm not a teapot",
+		Enc:  "text/plain",
 	}
 
 	dummyProxyFactory := proxy.FactoryFunc(func(_ *config.EndpointConfig) (proxy.Proxy, error) {

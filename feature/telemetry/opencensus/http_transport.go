@@ -19,6 +19,7 @@ package opencensus
 
 import (
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptrace"
 	"strconv"
@@ -170,9 +171,7 @@ func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		// However, the Request struct itself was already copied by
 		// the WithContext calls above and so we just need to copy the header.
 		header := make(http.Header)
-		for k, v := range req.Header {
-			header[k] = v
-		}
+		maps.Copy(header, req.Header)
 		req.Header = header
 		t.format.SpanContextToRequest(span.SpanContext(), req)
 	}

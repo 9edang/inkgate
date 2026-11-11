@@ -4,6 +4,8 @@ package proxy
 
 import (
 	"fmt"
+	"maps"
+
 	"github.com/9edang/inkgate/context"
 	"github.com/9edang/inkgate/internal/json"
 
@@ -46,9 +48,7 @@ func NewStaticMiddleware(logger logging.Logger, endpointConfig *config.EndpointC
 				result.Data = map[string]any{}
 			}
 
-			for k, v := range cfg.Data {
-				result.Data[k] = v
-			}
+			maps.Copy(result.Data, cfg.Data)
 
 			return result, err
 		}

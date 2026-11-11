@@ -26,7 +26,7 @@ func sseBackend(n int, gap time.Duration) *httptest.Server {
 		w.WriteHeader(http.StatusOK)
 		f := w.(http.Flusher)
 		f.Flush()
-		for i := 0; i < n; i++ {
+		for i := range n {
 			select {
 			case <-r.Context().Done():
 				return
@@ -75,10 +75,13 @@ func readEvents(t *testing.T, url string) (events []string, arrivals []time.Time
 	defer resp.Body.Close()
 	sc := bufio.NewScanner(resp.Body)
 	for sc.Scan() {
-		if strings.HasPrefix(sc.Text(), "data: ") {
-			events = append(events, strings.TrimPrefix(sc.Text(), "data: "))
+		if after, ok := strings.CutPrefix(sc.Text(), "data: "); ok {
+			events = append(events, after)
 			arrivals = append(arrivals, time.Now())
 		}
+	}
+	if err := sc.Err(); err != nil {
+		t.Errorf("reading the stream: %v", err)
 	}
 	return events, arrivals, resp
 }

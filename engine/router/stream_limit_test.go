@@ -36,6 +36,7 @@ func openSSE(t *testing.T, url string) (events <-chan string, resp *http.Respons
 				}
 			}
 		}
+		_ = sc.Err() // the stream ends when the gateway or the test closes it: an error here is expected
 		if !once {
 			close(first)
 		}

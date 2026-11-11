@@ -17,7 +17,7 @@ func ExampleNewRoundRobinLB() {
 	// code required in order to make the test deterministic
 	balancer.(*roundRobinLB).counter = 1
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		h, err := balancer.Host()
 		if err != nil {
 			fmt.Println(err.Error())
@@ -55,7 +55,7 @@ func TestRoundRobinLB(t *testing.T) {
 				b.counter = 0
 			}
 
-			for i := 0; i < iterations; i++ {
+			for i := range iterations {
 				endpoint, err := balancer.Host()
 				if err != nil {
 					t.Fail()
@@ -100,7 +100,7 @@ func ExampleNewRandomLB() {
 		}
 	}
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		h, err := balancer.Host()
 		if err != nil {
 			fmt.Println(err.Error())
@@ -134,7 +134,7 @@ func TestRandomLB(t *testing.T) {
 	subscriber := FixedSubscriber(endpoints)
 	balancer := NewRandomLB(subscriber)
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		endpoint, err := balancer.Host()
 		if err != nil {
 			t.Fail()
@@ -156,7 +156,7 @@ func TestRandomLB_single(t *testing.T) {
 	subscriber := FixedSubscriber(endpoints)
 	balancer := NewRandomLB(subscriber)
 
-	for i := 0; i < iterations; i++ {
+	for range iterations {
 		endpoint, err := balancer.Host()
 		if err != nil {
 			t.Fail()

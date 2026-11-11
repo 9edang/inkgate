@@ -1,5 +1,4 @@
 //go:build integration || !race
-// +build integration !race
 
 // SPDX-License-Identifier: Apache-2.0
 
@@ -59,7 +58,7 @@ func TestProxyStack_multi(t *testing.T) {
 				]
 			}]
 		}`
-		if err := os.WriteFile(cfgPath, []byte(fmt.Sprintf(cfgContent, s.URL, s.URL, s.URL)), 0666); err != nil {
+		if err := os.WriteFile(cfgPath, fmt.Appendf(nil, cfgContent, s.URL, s.URL, s.URL), 0666); err != nil {
 			t.Error(err)
 			return
 		}
@@ -80,7 +79,7 @@ func TestProxyStack_multi(t *testing.T) {
 		return
 	}
 
-	for i := 0; i < total; i++ {
+	for range total {
 		p(context.Background(), &Request{
 			Method:  "GET",
 			Params:  map[string]string{"Foo": "42"},

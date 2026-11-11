@@ -93,10 +93,10 @@ func generateCfg() *config.ServiceConfig {
 		},
 	}
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		var endpoints []*config.EndpointConfig
 
-		for k := 0; k < 1+intn(3); k++ {
+		for range 1 + intn(3) {
 			e := &config.EndpointConfig{
 				Endpoint:       fmt.Sprintf("/foo/%3d", intn(100)),
 				OutputEncoding: "json",
@@ -108,7 +108,7 @@ func generateCfg() *config.ServiceConfig {
 					proxy.Namespace:                        map[string]any{},
 				},
 			}
-			for j := 0; j < 1+intn(5); j++ {
+			for j := range 1 + intn(5) {
 				e.Backend = append(e.Backend, &config.Backend{
 					URLPattern: fmt.Sprintf("/foo/%3d", intn(100)),
 					Group:      fmt.Sprintf("group-%3d", j),
@@ -124,7 +124,7 @@ func generateCfg() *config.ServiceConfig {
 			}
 			endpoints = append(endpoints, e)
 		}
-		for k := 0; k < 1+intn(3); k++ {
+		for range 1 + intn(3) {
 			e := &config.EndpointConfig{
 				Endpoint:       fmt.Sprintf("/foo/%3d", intn(100)),
 				OutputEncoding: "no-op",

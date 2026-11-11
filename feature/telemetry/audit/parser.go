@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -124,20 +125,14 @@ func parseEndpoints(es []*config.EndpointConfig) []Endpoint {
 		}
 
 		if e.Endpoint == "/__catchall" {
-			wildcards = wildcards | (1 << BitEndpointCatchAll)
+			wildcards |= (1 << BitEndpointCatchAll)
 		}
 
-		for _, s := range e.QueryString {
-			if s == "*" {
-				wildcards = wildcards | 2
-				break
-			}
+		if slices.Contains(e.QueryString, "*") {
+			wildcards |= 2
 		}
-		for _, s := range e.HeadersToPass {
-			if s == "*" {
-				wildcards = wildcards | 4
-				break
-			}
+		if slices.Contains(e.HeadersToPass, "*") {
+			wildcards |= 4
 		}
 
 		numUnsafeMethods := 0

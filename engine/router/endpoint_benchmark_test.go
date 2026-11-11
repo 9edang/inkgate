@@ -33,7 +33,7 @@ func BenchmarkEndpointHandler_ko(b *testing.B) {
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 	}
@@ -62,7 +62,7 @@ func BenchmarkEndpointHandler_ok(b *testing.B) {
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 	}

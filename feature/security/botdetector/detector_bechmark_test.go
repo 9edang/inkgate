@@ -58,7 +58,7 @@ func becnhDetection(b *testing.B, f DetectorFunc) {
 		req, _ := http.NewRequest("GET", "https://example.com", http.NoBody)
 		req.Header.Add("User-Agent", tc.ua)
 		b.Run(tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				f(req)
 			}
 		})

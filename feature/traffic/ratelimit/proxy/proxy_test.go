@@ -39,7 +39,7 @@ func TestNewMiddleware_zeroConfig(t *testing.T) {
 			Path: "/tupu",
 		}
 
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			r, err := p(context.Background(), &request)
 			if err != nil {
 				t.Error(err.Error())
@@ -63,7 +63,7 @@ func TestNewMiddleware_ok(t *testing.T) {
 		Path: "/tupu",
 	}
 
-	for i := 0; i < 1000; i++ {
+	for range 1000 {
 		r, err := p(context.Background(), &request)
 		if err != nil {
 			t.Error(err.Error())
@@ -86,7 +86,7 @@ func TestNewMiddleware_capacity(t *testing.T) {
 		Path: "/tupu",
 	}
 
-	for i := 0; i < 10000; i++ {
+	for range 10000 {
 		r, err := p(context.Background(), &request)
 		if err != nil {
 			t.Error(err.Error())
@@ -116,7 +116,7 @@ func TestNewMiddleware_ko(t *testing.T) {
 		Path: "/tupu",
 	}
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		p(context.Background(), &request)
 	}
 

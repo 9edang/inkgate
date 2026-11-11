@@ -44,8 +44,8 @@ func NewRoundRobinLB(subscriber Subscriber) Balancer {
 	}
 
 	return &roundRobinLB{
-		balancer: balancer{subscriber: subscriber},
-		counter:  start,
+		subscriber: subscriber,
+		counter:    start,
 	}
 }
 
@@ -72,8 +72,8 @@ func NewRandomLB(subscriber Subscriber) Balancer {
 	}
 
 	return &randomLB{
-		balancer: balancer{subscriber: subscriber},
-		rand:     fastrand.Uint32n,
+		subscriber: subscriber,
+		rand:       fastrand.Uint32n,
 	}
 }
 

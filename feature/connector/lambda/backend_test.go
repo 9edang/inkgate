@@ -6,7 +6,6 @@ import (
 	"github.com/9edang/inkgate/context"
 	"github.com/9edang/inkgate/internal/json"
 	"io"
-	"io/ioutil"
 	"testing"
 
 	"github.com/9edang/inkgate/engine/config"
@@ -101,7 +100,7 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 					t.Errorf("last_name not present in the payload request")
 				}
 				return &lambda.InvokeOutput{
-					Payload:    []byte(fmt.Sprintf(`{"message":"Hello %s %s!", "foo": 42}`, payload["first_name"], payload["last_name"])),
+					Payload:    fmt.Appendf(nil, `{"message":"Hello %s %s!", "foo": 42}`, payload["first_name"], payload["last_name"]),
 					StatusCode: aws.Int64(200),
 				}, nil
 			})
@@ -127,7 +126,7 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 			Name:        "post_with_default_key",
 			Method:      "POST",
 			Params:      map[string]string{"function": "python37"},
-			Body:        ioutil.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
+			Body:        io.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
 			ExpectedMsg: "Hello foobar some!",
 		},
 		{
@@ -141,7 +140,7 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 			Name:        "post_with_custom_key",
 			Method:      "POST",
 			Params:      map[string]string{"function": "unknown", "lambda": "python37"},
-			Body:        ioutil.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
+			Body:        io.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
 			Key:         "lambda",
 			ExpectedMsg: "Hello foobar some!",
 		},
@@ -156,7 +155,7 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 			Name:        "post_with_function_name",
 			Method:      "POST",
 			Params:      map[string]string{"function": "unknown"},
-			Body:        ioutil.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
+			Body:        io.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
 			ExpectedMsg: "Hello foobar some!",
 			Function:    "python37",
 		},
@@ -172,7 +171,7 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 			Name:        "post_with_function_name_and_key",
 			Method:      "POST",
 			Params:      map[string]string{"function": "unknown", "lambda": "unknown"},
-			Body:        ioutil.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
+			Body:        io.NopCloser(bytes.NewBufferString(`{"first_name":"foobar","last_name":"some"}`)),
 			Key:         "lambda",
 			ExpectedMsg: "Hello foobar some!",
 			Function:    "python37",
@@ -256,7 +255,7 @@ func TestBackendFactoryWithInvoker_error(t *testing.T) {
 
 	r := &proxy.Request{
 		Params: map[string]string{"function": "python37"},
-		Body:   ioutil.NopCloser(bytes.NewBufferString(`"first_name":"foobar","last_name":"some"}`)),
+		Body:   io.NopCloser(bytes.NewBufferString(`"first_name":"foobar","last_name":"some"}`)),
 	}
 	remote := &config.Backend{
 		Method: "POST",

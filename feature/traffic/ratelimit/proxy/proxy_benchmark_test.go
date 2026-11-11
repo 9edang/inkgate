@@ -18,8 +18,7 @@ func BenchmarkNewMiddleware_ok(b *testing.B) {
 			},
 		},
 	})(dummyProxy(&proxy.Response{}, nil))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		p(context.Background(), &proxy.Request{
 			Path: "/tupu",
 		})
@@ -35,8 +34,7 @@ func BenchmarkNewMiddleware_ko(b *testing.B) {
 			},
 		},
 	})(dummyProxy(&proxy.Response{}, nil))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		p(context.Background(), &proxy.Request{
 			Path: "/tupu",
 		})

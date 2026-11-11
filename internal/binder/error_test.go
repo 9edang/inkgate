@@ -74,8 +74,6 @@ print(p:email())
 			if l != 4 {
 				t.Errorf("Source must have %d lines, received %d", 4, l)
 			}
-
-			break
 		default:
 			t.Error("Must return error", err)
 		}
@@ -108,9 +106,8 @@ print(p:email())
 
 
     `); err != nil {
-		switch err.(type) {
+		switch e := err.(type) {
 		case *Error:
-			e := err.(*Error)
 			s := strings.Split(e.Source(), "\n")
 			l := len(s)
 
@@ -118,8 +115,6 @@ print(p:email())
 			if l != need {
 				t.Errorf("Source must have %d lines, received %d", need, l)
 			}
-
-			break
 		default:
 			t.Error("Must return error", err)
 		}

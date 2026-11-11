@@ -73,10 +73,8 @@ func HandlerFactory(l logging.Logger, next router.HandlerFactory, pe router.Para
 
 		return func(w http.ResponseWriter, r *http.Request) {
 			if err := run(r); err != nil {
-				var errhttp errHTTP
-				if errors.As(err, &errhttp) {
-					var e errHTTPWithContentType
-					if errors.As(err, &e) {
+				if errhttp, ok := errors.AsType[errHTTP](err); ok {
+					if e, ok := errors.AsType[errHTTPWithContentType](err); ok {
 						w.Header().Add(constant.HeaderContentType, e.Encoding())
 					}
 					w.WriteHeader(errhttp.StatusCode())

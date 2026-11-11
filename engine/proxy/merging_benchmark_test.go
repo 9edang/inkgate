@@ -41,7 +41,7 @@ func BenchmarkNewMergeDataMiddleware(b *testing.B) {
 			proxy := NewMergeDataMiddleware(logging.NoOp, &endpoint)(proxies[:totalParts]...)
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				proxy(context.Background(), &Request{Params: map[string]string{}})
 			}
 		})
@@ -94,7 +94,7 @@ func BenchmarkNewMergeDataMiddleware_sequential(b *testing.B) {
 			proxy := NewMergeDataMiddleware(logging.NoOp, &endpoint)(proxies[:totalParts]...)
 			b.ResetTimer()
 			b.ReportAllocs()
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				proxy(context.Background(), &Request{Params: map[string]string{}})
 			}
 		})

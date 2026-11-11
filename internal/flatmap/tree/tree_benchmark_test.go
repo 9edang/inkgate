@@ -14,9 +14,7 @@ func BenchmarkIntegration(b *testing.B) {
 		b.Run(fmt.Sprintf("%d", size), func(b *testing.B) {
 			in := getInputData(size)
 
-			b.ResetTimer()
-
-			for n := 0; n < b.N; n++ {
+			for b.Loop() {
 				flatten, _ := New(in)
 				flatten.Move([]string{"a", "*", "b", "*", "c"}, []string{"a", "*", "b", "*", "x"})
 				flatten.Move([]string{"b", "b"}, []string{"c"})
@@ -38,9 +36,7 @@ func BenchmarkExpand(b *testing.B) {
 			flatten.Move([]string{"b", "b"}, []string{"c"})
 			flatten.Del([]string{"b"})
 
-			b.ResetTimer()
-
-			for n := 0; n < b.N; n++ {
+			for b.Loop() {
 				res = flatten.Get([]string{})
 			}
 		})
@@ -55,9 +51,7 @@ func BenchmarkNew(b *testing.B) {
 		b.Run(fmt.Sprintf("%d", size), func(b *testing.B) {
 			in := getInputData(size)
 
-			b.ResetTimer()
-
-			for n := 0; n < b.N; n++ {
+			for b.Loop() {
 				res, _ = New(in)
 			}
 		})
@@ -75,7 +69,7 @@ func BenchmarkMove(b *testing.B) {
 
 			b.ResetTimer()
 
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				if n%2 == 0 {
 					res.Move([]string{"a", "*", "b", "*", "c"}, []string{"a", "*", "b", "*", "x"})
 					res.Move([]string{"b", "b"}, []string{"b", "c"})
@@ -120,7 +114,7 @@ func getInputData(size int) map[string]any {
 	}
 
 	collection := make([]any, 2*size)
-	for i := 0; i < size; i++ {
+	for i := range size {
 		collection[2*i] = first
 		collection[2*i+1] = second
 	}

@@ -13,7 +13,6 @@ func TestNewIntegration(t *testing.T) {
 	defer runner.Close()
 
 	for _, tc := range tcs {
-		tc := tc
 		t.Run(tc.Name, func(t *testing.T) {
 			if err := runner.Check(tc); err != nil {
 				t.Error(err)

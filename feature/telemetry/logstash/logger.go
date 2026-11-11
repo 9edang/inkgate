@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/9edang/inkgate/internal/json"
 	"io"
+	"maps"
 	"os"
 	"time"
 
@@ -80,9 +81,7 @@ func (l *Logger) format(logLevel LogLevel, v ...any) ([]byte, error) {
 		for _, ctx := range v[1:] {
 			switch value := ctx.(type) {
 			case map[string]any:
-				for k, item := range value {
-					record[k] = item
-				}
+				maps.Copy(record, value)
 			case int:
 				msg = fmt.Sprintf("%s %d", msg, value)
 			case bool:

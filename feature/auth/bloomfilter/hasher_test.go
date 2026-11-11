@@ -18,7 +18,7 @@ func TestHasher(t *testing.T) {
 func BenchmarkHasher(b *testing.B) {
 	for k, hash := range defaultHashers {
 		b.Run(fmt.Sprintf("hasher %d", k), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				array1 := []byte{1, 2, 3}
 				hash(array1)
 			}
@@ -47,7 +47,7 @@ func TestOptimalHashFactory(t *testing.T) {
 func BenchmarkOptimalHashFactory(b *testing.B) {
 	for k, hash := range OptimalHashFactory(23) {
 		b.Run(fmt.Sprintf("hasher %d", k), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				array1 := []byte{1, 2, 3}
 				hash(array1)
 			}

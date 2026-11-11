@@ -1,6 +1,8 @@
 package router
 
 import (
+	"maps"
+
 	"github.com/9edang/inkgate/context"
 	"net/http"
 	"net/textproto"
@@ -18,13 +20,9 @@ func WithParams(r *http.Request, params map[string]string) *http.Request {
 	}
 	merged := map[string]string{}
 	if prev, ok := r.Context().Value(extraParamsKey{}).(map[string]string); ok {
-		for k, v := range prev {
-			merged[k] = v
-		}
+		maps.Copy(merged, prev)
 	}
-	for k, v := range params {
-		merged[k] = v
-	}
+	maps.Copy(merged, params)
 	return r.WithContext(context.WithValue(r.Context(), extraParamsKey{}, merged))
 }
 
@@ -38,9 +36,7 @@ func PathParamExtractor(r *http.Request) map[string]string {
 		params[textproto.CanonicalMIMEHeaderKey(name[:1])+name[1:]] = value
 	}
 	if extra, ok := r.Context().Value(extraParamsKey{}).(map[string]string); ok {
-		for k, v := range extra {
-			params[k] = v
-		}
+		maps.Copy(params, extra)
 	}
 	return params
 }

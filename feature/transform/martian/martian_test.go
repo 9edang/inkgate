@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/9edang/inkgate/context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -34,7 +34,7 @@ func TestHTTPRequestExecutor_ok(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		body, err := ioutil.ReadAll(req.Body)
+		body, err := io.ReadAll(req.Body)
 		if err != nil {
 			return
 		}
@@ -51,7 +51,7 @@ func TestHTTPRequestExecutor_ok(t *testing.T) {
 				"X-Custom":     {"one"},
 				"Content-Type": {"application/json"},
 			},
-			Body:       ioutil.NopCloser(bytes.NewBufferString("{}")),
+			Body:       io.NopCloser(bytes.NewBufferString("{}")),
 			Status:     http.StatusText(200),
 			StatusCode: 200,
 		}
@@ -66,7 +66,7 @@ func TestHTTPRequestExecutor_ok(t *testing.T) {
 
 	re = HTTPRequestExecutor(r, re)
 
-	req, _ := http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	req.Header.Set("X-Neptunian", "no!")
 	resp, err := re(context.Background(), req)
 	if err != nil {
@@ -82,7 +82,7 @@ func TestHTTPRequestExecutor_ok(t *testing.T) {
 		t.Errorf("unexpected custom header: %s", resp.Header.Get("X-Custom"))
 	}
 
-	req, _ = http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ = http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	req.Header.Set("X-Neptunian", "no!")
 	req.Header.Set("X-Martian-New", "some value")
 	resp, err = re(context.Background(), req)
@@ -109,7 +109,7 @@ func TestHTTPRequestExecutor_koEmptyResponse(t *testing.T) {
 
 	re := HTTPRequestExecutor(r, func(_ context.Context, _ *http.Request) (resp *http.Response, err error) { return })
 
-	req, _ := http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	resp, err := re(context.Background(), req)
 	if err != ErrEmptyResponse {
 		t.Error(err)
@@ -134,7 +134,7 @@ func TestHTTPRequestExecutor_koEmptyResponseBody(t *testing.T) {
 		return
 	})
 
-	req, _ := http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	resp, err := re(context.Background(), req)
 	if err != nil {
 		t.Error(err)
@@ -154,7 +154,7 @@ func TestHTTPRequestExecutor_koErroredResponse(t *testing.T) {
 	expectedErr := fmt.Errorf("some error")
 	re := HTTPRequestExecutor(r, func(_ context.Context, _ *http.Request) (resp *http.Response, err error) { return nil, expectedErr })
 
-	req, _ := http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	resp, err := re(context.Background(), req)
 	if err != expectedErr {
 		t.Error(err)
@@ -200,7 +200,7 @@ func TestNewBackendFactory_noExtra(t *testing.T) {
 			Host: "example.com",
 			Path: "/",
 		},
-		Body: ioutil.NopCloser(bytes.NewBufferString("")),
+		Body: io.NopCloser(bytes.NewBufferString("")),
 	})
 	if resp != nil {
 		t.Error("unexpected response:", resp)
@@ -226,7 +226,7 @@ func TestNewBackendFactory_wrongExtra(t *testing.T) {
 			Host: "example.com",
 			Path: "/",
 		},
-		Body: ioutil.NopCloser(bytes.NewBufferString("")),
+		Body: io.NopCloser(bytes.NewBufferString("")),
 	})
 	if resp != nil {
 		t.Error("unexpected response:", resp)
@@ -266,7 +266,7 @@ func TestNewBackendFactory_ok(t *testing.T) {
 			Host: "example.com",
 			Path: "/",
 		},
-		Body: ioutil.NopCloser(bytes.NewBufferString("")),
+		Body: io.NopCloser(bytes.NewBufferString("")),
 	})
 	if resp != nil {
 		t.Error("unexpected response:", resp)
@@ -291,7 +291,7 @@ func TestHTTPRequestExecutor_NoPanicWhenScopeLimitedToResponse(t *testing.T) {
 		return
 	})
 
-	req, _ := http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	resp, err := re(context.Background(), req)
 	if err != nil {
 		t.Error(err)
@@ -316,7 +316,7 @@ func TestHTTPRequestExecutor_NoPanicWhenScopeLimitedToRequest(t *testing.T) {
 		return
 	})
 
-	req, _ := http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	resp, err := re(context.Background(), req)
 	if err != nil {
 		t.Error(err)
@@ -327,16 +327,13 @@ func TestHTTPRequestExecutor_NoPanicWhenScopeLimitedToRequest(t *testing.T) {
 }
 
 func TestHTTPRequestExecutor_static(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "test_static_modifier_explicit_path_mapping_")
-	if err != nil {
-		t.Fatalf("ioutil.TempDir(): got %v, want no error", err)
-	}
+	tmpdir := t.TempDir()
 
 	if err := os.MkdirAll(path.Join(tmpdir, "explicit/path"), 0777); err != nil {
 		t.Fatalf("os.Mkdir(): got %v, want no error", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("dont return"), 0777); err != nil {
+	if err := os.WriteFile(path.Join(tmpdir, "sfmtest.txt"), []byte("dont return"), 0777); err != nil {
 		t.Fatalf("ioutil.WriteFile(): got %v, want no error", err)
 	}
 
@@ -345,13 +342,13 @@ func TestHTTPRequestExecutor_static(t *testing.T) {
 		return
 	}
 
-	msg := []byte(fmt.Sprintf(`{
+	msg := fmt.Appendf(nil, `{
 		"static.Modifier": {
 			"scope": ["request", "response"],
 			"explicitPaths": {"/foo/bar.baz": "/subdir/sfmtest.txt"},
 			"rootPath": %q
 		}
-	}`, tmpdir))
+	}`, tmpdir)
 
 	r, err := parse.FromJSON(msg)
 	if err != nil {
@@ -361,7 +358,7 @@ func TestHTTPRequestExecutor_static(t *testing.T) {
 
 	re = HTTPRequestExecutor(r, re)
 
-	req, _ := http.NewRequest("GET", "/sfmtest.txt", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ := http.NewRequest("GET", "/sfmtest.txt", io.NopCloser(bytes.NewBufferString("")))
 	resp, err := re(context.Background(), req)
 	if err != nil {
 		t.Error(err)
@@ -376,7 +373,7 @@ func TestHTTPRequestExecutor_static(t *testing.T) {
 		t.Errorf("unexpected custom header: %s", resp.Header.Get("Content-Type"))
 	}
 
-	req, _ = http.NewRequest("GET", "url", ioutil.NopCloser(bytes.NewBufferString("")))
+	req, _ = http.NewRequest("GET", "url", io.NopCloser(bytes.NewBufferString("")))
 	resp, err = re(context.Background(), req)
 	if err != nil {
 		t.Error(err)

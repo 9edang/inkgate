@@ -168,8 +168,8 @@ func (e *GorillaEngine) redirectCandidates(path string) []string {
 }
 
 func toggleSlash(p string) string {
-	if strings.HasSuffix(p, "/") {
-		return strings.TrimSuffix(p, "/")
+	if before, ok := strings.CutSuffix(p, "/"); ok {
+		return before
 	}
 
 	return p + "/"

@@ -7,7 +7,7 @@ const (
 
 func PseudoFNV64a(s string) uint64 {
 	h := offset64
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		h ^= uint64(s[i])
 		h *= prime64
 	}

@@ -8,19 +8,13 @@ import (
 )
 
 func TestScan_ok(t *testing.T) {
-	tmpDir, err := os.MkdirTemp(".", "test")
-	if err != nil {
-		t.Error("unexpected error:", err.Error())
-		return
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	f, err := os.CreateTemp(tmpDir, "test.so")
 	if err != nil {
 		t.Error("unexpected error:", err.Error())
 		return
 	}
 	f.Close()
-	defer os.RemoveAll(tmpDir)
 
 	tot, err := Scan(tmpDir, ".so")
 	if len(tot) != 1 {
@@ -47,11 +41,7 @@ func TestScan_noFolder(t *testing.T) {
 }
 
 func TestScan_emptyFolder(t *testing.T) {
-	name, err := os.MkdirTemp(".", "test")
-	if err != nil {
-		t.Error("unexpected error:", err.Error())
-		return
-	}
+	name := t.TempDir()
 	tot, err := Scan(name, "")
 	if len(tot) != 0 {
 		t.Error("unexpected number of plugins loaded:", tot)
@@ -63,19 +53,13 @@ func TestScan_emptyFolder(t *testing.T) {
 }
 
 func TestScan_noMatches(t *testing.T) {
-	tmpDir, err := os.MkdirTemp(".", "test")
-	if err != nil {
-		t.Error("unexpected error:", err.Error())
-		return
-	}
-	defer os.RemoveAll(tmpDir)
+	tmpDir := t.TempDir()
 	f, err := os.CreateTemp(tmpDir, "test")
 	if err != nil {
 		t.Error("unexpected error:", err.Error())
 		return
 	}
 	f.Close()
-	defer os.RemoveAll(tmpDir)
 	tot, err := Scan(tmpDir, ".so")
 	if len(tot) != 0 {
 		t.Error("unexpected number of plugins loaded:", tot)

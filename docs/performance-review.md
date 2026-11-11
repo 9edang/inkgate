@@ -76,7 +76,7 @@ Not a speed problem: these decide whether one bad client can take an instance do
 | request body size | unlimited | `max_body_bytes`, 10 MB by default, checked with `http.MaxBytesReader` |
 
 A default changes behaviour for configs that rely on no limit today, so it belongs in the CHANGELOG as a breaking
-change. The checklist entry is in [production-readiness.md](production-readiness.md#4-security).
+change. The checklist entry is in [production-readiness.md](production-readiness.md#21-configuration).
 
 ## Order of work
 

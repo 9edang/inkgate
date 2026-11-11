@@ -42,7 +42,7 @@ func TestNewMiddleware_zeroConfig(t *testing.T) {
 			Path: "/tupu",
 		}
 
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			r, err := p(context.Background(), &request)
 			if err != nil {
 				t.Error(err.Error())
@@ -72,7 +72,7 @@ func TestNewMiddleware_ok(t *testing.T) {
 		Path: "/tupu",
 	}
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		r, err := p(context.Background(), &request)
 		if err != nil {
 			t.Error(err.Error())
@@ -116,7 +116,7 @@ func TestNewMiddleware_ko(t *testing.T) {
 		t.Error("not nil response")
 	}
 
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		r, err := p(context.Background(), &request)
 		if err != breaker.ErrBreakerOpen {
 			t.Error("error expected")

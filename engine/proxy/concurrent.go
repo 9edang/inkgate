@@ -34,7 +34,7 @@ func NewConcurrentMiddlewareWithLogger(logger logging.Logger, remote *config.Bac
 			results := make(chan *Response, remote.ConcurrentCalls)
 			failed := make(chan error, remote.ConcurrentCalls)
 
-			for i := 0; i < remote.ConcurrentCalls; i++ {
+			for i := range remote.ConcurrentCalls {
 				if i < remote.ConcurrentCalls-1 {
 					go processConcurrentCall(localCtx, next[0], CloneRequest(request), results, failed)
 				} else {
@@ -45,7 +45,7 @@ func NewConcurrentMiddlewareWithLogger(logger logging.Logger, remote *config.Bac
 			var response *Response
 			var err error
 
-			for i := 0; i < remote.ConcurrentCalls; i++ {
+			for range remote.ConcurrentCalls {
 				select {
 				case response = <-results:
 					if response != nil && response.IsComplete {

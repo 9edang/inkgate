@@ -255,7 +255,7 @@ func TestJWK_cache(t *testing.T) {
 			t.Errorf("wrong initial number of hits to the jwk endpoint: %d", n)
 		}
 
-		for i := 0; i < 10; i++ {
+		for range 10 {
 			for _, k := range tc.ID {
 				key, err := secretProvidr.GetKey(k)
 				if err != nil {

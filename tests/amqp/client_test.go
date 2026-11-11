@@ -27,8 +27,7 @@ var totalIterations = flag.Int("iterations", 200, "The number of produce and con
 func TestProduceConsume(t *testing.T) {
 	host := rabbitmqURL(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 
 	buf := new(bytes.Buffer)
 	l, _ := logging.NewLogger("DEBUG", buf, "")
@@ -78,7 +77,7 @@ func TestProduceConsume(t *testing.T) {
 		},
 	})
 
-	for i := 0; i < *totalIterations; i++ {
+	for i := range *totalIterations {
 		resp, err := producerProxy(ctx, &proxy.Request{
 			Headers: map[string][]string{"Content-Type": {"application/json"}},
 			Params:  map[string]string{"routing_key": "some_value"},
@@ -92,7 +91,7 @@ func TestProduceConsume(t *testing.T) {
 		}
 	}
 
-	for i := 0; i < *totalIterations; i++ {
+	for i := range *totalIterations {
 		localCtx, cancelRead := context.WithTimeout(ctx, 5*time.Second)
 		resp, err := consumerProxy(localCtx, nil)
 		cancelRead()

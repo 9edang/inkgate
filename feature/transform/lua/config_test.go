@@ -45,7 +45,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParse_live(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "test_parse_live")
+	tmpfile, err := os.CreateTemp(t.TempDir(), "test_parse_live")
 	if err != nil {
 		t.Error(err)
 		return

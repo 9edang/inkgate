@@ -30,8 +30,7 @@ c:headers("X-From-Lua", c:method())`,
 	}, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	req := httptest.NewRequest(http.MethodGet, "/x", nil)
 	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		h(httptest.NewRecorder(), req)
 	}
 }

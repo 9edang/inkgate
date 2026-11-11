@@ -307,7 +307,7 @@ inkgate test-plugin [-s] [-c] [-m] <file.so> [<file2.so> ...]
 
 The three flags can be combined (`-scm` checks all types on every file) and each one adds its own `[OK]` or `[KO]`
 line. With no flag the command stops with `You must declare the expected type of the plugin.` The exit code is 0 when
-every file passes and 1 otherwise, so it can run in CI.
+every file passes and 1 otherwise, so a script or a pre-deploy check can rely on it.
 
 ```bash
 inkgate test-plugin -c out/add-header.so out/timing.so   # two client plugins

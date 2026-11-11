@@ -9,6 +9,7 @@ import (
 	"errors"
 	"github.com/9edang/inkgate/internal/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -125,9 +126,7 @@ func New(opt Options) *Extractor {
 			OperationName: opt.OperationName,
 			Variables:     map[string]any{},
 		}
-		for k, v := range opt.Variables {
-			val.Variables[k] = v
-		}
+		maps.Copy(val.Variables, opt.Variables)
 		for _, vs := range replacements {
 			val.Variables[vs[0]] = params[vs[1]]
 		}

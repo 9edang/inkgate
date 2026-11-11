@@ -74,7 +74,7 @@ func TestReport(t *testing.T) {
 		}
 
 		if tot == 1 {
-			if msg.Data.Extra == nil || len(msg.Data.Extra) == 0 {
+			if len(msg.Data.Extra) == 0 {
 				t.Error("nil extra")
 				http.Error(rw, "crash", 500)
 				return
@@ -86,7 +86,7 @@ func TestReport(t *testing.T) {
 				return
 			}
 		} else {
-			if msg.Data.Extra != nil && len(msg.Data.Extra) != 0 {
+			if len(msg.Data.Extra) != 0 {
 				t.Error("unexpected extra payload")
 				http.Error(rw, "crash", 500)
 				return

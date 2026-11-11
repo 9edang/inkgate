@@ -14,8 +14,7 @@ import (
 
 func BenchmarkNewCircuitBreakerMiddleware_ok(b *testing.B) {
 	p := NewMiddleware(&cfg)(dummyProxy(&proxy.Response{}, nil))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		p(context.Background(), &proxy.Request{
 			Path: "/tupu",
 		})
@@ -24,8 +23,7 @@ func BenchmarkNewCircuitBreakerMiddleware_ok(b *testing.B) {
 
 func BenchmarkNewCircuitBreakerMiddleware_ko(b *testing.B) {
 	p := NewMiddleware(&cfg)(dummyProxy(nil, errors.New("sample error")))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		p(context.Background(), &proxy.Request{
 			Path: "/tupu",
 		})
@@ -35,8 +33,7 @@ func BenchmarkNewCircuitBreakerMiddleware_ko(b *testing.B) {
 func BenchmarkNewCircuitBreakerMiddleware_burst(b *testing.B) {
 	err := errors.New("sample error")
 	p := NewMiddleware(&cfg)(burstProxy(&proxy.Response{}, err, 100, 6))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		p(context.Background(), &proxy.Request{
 			Path: "/tupu",
 		})
@@ -55,7 +52,7 @@ var cfg = config.Backend{
 
 func burstProxy(r *proxy.Response, err error, ok, ko int) proxy.Proxy {
 	tmp := make([]bool, ok+ko)
-	for i := 0; i < ok+ko; i++ {
+	for i := range ok + ko {
 		tmp[i] = i < ok
 	}
 	calls := uint64(0)

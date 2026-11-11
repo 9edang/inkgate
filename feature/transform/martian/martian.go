@@ -79,7 +79,7 @@ func HTTPRequestExecutor(result *parse.Result, re client.HTTPRequestExecutor) cl
 				err = ErrEmptyResponse
 				return
 			}
-		} else if resp == nil {
+		} else {
 			resp = &http.Response{
 				Request:    req,
 				Header:     http.Header{},
