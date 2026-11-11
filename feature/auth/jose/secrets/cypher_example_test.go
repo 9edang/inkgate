@@ -94,13 +94,13 @@ func ExampleDecrypt() {
 	}
 
 	res1, err3 := Decrypt(cypherMsg, []byte(passphrase))
-	if err != nil {
+	if err3 != nil {
 		fmt.Println(err3)
 		return
 	}
 
 	res2, err4 := Decrypt(cypherMsg2, []byte(passphrase))
-	if err != nil {
+	if err4 != nil {
 		fmt.Println(err4)
 		return
 	}

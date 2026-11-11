@@ -251,8 +251,8 @@ func TestJWK_cache(t *testing.T) {
 		// give some time to the concurrent cache warm up to complete
 		<-time.After(100 * time.Millisecond)
 
-		if hits != 1 {
-			t.Errorf("wrong initial number of hits to the jwk endpoint: %d", hits)
+		if n := atomic.LoadUint32(&hits); n != 1 {
+			t.Errorf("wrong initial number of hits to the jwk endpoint: %d", n)
 		}
 
 		for i := 0; i < 10; i++ {
@@ -268,8 +268,8 @@ func TestJWK_cache(t *testing.T) {
 		}
 		server.Close()
 
-		if hits != 1 {
-			t.Errorf("wrong number of hits to the jwk endpoint: %d", hits)
+		if n := atomic.LoadUint32(&hits); n != 1 {
+			t.Errorf("wrong number of hits to the jwk endpoint: %d", n)
 		}
 	}
 }

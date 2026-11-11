@@ -236,14 +236,21 @@ func NewIntegration(cfg *Config, cb CmdBuilder, bb BackendBuilder) (*Runner, []T
 	if err := cmd.Start(); err != nil {
 		return nil, tcs, err
 	}
+	waited := make(chan error, 1)
+	go func() { waited <- cmd.Wait() }()
 	closeFuncs := []func(){
 		func() {
 			// #nosec G104 -- test harness
 			cmd.Process.Kill()
+			// say how the process ended from here, on the caller's goroutine: printing from the goroutine above
+			// raced with the testing package swapping os.Stdout for an example
+			select {
+			case err := <-waited:
+				fmt.Println(err)
+			case <-time.After(5 * time.Second):
+			}
 		},
 	}
-
-	go func() { fmt.Println(cmd.Wait()) }()
 
 	var err error
 	tcs, err = testCases(*cfg)

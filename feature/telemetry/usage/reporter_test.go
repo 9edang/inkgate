@@ -20,7 +20,10 @@ func TestReport(t *testing.T) {
 	done := make(chan struct{}, 10)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	hasher := hashcash.New(hashBits, saltChars, defaultExtension)
+	// the production difficulty (20 bits, about a million hashes per report) made this test take 10 s alone, 18 s under
+	// -race, and fail by timeout on a busy machine; a few bits check the same minting and verification
+	const testHashBits uint = 10
+	hasher := hashcash.New(testHashBits, saltChars, defaultExtension)
 
 	totReport := int32(5)
 	var reports int32
@@ -105,7 +108,8 @@ func TestReport(t *testing.T) {
 			ServerID:        "serverId",
 			URL:             s.URL,
 			ExtraPayload:    expectedExtraPayload,
-			ReportLapse:     2 * time.Second,
+			HashBits:        testHashBits,
+			ReportLapse:     time.Second, // not shorter: the extra payload is sent while Uptime < ReportLapse in whole seconds
 			UserAgent:       "foo bar",
 			ReportEndpoint:  reportEndpoint,
 			SessionEndpoint: sessionEndpoint,
