@@ -11,6 +11,7 @@
         "return_error_msg":true
       },
       "context": {
+        "trust_request_id": true,
         "propagate_request_id": false
       },
       "telemetry/logging": {

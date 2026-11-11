@@ -249,10 +249,10 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: false
-  # report only what is new in the working tree (and whole files that were touched);
-  # set to false, or run `make lint LINT_ALL=1`, to see the existing findings too
+  # report only the lines changed in the working tree. Touching an old file to fix a bug must not pull in that
+  # file's existing findings: old debt is paid in dedicated refactors. `make lint LINT_ALL=1` shows everything.
   new: true
-  whole-files: true
+  whole-files: false
   fix: false
 
 output:

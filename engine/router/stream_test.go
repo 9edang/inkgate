@@ -5,13 +5,14 @@ package router
 import (
 	"bufio"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/proxy"
@@ -181,5 +182,21 @@ func TestStreamEndpoint_clientLeavingStopsBackend(t *testing.T) {
 	case <-stopped:
 	case <-time.After(2 * time.Second):
 		t.Error("the backend stream was not closed after the client left")
+	}
+}
+
+// max_message_size is read whatever JSON decoder built the config: koanf gives float64, internal/json gives int64.
+func TestParseStreamMaxMessageSizeAnyNumberType(t *testing.T) {
+	for _, size := range []any{float64(1024), int64(1024), 1024} {
+		cfg := &config.EndpointConfig{Endpoint: "/s", ExtraConfig: config.ExtraConfig{
+			StreamNamespace: map[string]any{"max_message_size": size},
+		}}
+		sc, err := parseStream(cfg)
+		if err != nil {
+			t.Fatalf("%T: %v", size, err)
+		}
+		if sc.maxMessageSize != 1024 {
+			t.Errorf("%T: maxMessageSize %d, want 1024", size, sc.maxMessageSize)
+		}
 	}
 }

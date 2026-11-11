@@ -64,7 +64,7 @@ func ConfigGetter(e config.ExtraConfig) any {
 	}
 
 	if optionsSuccessStatus, ok := tmp["options_success_status"]; ok {
-		if v, ok := optionsSuccessStatus.(float64); ok {
+		if v, ok := config.Float64(optionsSuccessStatus); ok {
 			cfg.OptionsSuccessStatus = int(v)
 		}
 	}

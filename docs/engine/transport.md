@@ -25,8 +25,25 @@ flowchart LR
 | `port`, `listen_ip` | where to listen (default `:8080`) |
 | `tls` | `public_key`/`private_key` or `keys[]`, `min_version`, `max_version`, `cipher_suites`, `curve_preferences`, `enable_mtls`, `ca_certs`, `disable_system_ca_pool` |
 | `use_h2c` | HTTP/2 without TLS |
-| `read_timeout`, `write_timeout`, `idle_timeout`, `read_header_timeout`, `max_header_bytes` | `net/http.Server` limits |
+| `read_header_timeout`, `read_timeout`, `idle_timeout`, `write_timeout`, `max_header_bytes`, `max_body_bytes` | request limits, see below |
 | `max_shutdown_wait_time` | how long in-flight requests may finish after SIGTERM |
+
+### Request limits
+
+Every server gets limits against slow and oversized requests, unless the config sets its own. A negative value
+turns a limit off (`"read_timeout": "-1s"`, `"max_body_bytes": -1`).
+
+| Setting | Default | Bounds |
+|---|---|---|
+| `read_header_timeout` | 10s | the time to send the request headers (slow-client attacks) |
+| `read_timeout` | 30s | the time to send the whole request, body included. Streamed responses (SSE) and WebSocket connections are not cut: Go clears the deadline when a connection is hijacked |
+| `idle_timeout` | 120s | how long an idle keep-alive connection is kept |
+| `write_timeout` | none | it would cut long responses and streams; use the endpoint `timeout` instead |
+| `max_header_bytes` | 1 MB | the size of the request line and headers |
+| `max_body_bytes` | 10 MB | the request body. A larger declared body gets 413 before any backend is called; a chunked body is cut when it passes the limit, and the client gets 413 |
+
+The limits apply to the whole service. If it accepts large uploads over slow links, raise `read_timeout` and
+`max_body_bytes` together: 10 MB at 2 Mbit/s already takes about 40 seconds.
 
 `DefaultToHTTPError` maps pipeline errors to 500, except for errors that carry their own status code.
 

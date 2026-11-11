@@ -2,11 +2,12 @@ package pubsub
 
 import (
 	"bytes"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"io/ioutil"
 	"strings"
 	"testing"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/mempubsub"
@@ -45,7 +46,7 @@ func TestNew_noConfig(t *testing.T) {
 	}
 
 	lines := strings.Split(buff.String(), "\n")
-	if !strings.HasSuffix(lines[0], "ERROR: [BACKEND][PubSub] Error initializing subscriber: json: cannot unmarshal string into Go value of type pubsub.subscriberCfg") {
+	if !strings.HasSuffix(lines[0], "ERROR: [BACKEND][PubSub] Error initializing subscriber: inkgate/feature/connector/pubsub/subscriber: cannot unmarshal string into Go value of type pubsub.subscriberCfg") {
 		t.Error("unexpected first log line:", lines[0])
 	}
 
@@ -137,7 +138,7 @@ func TestNew_publisher(t *testing.T) {
 	prxy(context.Background(), &proxy.Request{Body: ioutil.NopCloser(bytes.NewBufferString(`{"foo":"bar"}`))})
 
 	lines := strings.Split(buff.String(), "\n")
-	if !strings.HasSuffix(lines[0], "DEBUG: [BACKEND: mem://host/publisher-topic-url][PubSub] Publisher initialized sucessfully") {
+	if !strings.HasSuffix(lines[0], "DEBUG: [BACKEND: mem://host/publisher-topic-url][PubSub] Publisher initialized successfully") {
 		t.Error("unexpected first log line:", lines[0])
 	}
 	if lines[1] != "" {

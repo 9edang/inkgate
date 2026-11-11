@@ -211,7 +211,8 @@ func TestConfig_init(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	if hash != "/X+fgDf29kmtPpCUh9DeJBOwewpExy3IGEjeqA9zExA=" {
+	// the hash covers the server limit defaults (read/idle timeouts, max_body_bytes)
+	if hash != "NWfZF4qwYl/loHTQXJzoA6uYicgZaT7Pna3g4zODwrs=" {
 		t.Errorf("unexpected hash: %s", hash)
 	}
 }

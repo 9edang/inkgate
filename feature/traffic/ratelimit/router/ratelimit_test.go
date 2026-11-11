@@ -1,10 +1,11 @@
 package router
 
 import (
-	"github.com/9edang/inkgate/context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -60,5 +61,19 @@ func TestNoConfigIsUntouched(t *testing.T) {
 	h := newHandler(t, nil)
 	if got := statuses(h, 5, "1.1.1.1"); got[4] != http.StatusOK {
 		t.Errorf("unexpected statuses %v", got)
+	}
+}
+
+// Without client_capacity, the burst of each client is its own rate (M1 1.5).
+func TestClientCapacityDefaultsToClientRate(t *testing.T) {
+	h := newHandler(t, map[string]any{"client_max_rate": 10.0, "strategy": "ip"})
+	got := statuses(h, 11, "1.1.1.1")
+	for i, code := range got[:10] {
+		if code != http.StatusOK {
+			t.Fatalf("request %d: status %d, want 200 (all: %v)", i+1, code, got)
+		}
+	}
+	if got[10] != http.StatusTooManyRequests {
+		t.Errorf("request 11: status %d, want 429", got[10])
 	}
 }

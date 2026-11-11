@@ -4,9 +4,10 @@ package proxy
 
 import (
 	"compress/gzip"
-	"github.com/9edang/inkgate/context"
 	"io"
 	"net/http"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/encoding"
 )
@@ -52,7 +53,9 @@ func DefaultHTTPResponseParserFactory(cfg HTTPResponseParserConfig) HTTPResponse
 			return nil, err
 		}
 
-		newResponse := Response{Data: data, IsComplete: true}
+		// the status is reported, the backend headers are not: the body is encoded again, so headers such as
+		// Content-Length would no longer be true
+		newResponse := Response{Data: data, IsComplete: true, Metadata: Metadata{StatusCode: resp.StatusCode}}
 		newResponse = cfg.EntityFormatter.Format(newResponse)
 		return &newResponse, nil
 	}

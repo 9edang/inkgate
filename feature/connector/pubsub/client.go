@@ -64,8 +64,8 @@ func (f *BackendFactory) initPublisher(ctx context.Context, remote *config.Backe
 	cfg := &publisherCfg{}
 
 	if err := getConfig(remote, publisherNamespace, cfg); err != nil {
-		namespaceNotFoundErr := &NamespaceNotFoundErr{}
-		if errors.As(err, &namespaceNotFoundErr) {
+		// a backend without this namespace is not a pubsub backend: only a broken config is worth an error
+		if _, notFound := errors.AsType[*NamespaceNotFoundErr](err); !notFound {
 			f.logger.Error("[BACKEND][PubSub] Error initializing publisher: " + err.Error())
 		}
 
@@ -118,8 +118,8 @@ func (f *BackendFactory) initSubscriber(ctx context.Context, remote *config.Back
 	cfg := &subscriberCfg{}
 
 	if err := getConfig(remote, subscriberNamespace, cfg); err != nil {
-		namespaceNotFoundErr := &NamespaceNotFoundErr{}
-		if errors.As(err, &namespaceNotFoundErr) {
+		// a backend without this namespace is not a pubsub backend: only a broken config is worth an error
+		if _, notFound := errors.AsType[*NamespaceNotFoundErr](err); !notFound {
 			f.logger.Error("[BACKEND][PubSub] Error initializing subscriber: " + err.Error())
 		}
 
@@ -188,7 +188,16 @@ func getConfig(remote *config.Backend, namespace string, v any) error {
 		return err
 	}
 
-	return json.Unmarshal(b, &v)
+	if err := json.Unmarshal(b, &v); err != nil {
+		// sonic's own message spans several lines; keep the log entry on one line
+		if failure, ok := json.DecodeError(err); ok {
+			return fmt.Errorf("%s: %s", namespace, failure.Message)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 type NamespaceNotFoundErr struct {

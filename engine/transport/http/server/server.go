@@ -178,7 +178,7 @@ func NewServerWithLogger(cfg config.ServiceConfig, handler http.Handler, logger 
 
 	return &http.Server{
 		Addr:              net.JoinHostPort(cfg.Address, strconv.Itoa(cfg.Port)),
-		Handler:           handler,
+		Handler:           limitBody(handler, cfg.MaxBodyBytes),
 		ReadTimeout:       cfg.ReadTimeout,
 		WriteTimeout:      cfg.WriteTimeout,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
@@ -346,3 +346,22 @@ var (
 		"TLS13":  tls.VersionTLS13,
 	}
 )
+
+// limitBody refuses request bodies larger than maxBytes with 413. A declared Content-Length is checked before the
+// handler runs; a chunked body is cut by http.MaxBytesReader when it passes the limit. maxBytes <= 0 means no limit.
+func limitBody(next http.Handler, maxBytes int64) http.Handler {
+	if maxBytes <= 0 {
+		return next
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ContentLength > maxBytes {
+			http.Error(w, http.StatusText(http.StatusRequestEntityTooLarge), http.StatusRequestEntityTooLarge)
+			return
+		}
+		if r.Body != nil && r.Body != http.NoBody {
+			r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+		}
+		next.ServeHTTP(w, r)
+	})
+}

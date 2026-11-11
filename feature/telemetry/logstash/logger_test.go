@@ -2,13 +2,14 @@ package logstash
 
 import (
 	"bytes"
-	"github.com/9edang/inkgate/internal/json"
 	"math"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -159,7 +160,7 @@ func TestLogger_format(t *testing.T) {
 				continue
 			}
 
-			if !reflect.DeepEqual(tmp, v) {
+			if !sameValue(tmp, v) {
 				t.Errorf("unexpected value for key %s. Have: %v, Want: %v", k, v, tmp)
 			}
 		}
@@ -228,3 +229,14 @@ func TestLogger_format_unexpectedMessageType(t *testing.T) {
 }
 
 type sample struct{ A int }
+
+// sameValue compares decoded JSON values; numbers by value, since the decoder may give float64 or int64
+// (internal/json decodes whole numbers as int64 by default, JSON_USE_INT64).
+func sameValue(want, have any) bool {
+	if w, ok := config.Float64(want); ok {
+		h, ok := config.Float64(have)
+		return ok && w == h
+	}
+
+	return reflect.DeepEqual(want, have)
+}

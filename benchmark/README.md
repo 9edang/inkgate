@@ -69,3 +69,5 @@ All settings (`CONNECTIONS`, `GATEWAY_CPUS`, `GATEWAY_MEMORY`, image names, ...)
 of [run.sh](run.sh). Needs `docker` or `podman`, and `python3`.
 
 Absolute numbers depend on the machine. Compare the two gateways within one run, not across machines.
+
+What to improve in this harness: [docs/guides/benchmarking.md](../docs/guides/benchmarking.md).

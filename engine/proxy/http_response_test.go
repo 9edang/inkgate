@@ -4,11 +4,12 @@ package proxy
 
 import (
 	"compress/gzip"
-	"github.com/9edang/inkgate/context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/encoding"
 )
@@ -147,5 +148,29 @@ func TestDefaultHTTPResponseParser_plain(t *testing.T) {
 	}
 	if m, ok := result.Data["msg"]; !ok || m != "some nice, interesting and long content" {
 		t.Error("unexpected result")
+	}
+}
+
+// M1 1.1: a decoded response reports the backend status, but never forwards the backend headers (the body is
+// encoded again, so Content-Length and the like would be wrong).
+func TestDefaultHTTPResponseParser_statusCode(t *testing.T) {
+	w := httptest.NewRecorder()
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Set-Cookie", "session=1")
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(`{"id":1}`))
+
+	result, err := DefaultHTTPResponseParserFactory(HTTPResponseParserConfig{
+		Decoder:         encoding.JSONDecoder,
+		EntityFormatter: DefaultHTTPResponseParserConfig.EntityFormatter,
+	})(context.Background(), w.Result())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Metadata.StatusCode != http.StatusCreated {
+		t.Errorf("status %d, want %d", result.Metadata.StatusCode, http.StatusCreated)
+	}
+	if len(result.Metadata.Headers) != 0 {
+		t.Errorf("backend headers must not be forwarded: %v", result.Metadata.Headers)
 	}
 }

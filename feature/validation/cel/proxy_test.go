@@ -3,11 +3,12 @@ package cel
 import (
 	"bytes"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"net/url"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/9edang/inkgate/context"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -268,4 +269,27 @@ func dummyProxyFactory(r *proxy.Response) proxy.Factory {
 			return r, nil
 		}, nil
 	})
+}
+
+// M1 1.1: a rule on the status of a decoded response sees the backend status.
+func TestProxyFactory_respMetadataStatus(t *testing.T) {
+	pf := proxy.FactoryFunc(func(_ *config.EndpointConfig) (proxy.Proxy, error) {
+		return func(_ context.Context, _ *proxy.Request) (*proxy.Response, error) {
+			return &proxy.Response{
+				Data: map[string]any{"id": 1}, IsComplete: true, Metadata: proxy.Metadata{StatusCode: 200},
+			}, nil
+		}, nil
+	})
+	prxy, err := ProxyFactory(logging.NoOp, pf).New(&config.EndpointConfig{
+		Endpoint: "/",
+		ExtraConfig: config.ExtraConfig{
+			internal.Namespace: []internal.InterpretableDefinition{{CheckExpression: "resp_metadata_status == 200"}},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := prxy(context.Background(), &proxy.Request{Method: "GET", Path: "/", Headers: map[string][]string{}}); err != nil {
+		t.Errorf("rule on status 200 rejected the response: %v", err)
+	}
 }

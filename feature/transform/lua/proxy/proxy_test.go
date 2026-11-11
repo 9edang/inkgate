@@ -3,12 +3,14 @@ package proxy
 import (
 	"bytes"
 	"errors"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
+	"fmt"
 	"io"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/encoding"
@@ -1152,5 +1154,66 @@ responseData:set("name_b", errorB:get('name'))
 	}
 	if encB != errB.Enc {
 		t.Errorf("unexpected encoding b. have %s, want %s", encB, errB.Enc)
+	}
+}
+
+// runPostScript runs a Lua post-script against a backend answering data and returns the response.
+func runPostScript(t *testing.T, data map[string]any, script string) *proxy.Response {
+	t.Helper()
+	backend := proxy.FactoryFunc(func(_ *config.EndpointConfig) (proxy.Proxy, error) {
+		return func(_ context.Context, _ *proxy.Request) (*proxy.Response, error) {
+			return &proxy.Response{Data: data, Metadata: proxy.Metadata{Headers: map[string][]string{}}}, nil
+		}, nil
+	})
+	prxy, err := ProxyFactory(logging.NoOp, backend).New(&config.EndpointConfig{
+		Endpoint:    "/",
+		ExtraConfig: config.ExtraConfig{ProxyNamespace: map[string]any{"post": script}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	URL, _ := url.Parse("https://some.host.tld/path")
+	resp, err := prxy(context.Background(), &proxy.Request{
+		Method: "GET", Path: "/", URL: URL, Headers: map[string][]string{}, Params: map[string]string{},
+		Body: io.NopCloser(strings.NewReader("")),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp
+}
+
+// M1 1.3: resp:data(key, value) sets a field, like resp:data():set(key, value).
+func TestResponseDataSetter(t *testing.T) {
+	resp := runPostScript(t, map[string]any{"id": 1.0}, `
+local resp = response.load()
+resp:data("lua", "yes")
+resp:data("n", 42)
+resp:data("flag", true)
+resp:data("obj", {a = "b"})
+`)
+	want := map[string]any{"id": 1.0, "lua": "yes", "n": 42.0, "flag": true, "obj": map[string]any{"a": "b"}}
+	for k, v := range want {
+		if got := resp.Data[k]; fmt.Sprint(got) != fmt.Sprint(v) {
+			t.Errorf("%s = %#v, want %#v", k, got, v)
+		}
+	}
+}
+
+func TestResponseDataTableSet(t *testing.T) {
+	resp := runPostScript(t, map[string]any{"id": 1.0}, `
+local resp = response.load()
+resp:data():set("lua", "yes")
+`)
+	if resp.Data["lua"] != "yes" {
+		t.Errorf("lua = %#v, want yes", resp.Data["lua"])
+	}
+}
+
+// A backend without a decoded body has no data map: the setter must create it, not panic.
+func TestResponseDataSetterOnEmptyResponse(t *testing.T) {
+	resp := runPostScript(t, nil, `response.load():data("lua", "yes")`)
+	if resp.Data["lua"] != "yes" {
+		t.Errorf("lua = %#v, want yes", resp.Data["lua"])
 	}
 }

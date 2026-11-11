@@ -7,10 +7,8 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/context"
 	"html"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -18,14 +16,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/9edang/inkgate/context"
+
+	"golang.org/x/net/http2"
+
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
-	"golang.org/x/net/http2"
 )
-
-func init() {
-	rand.Seed(time.Now().Unix())
-}
 
 func TestRunServer_TLS(t *testing.T) {
 	testKeysAreAvailable(t)
@@ -57,7 +54,7 @@ func TestRunServer_TLS(t *testing.T) {
 		return
 	}
 
-	<-time.After(100 * time.Millisecond)
+	waitForPort(t, port)
 
 	resp, err := client.Get(fmt.Sprintf("https://localhost:%d", port))
 	if err != nil {
@@ -272,7 +269,7 @@ func TestRunServer_plain(t *testing.T) {
 		)
 	}()
 
-	<-time.After(100 * time.Millisecond)
+	waitForPort(t, port)
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d", port))
 	if err != nil {
@@ -308,7 +305,7 @@ func TestRunServer_h2c(t *testing.T) {
 		)
 	}()
 
-	<-time.After(100 * time.Millisecond)
+	waitForPort(t, port)
 
 	client := h2cClient()
 	resp, err := client.Get(fmt.Sprintf("http://localhost:%d", port))
@@ -347,7 +344,7 @@ func TestRunServer_disabledTLS(t *testing.T) {
 		)
 	}()
 
-	<-time.After(100 * time.Millisecond)
+	waitForPort(t, port)
 
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d", port))
 	if err != nil {
@@ -550,9 +547,16 @@ func h2cClient() *http.Client {
 	}
 }
 
-// newPort returns random port numbers to avoid port collisions during the tests
+// newPort returns a port the OS reports as free. A random port could already be in use (the kernel's ephemeral
+// range overlaps any fixed range), which made the server tests fail at random.
 func newPort() int {
-	return 16666 + rand.Intn(40000) // skipcq: GSC-G404
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+
+	return l.Addr().(*net.TCPAddr).Port
 }
 
 func TestRunServer_MultipleTLS(t *testing.T) {
@@ -593,7 +597,7 @@ func TestRunServer_MultipleTLS(t *testing.T) {
 		return
 	}
 
-	<-time.After(100 * time.Millisecond)
+	waitForPort(t, port)
 
 	resp, err := client.Get(fmt.Sprintf("https://localhost:%d", port))
 	if err != nil {
@@ -658,4 +662,20 @@ func overrideHostTransport(client *http.Client) {
 		return myDialer.DialContext(ctx, network, overrideAddress)
 	}
 	client.Transport = t
+}
+
+// waitForPort blocks until the server accepts connections on port, instead of sleeping a fixed time: a TLS server
+// loading its certificates on a cold, busy machine can take longer than any fixed delay.
+func waitForPort(t *testing.T, port int) {
+	t.Helper()
+	addr := fmt.Sprintf("localhost:%d", port)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond); err == nil {
+			conn.Close()
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("server did not listen on %s within 5s", addr)
 }

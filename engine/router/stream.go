@@ -91,7 +91,7 @@ func parseStream(cfg *config.EndpointConfig) (streamConfig, error) {
 		sc.idleTimeout = d
 	}
 	if raw, ok := m["max_message_size"]; ok {
-		n, ok := raw.(float64)
+		n, ok := config.Float64(raw)
 		if i, isInt := raw.(int); isInt {
 			n, ok = float64(i), true
 		}

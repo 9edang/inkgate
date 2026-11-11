@@ -13,6 +13,7 @@ import (
 	"net"
 	"net/http"
 	"net/textproto"
+	"slices"
 	"strings"
 	"time"
 
@@ -287,16 +288,33 @@ func writeError(w http.ResponseWriter, err error, errF server.ToHTTPError) {
 	if withStatus, ok := errors.AsType[responseError](err); ok {
 		status = withStatus.StatusCode()
 	}
+	// a body cut by max_body_bytes while it was forwarded: the client sent too much, the backend did not fail
+	if bodyTooLarge(err) {
+		status = http.StatusRequestEntityTooLarge
+	}
 	if !ReturnErrorMsg {
 		w.WriteHeader(status)
 		return
 	}
 	contentType := "text/plain; charset=utf-8"
-	if withEncoding, ok := errors.AsType[encodedResponseError](err); ok {
+	if withEncoding, ok := errors.AsType[encodedResponseError](err); ok && withEncoding.Encoding() != "" {
 		contentType = withEncoding.Encoding()
 	}
 	w.Header().Set(constant.HeaderContentType, contentType)
 	w.WriteHeader(status)
 	// #nosec G104 -- response write is best effort, the client may be gone
 	w.Write([]byte(err.Error()))
+}
+
+// bodyTooLarge reports whether err comes from a body cut by max_body_bytes, also inside the error of a merged
+// endpoint (which lists the error of each backend without unwrapping them).
+func bodyTooLarge(err error) bool {
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		return true
+	}
+	if multi, ok := err.(interface{ Errors() []error }); ok {
+		return slices.ContainsFunc(multi.Errors(), bodyTooLarge)
+	}
+
+	return false
 }

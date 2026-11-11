@@ -2,8 +2,9 @@ package decorator
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/internal/json"
 	"sort"
+
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/9edang/inkgate/engine/transport/http/client"
 	lua "github.com/9edang/inkgate/feature/transform/lua"
@@ -78,32 +79,7 @@ func tableSet(c *binder.Context) error {
 	if !ok {
 		return ErrResponseExpected
 	}
-	key := c.Arg(2).String()
-	switch t := c.Arg(3).Any().(type) {
-	case lua.NativeString:
-		tab.Data[key] = c.Arg(3).String()
-	case lua.NativeNumber:
-		tab.Data[key] = c.Arg(3).Number()
-	case lua.NativeBool:
-		tab.Data[key] = c.Arg(3).Bool()
-	case *lua.NativeTable:
-		res := map[string]any{}
-		t.ForEach(func(k, v lua.NativeValue) {
-			lua.ParseToTable(k, v, res)
-		})
-		tab.Data[key] = res
-	case *lua.NativeUserData:
-		if t.Value == nil {
-			tab.Data[key] = nil
-		} else {
-			switch v := t.Value.(type) {
-			case *lua.Table:
-				tab.Data[key] = v.Data
-			case *lua.List:
-				tab.Data[key] = v.Data
-			}
-		}
-	}
+	SetValue(c, tab, c.Arg(2).String(), 3)
 
 	return nil
 }
@@ -165,5 +141,34 @@ func clientErrorToMap(err client.HTTPResponseError) map[string]any {
 		"http_status_code":   err.StatusCode(),
 		"http_body":          err.Error(),
 		"http_body_encoding": err.Encoding(),
+	}
+}
+
+// SetValue stores argument n of c in tab under key, converted to its Go form: the conversion tab:set uses.
+func SetValue(c *binder.Context, tab *lua.Table, key string, n int) {
+	switch t := c.Arg(n).Any().(type) {
+	case lua.NativeString:
+		tab.Data[key] = c.Arg(n).String()
+	case lua.NativeNumber:
+		tab.Data[key] = c.Arg(n).Number()
+	case lua.NativeBool:
+		tab.Data[key] = c.Arg(n).Bool()
+	case *lua.NativeTable:
+		res := map[string]any{}
+		t.ForEach(func(k, v lua.NativeValue) {
+			lua.ParseToTable(k, v, res)
+		})
+		tab.Data[key] = res
+	case *lua.NativeUserData:
+		if t.Value == nil {
+			tab.Data[key] = nil
+		} else {
+			switch v := t.Value.(type) {
+			case *lua.Table:
+				tab.Data[key] = v.Data
+			case *lua.List:
+				tab.Data[key] = v.Data
+			}
+		}
 	}
 }

@@ -1,9 +1,10 @@
 package audit
 
 import (
-	"github.com/9edang/inkgate/internal/json"
 	"strings"
 	"time"
+
+	"github.com/9edang/inkgate/internal/json"
 
 	"github.com/go-viper/mapstructure/v2"
 
@@ -332,7 +333,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			if ks, ok := cfg["patterns"].([]any); ok {
 				res[2] = len(ks)
 			}
-			if s, ok := cfg["cache_size"].(float64); ok {
+			if s, ok := config.Float64(cfg["cache_size"]); ok {
 				res[3] = int(s)
 			}
 			components[c] = res
@@ -386,10 +387,10 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 
 			v1 := 0
-			if vs, ok := cfg["max_rate"].(float64); ok && vs > 0 {
+			if vs, ok := config.Float64(cfg["max_rate"]); ok && vs > 0 {
 				v1 = 1
 			}
-			if vs, ok := cfg["client_max_rate"].(float64); ok && vs > 0 {
+			if vs, ok := config.Float64(cfg["client_max_rate"]); ok && vs > 0 {
 				v1 += 2
 			}
 			if vs, ok := cfg["strategy"].(string); ok {
@@ -440,12 +441,12 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				components[c] = []int{}
 				continue
 			}
-			metricReportingPeriodFloat, periodOk := cfg["metric_reporting_period"].(float64)
+			metricReportingPeriodFloat, periodOk := config.Float64(cfg["metric_reporting_period"])
 			metricReportingPeriod := int(metricReportingPeriodFloat)
 			if !periodOk {
 				metricReportingPeriod = -1
 			}
-			traceSampleRateFloat, rateOk := cfg["trace_sample_rate"].(float64)
+			traceSampleRateFloat, rateOk := config.Float64(cfg["trace_sample_rate"])
 			traceSampleRatePercent := int(traceSampleRateFloat * 100.0)
 			if !rateOk {
 				traceSampleRatePercent = -1
@@ -521,7 +522,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				if customErrorOk && customError != "" {
 					p[1] = 1
 				}
-				customErrorCode, customErrorCodeOk := errorCfg["status"].(float64)
+				customErrorCode, customErrorCodeOk := config.Float64(errorCfg["status"])
 				if customErrorCodeOk && customErrorCode > 0 {
 					p[2] = int(customErrorCode)
 				}
@@ -607,19 +608,19 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				d[0] = addBit(d[0], 4)
 			}
 
-			if f, ok := cfg["read_buffer_size"].(float64); ok && f > 0 {
+			if f, ok := config.Float64(cfg["read_buffer_size"]); ok && f > 0 {
 				d[1] = int(f)
 			}
-			if f, ok := cfg["write_buffer_size"].(float64); ok && f > 0 {
+			if f, ok := config.Float64(cfg["write_buffer_size"]); ok && f > 0 {
 				d[2] = int(f)
 			}
-			if f, ok := cfg["message_buffer_size"].(float64); ok && f > 0 {
+			if f, ok := config.Float64(cfg["message_buffer_size"]); ok && f > 0 {
 				d[3] = int(f)
 			}
-			if f, ok := cfg["max_message_size"].(float64); ok && f > 0 {
+			if f, ok := config.Float64(cfg["max_message_size"]); ok && f > 0 {
 				d[4] = int(f)
 			}
-			if f, ok := cfg["max_retries"].(float64); ok && f > 0 {
+			if f, ok := config.Float64(cfg["max_retries"]); ok && f > 0 {
 				d[5] = int(f)
 			}
 
@@ -672,10 +673,10 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			if e, ok := cfg["shared"].(bool); ok && e {
 				f = addBit(f, 0)
 			}
-			if m, ok := cfg["max_items"].(float64); ok && m > 0 {
+			if m, ok := config.Float64(cfg["max_items"]); ok && m > 0 {
 				f = addBit(f, 1)
 			}
-			if m, ok := cfg["max_size"].(float64); ok && m > 0 {
+			if m, ok := config.Float64(cfg["max_size"]); ok && m > 0 {
 				f = addBit(f, 2)
 			}
 			components[c] = []int{f}
@@ -826,7 +827,7 @@ func parseRouter(cfg config.ExtraConfig) int {
 		res = addBit(res, RouterAppEngine)
 	}
 
-	if v, ok := cfg["max_multipart_memory"].(float64); ok && v > 0 {
+	if v, ok := config.Float64(cfg["max_multipart_memory"]); ok && v > 0 {
 		res = addBit(res, RouterMaxMultipartMemory)
 	}
 
