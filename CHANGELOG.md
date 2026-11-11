@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Security
+- Go 1.27.4 is the minimum toolchain (`go.mod`): 1.27.3's `net/http` can crash an HTTP/1 server through a race
+  between `MaxBytesReader` and the headers (GO-2026-6859), and inkgate wraps every request body in `MaxBytesReader`
+  (`max_body_bytes`, on by default). The Docker image already built with 1.27.4.
+
 ### Changed (breaking for plugins)
 - The Docker image is built and runs on Debian 13 trixie (`golang:1.27-trixie`, `debian:trixie-slim`) instead of
   bookworm: glibc 2.41 instead of 2.36. Go plugins (`.so`) built for the bookworm image do not load; rebuild them in
