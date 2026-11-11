@@ -74,6 +74,12 @@ func isResetTimer(s ast.Stmt, name string) *ast.ExprStmt {
 func main() {
 	changed, skipped := 0, 0
 	for _, path := range os.Args[1:] {
+		// #nosec G703 -- a developer tool: it edits the files named on its command line
+		info, err := os.Stat(path)
+		if err != nil {
+			panic(err)
+		}
+		// #nosec G304 G703 -- as above
 		src, err := os.ReadFile(path)
 		if err != nil {
 			panic(err)
@@ -206,7 +212,10 @@ func main() {
 		for _, e := range edits {
 			out = append(append(append([]byte{}, out[:e.from]...), e.text...), out[e.to:]...)
 		}
-		if err := os.WriteFile(path, out, 0o644); err != nil {
+		// the file keeps its permissions
+		// #nosec G703 -- the path was named on the command line
+		err = os.WriteFile(path, out, info.Mode().Perm())
+		if err != nil {
 			panic(err)
 		}
 		changed++
