@@ -140,7 +140,7 @@ func TestMetrics_process(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	called := false
-	m := Metrics{Registry: &p, Router: NewRouterMetrics(&p), latestSnapshot: NewStats()}
+	m := Metrics{Registry: &p, Router: NewRouterMetrics(&p)}
 	m.processMetrics(ctx, time.Millisecond, customLogger{&called})
 	time.Sleep(50 * time.Millisecond)
 	totalMetrics := 0
