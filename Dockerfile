@@ -2,9 +2,9 @@
 
 # Build and runtime stages use the same Debian release, so the glibc version is
 # the same, on amd64 and arm64. That matters for Go plugins (.so): they load only into a binary built
-# with the same Go version, dependencies and glibc.
+# with the same Go version, dependencies and glibc. Debian 13 trixie ships glibc 2.41.
 ARG GO_VERSION=1.27
-ARG DEBIAN=bookworm
+ARG DEBIAN=trixie
 
 # The build stage always runs on the builder's own CPU and cross-compiles for the target,
 # so an arm64 image can be built on an amd64 machine (and the reverse) without emulation.

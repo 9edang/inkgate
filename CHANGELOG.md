@@ -7,6 +7,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed (breaking for plugins)
+- The Docker image is built and runs on Debian 13 trixie (`golang:1.27-trixie`, `debian:trixie-slim`) instead of
+  bookworm: glibc 2.41 instead of 2.36. Go plugins (`.so`) built for the bookworm image do not load; rebuild them in
+  `golang:1.27-trixie`.
+
 ### Added
 - `router/stream` `keep_alive`: an SSE stream silent for that long gets a `: keep-alive` comment, so proxies in front do
   not close it. Only for `text/event-stream`, only between events.
