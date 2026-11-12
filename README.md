@@ -54,12 +54,12 @@ inkgate against KrakenD CE `2.13.11`, in containers with the same config and the
 
 | Scenario | inkgate req/s | KrakenD CE req/s | inkgate p99 | KrakenD CE p99 | inkgate memory | KrakenD CE memory |
 |---|--:|--:|--:|--:|--:|--:|
-| passthrough | **30,928** (1.35x) | 22,918 | 10.7 ms | 12.9 ms | 38 MB | 39 MB |
-| json | **29,390** (1.10x) | 26,725 | 11.0 ms | 12.0 ms | 38 MB | 42 MB |
-| merge | **16,811** (1.08x) | 15,570 | 15.6 ms | 16.8 ms | 44 MB | 44 MB |
-| plugin-modifier | **29,155** (1.08x) | 27,045 | 11.5 ms | 11.9 ms | 48 MB | 44 MB |
-| plugin-server | **29,291** (1.11x) | 26,309 | 11.3 ms | 12.2 ms | 43 MB | 42 MB |
-| plugin-client | **20,992** (1.07x) | 19,612 | 14.2 ms | 15.4 ms | 46 MB | 44 MB |
+| passthrough | **32,607** (1.40x) | 23,354 | 10.1 ms | 12.8 ms | 39 MB | 40 MB |
+| json | **30,191** (1.10x) | 27,331 | 10.9 ms | 11.8 ms | 39 MB | 41 MB |
+| merge | **17,175** (1.08x) | 15,900 | 15.4 ms | 16.5 ms | 45 MB | 44 MB |
+| plugin-modifier | **30,371** (1.09x) | 27,953 | 11.3 ms | 11.7 ms | 48 MB | 46 MB |
+| plugin-server | **30,044** (1.12x) | 26,891 | 11.3 ms | 12.0 ms | 48 MB | 44 MB |
+| plugin-client | **20,926** (1.04x) | 20,034 | 14.2 ms | 15.1 ms | 44 MB | 45 MB |
 
 ![requests per second](benchmark/results/rps.svg)
 

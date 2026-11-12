@@ -110,7 +110,10 @@ sample_stats() { # sample_stats <file>: one "cpu%|memory" line per second until 
 }
 
 if [ -z "${SKIP_BUILD:-}" ]; then
-  $DOCKER build -t "$INKGATE_IMAGE" --build-arg VERSION=bench -f ../Dockerfile ..
+  # the revision the image is built from, so a report says which code it measured (-dirty: uncommitted changes)
+  REVISION="$(git -C .. rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  git -C .. diff --quiet HEAD -- . ':!benchmark/results' 2>/dev/null || REVISION="$REVISION-dirty"
+  $DOCKER build -t "$INKGATE_IMAGE" --build-arg VERSION=bench --build-arg REVISION="$REVISION" -f ../Dockerfile ..
   build_plugins
 fi
 for img in "$KRAKEND_IMAGE" "$NGINX_IMAGE" "$OHA_IMAGE" "$KRAKEND_BUILDER_IMAGE"; do $DOCKER image inspect "$img" >/dev/null 2>&1 || $DOCKER pull "$img"; done
@@ -121,10 +124,17 @@ $DOCKER network create $NET >/dev/null
 $DOCKER run -d --name bench-backend --network $NET --cpus "$BACKEND_CPUS" \
   -v "$PWD/backend/nginx.conf:/etc/nginx/nginx.conf:ro,z" "$NGINX_IMAGE" >/dev/null
 
+# what the image really holds (also with SKIP_BUILD, which reuses an older image)
+IMG_REVISION="$($DOCKER image inspect -f '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$INKGATE_IMAGE")"
+IMG_VERSION="$($DOCKER run --rm --entrypoint inkgate "$INKGATE_IMAGE" version)"
+IMG_GO="$(sed -n 's/^Go Version: //p' <<<"$IMG_VERSION")"
+IMG_GLIBC="$(sed -n 's/^Glibc Version: //p' <<<"$IMG_VERSION")"
+
 cat >results/meta.json <<META
 {
   "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "host": {"cpu": "$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | xargs)", "threads": $(nproc), "memory_gb": $(awk '/MemTotal/ {printf "%.0f", $2/1048576}' /proc/meminfo), "kernel": "$(uname -sr)"},
+  "inkgate_build": {"revision": "$IMG_REVISION", "go": "$IMG_GO", "glibc": "$IMG_GLIBC"},
   "images": {"inkgate": "$INKGATE_IMAGE", "krakend": "$KRAKEND_IMAGE", "backend": "$NGINX_IMAGE", "load": "$OHA_IMAGE"},
   "limits": {"gateway_cpus": $GATEWAY_CPUS, "gateway_memory": "$GATEWAY_MEMORY", "backend_cpus": $BACKEND_CPUS, "load_cpus": $LOAD_CPUS},
   "run": {"duration": "$DURATION", "warmup": "$WARMUP", "connections": $CONNECTIONS, "rounds": $ROUNDS},
