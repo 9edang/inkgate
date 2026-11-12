@@ -3,13 +3,13 @@
 What to fix, speed up and add next, in the order it pays off. Every item comes with the evidence behind it: a
 benchmark figure, a line of code or a reproduction. An item without evidence is marked as an idea to check first.
 
-| Milestone | Theme | Size | Why first |
-|---|---|---|---|
-| [M1](m1-confirmed-bugs.md) | Fix confirmed bugs | small | each one is reproduced and gives wrong behavior today |
-| [M2](m2-request-cost.md) | Cut the cost of a request | medium | the slowest features cost 40% to 93% of throughput, measured |
-| [M3](m3-streaming.md) | Harden live streams and WebSocket | medium | new code: correct, but no limits, no metrics, no shutdown drain |
-| [M4](m4-traffic-resilience.md) | Traffic and resilience features | large | what an API gateway is usually expected to do next |
-| [M5](m5-operability.md) | Config, observability and test hygiene | medium | makes everything above safer to change |
+| Milestone | Theme | Size | Why first | Status (November 2026) |
+|---|---|---|---|---|
+| [M1](m1-confirmed-bugs.md) | Fix confirmed bugs | small | each one is reproduced and gives wrong behavior today | 7 of 8 fixed; 1.4 open |
+| [M2](m2-request-cost.md) | Cut the cost of a request | medium | the slowest features cost 40% to 93% of throughput, measured | 2.1, 2.2, 2.4, 2.5 done; 2.3 dropped; 2.6 to 2.8 open |
+| [M3](m3-streaming.md) | Harden live streams and WebSocket | medium | the stream code had no limits, no metrics and no shutdown drain | 3.1 to 3.6 done; 3.7, 3.8 and OpenTelemetry stream metrics open |
+| [M4](m4-traffic-resilience.md) | Traffic and resilience features | large | what an API gateway is usually expected to do next | not started |
+| [M5](m5-operability.md) | Config, observability and test hygiene | medium | makes everything above safer to change | 5.5 done; the rest open |
 
 M1 and the quick items of M2 can start at once; M3 to M5 can run in parallel after that.
 

@@ -42,7 +42,7 @@ For a plugin outside the inkgate repository, point the module at your inkgate ch
 # go.mod
 module example.com/my-plugins
 
-go 1.27.3
+go 1.27.4
 
 require github.com/9edang/inkgate v0.0.0
 
@@ -50,6 +50,8 @@ replace github.com/9edang/inkgate => /path/to/inkgate
 ```
 
 Then run `go mod tidy`. With the `replace` line the plugin gets exactly the dependency versions of that checkout.
+Copy the `go` line from inkgate's own `go.mod` (1.27.4 at the time of writing): it is the minimum Go that builds
+inkgate, and the plugin must be built with the same Go release as the binary that loads it.
 
 ## 4. Example 1: an http-client plugin that adds a header
 
@@ -333,7 +335,7 @@ With `-f` the `go.mod` of the plugin must sit next to the `go.sum`.
 
 ```bash
 inkgate check-plugin                                       # go.sum in the current folder
-inkgate check-plugin -s my-plugins/go.sum -g 1.27.3 -f     # with fix commands
+inkgate check-plugin -s my-plugins/go.sum -g 1.27.4 -f     # with fix commands
 inkgate check-plugin -s my-plugins/go.sum -l 2.39          # also compare glibc
 ```
 
@@ -350,7 +352,7 @@ inkgate check-plugin -s my-plugins/go.sum -l 2.39          # also compare glibc
 If loading fails with a version error, compare the dependencies of the plugin with those of the gateway:
 
 ```bash
-bin/inkgate check-plugin -s my-plugins/go.sum -g 1.27.3 -f
+bin/inkgate check-plugin -s my-plugins/go.sum -g 1.27.4 -f
 ```
 
 `-f` prints the `go get` or `go mod edit --replace` commands that align the versions. Pass `-l <glibc version>`
