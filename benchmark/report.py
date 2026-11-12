@@ -114,6 +114,14 @@ def update_readme(meta, summary):
     readme.write_text(head + block + tail)
 
 
+def build_note(meta):
+    """What the inkgate image holds: git revision, Go and glibc. Older results do not have it."""
+    b = meta.get("inkgate_build")
+    if not b:
+        return ""
+    return f", revision `{b['revision']}`, Go {b['go']}, glibc {b['glibc']}"
+
+
 def markdown(meta, summary):
     h, lim, run, img = meta["host"], meta["limits"], meta["run"], meta["images"]
     out = [
@@ -126,13 +134,13 @@ def markdown(meta, summary):
         "| | |",
         "|---|---|",
         f"| Host | {h['cpu']}, {h['threads']} threads, {h['memory_gb']} GB RAM, {h['kernel']} |",
-        f"| inkgate | `{img['inkgate']}` (built from this repository) |",
+        f"| inkgate | `{img['inkgate']}` (built from this repository){build_note(meta)} |",
         f"| KrakenD CE | `{img['krakend']}` |",
         f"| Backend | `{img['backend']}`, fixed JSON answers, {lim['backend_cpus']} CPUs |",
         f"| Load generator | `{img['load']}`, {run['connections']} keep-alive connections, {lim['load_cpus']} CPUs |",
         f"| Each gateway | {lim['gateway_cpus']} CPUs, {lim['gateway_memory']} memory, one at a time |",
         f"| Per run | {run['warmup']} warm-up, then {run['duration']} measured |",
-        "| Config | the same file for both: [config/gateway.json](config/gateway.json) |",
+        "| Config | the same file for both: [config/gateway.json](../config/gateway.json) |",
         "",
         "## Results",
     ]

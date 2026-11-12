@@ -9,7 +9,7 @@ doing" in [../known-issues.md](../known-issues.md); this page gives them an orde
 | 5.2 | A real JSON schema for `check -n` and `check -l` | M |
 | 5.3 | Opt-in `pprof` endpoint | S |
 | 5.4 | Performance regression check in CI | M |
-| 5.5 | Make the whole test suite green | M |
+| 5.5 | Make the whole test suite green (**done**) | M |
 | 5.6 | Config reload without a restart | L |
 
 ## 5.1 Strict config
@@ -40,6 +40,12 @@ Today 7 packages fail in a full `go test ./...` for reasons outside the code (mi
 plugins, an order-dependent test) and two are flaky on fixed ports. Build the test plugins from a make target, ship or
 generate the missing fixtures (`testdata/*-go.sum`, `cert.pem`), use free ports in the server tests, and fix
 `TestMetrics_process`. A green suite is what makes the M2 refactors safe.
+
+**Result** (November 2026): `make test` is green, also under `-race` and in `golang:1.27-trixie` without network.
+`make test` builds the test plugins (`test-plugins`) and the TLS fixtures (`test-certs`); the server tests use free
+ports; seven data races, a flaky proof-of-work test and an integration case that called the internet were fixed. What
+is left to know is in [../known-issues.md](../known-issues.md); the checks to run before a PR are in
+[../guides/testing.md](../guides/testing.md#before-opening-a-pr).
 
 ## 5.6 Config reload (idea to discuss)
 
