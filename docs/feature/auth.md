@@ -25,7 +25,7 @@ flowchart LR
 |---|---|---|
 | Namespace | `inkgate/feature/auth/jose/validator` | `inkgate/feature/auth/jose/signer` |
 | Alias | `auth/validator` | `auth/signer` |
-| Where | endpoint `extra_config`, stage 3 step 5 | endpoint `extra_config`, signs fields of the response |
+| Where | endpoint `extra_config`, stage 3 step 4 | endpoint `extra_config`, signs fields of the response |
 | Code | shared: `feature/auth/jose` (`jose.go`, `jwk_client.go`) · adapter: `feature/auth/jose` | shared: `feature/auth/jose/jws.go` · same adapters |
 
 **Validator options:** `alg`, `jwk_url` (or `jwk_local_path` / `jwk_local_ca`), `cache`, `cache_duration`,
@@ -38,6 +38,11 @@ flowchart LR
 `disable_jwk_security`, `cipher_suites`.
 
 **Service level:** `shared_cache_duration` enables a JWK cache shared by every endpoint (`jose.SetGlobalCacher`, called at boot).
+
+**Audience:** with `audience` set, the token must contain **every** listed audience (go-jose v4 alone would accept any
+one; inkgate keeps the stricter v3 rule). **Algorithms:** a token is accepted only if its `alg` is the configured one;
+`none` and unsupported algorithms never get past parsing. **Symmetric keys** (`HS256`, `HS384`, `HS512`) must be at
+least 32, 48 and 64 bytes (RFC 7518 section 3.2), for validation and for the signer.
 
 Outcomes: no or invalid token → 401, valid token but missing role or scope → 403.
 

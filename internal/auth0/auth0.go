@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 // SecretProvider will provide everything
@@ -51,12 +51,21 @@ func (p *nopTokenSecretProvider) SecretFromToken(token *jwt.JSONWebToken) (any, 
 	return nil, ErrJWTFromTokenNotImplemented
 }
 
+// SignatureAlgorithms are the algorithms a token may be signed with when it is parsed (go-jose v4 asks for the list).
+// Which one a route accepts is checked after parsing, against the configured algorithm (ValidateTokenHeaders). "none"
+// is not here, and go-jose does not support it.
+var SignatureAlgorithms = []jose.SignatureAlgorithm{
+	jose.EdDSA, jose.HS256, jose.HS384, jose.HS512, jose.RS256, jose.RS384, jose.RS512,
+	jose.ES256, jose.ES384, jose.ES512, jose.PS256, jose.PS384, jose.PS512,
+}
+
 // Configuration contains
 // all the information about the
 // Auth0 service.
 type Configuration struct {
 	secretProvider      SecretProvider
 	expectedClaims      jwt.Expected
+	audience            []string // every one must be in the token (see ValidateTokenClaims)
 	signIn              jose.SignatureAlgorithm
 	tokenSecretProvider TokenSecretProvider
 }
@@ -69,7 +78,8 @@ func NewConfiguration(provider SecretProvider, audience []string, issuer string,
 	}
 	return Configuration{
 		secretProvider:      provider,
-		expectedClaims:      jwt.Expected{Issuer: issuer, Audience: audience},
+		expectedClaims:      jwt.Expected{Issuer: issuer},
+		audience:            audience,
 		signIn:              method,
 		tokenSecretProvider: tokenSecretProvider,
 	}
@@ -83,7 +93,8 @@ func NewConfigurationTrustProvider(provider SecretProvider, audience []string, i
 	}
 	return Configuration{
 		secretProvider:      provider,
-		expectedClaims:      jwt.Expected{Issuer: issuer, Audience: audience},
+		expectedClaims:      jwt.Expected{Issuer: issuer},
+		audience:            audience,
 		tokenSecretProvider: tokenSecretProvider,
 	}
 }
@@ -141,8 +152,18 @@ func (v *JWTValidator) ValidateTokenClaims(token *jwt.JSONWebToken, secretKey an
 	}
 
 	expected := v.config.expectedClaims.WithTime(time.Now())
-	err := claims.ValidateWithLeeway(expected, v.leeway)
-	return token, err
+	if err := claims.ValidateWithLeeway(expected, v.leeway); err != nil {
+		return token, err
+	}
+	// go-jose v3 required every configured audience in the token; v4 only offers "any of them". Keeping "all" is the
+	// stricter reading and what a config written for v3 relies on.
+	for _, a := range v.config.audience {
+		if !claims.Audience.Contains(a) {
+			return token, jwt.ErrInvalidAudience
+		}
+	}
+
+	return token, nil
 }
 
 // ValidateSigned validates a non parsed token in string form
@@ -162,7 +183,7 @@ func (v *JWTValidator) ValidateSigned(s string) (*jwt.JSONWebToken, error) {
 	if s == "" {
 		return nil, ErrTokenNotFound
 	}
-	token, err := jwt.ParseSigned(s)
+	token, err := jwt.ParseSigned(s, SignatureAlgorithms)
 	if err != nil {
 		return nil, err
 	}

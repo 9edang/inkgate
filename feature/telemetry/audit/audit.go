@@ -4,6 +4,10 @@ import (
 	"github.com/9edang/inkgate/engine/config"
 )
 
+// openCensusNamespace is the extra_config key of OpenCensus. inkgate has no OpenCensus any more, but `inkgate audit`
+// reads configs written for KrakenD, which may use it, and reports it as deprecated.
+const openCensusNamespace = "inkgate/feature/telemetry/opencensus"
+
 // Audit audits the received configuration and generates an AuditResult with all the Recommendations
 func Audit(cfg *config.ServiceConfig, ignore, severities []string) (AuditResult, error) {
 	service := Parse(cfg)

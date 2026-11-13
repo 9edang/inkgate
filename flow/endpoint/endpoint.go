@@ -10,7 +10,6 @@ import (
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/proxy"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	otelpipeline "github.com/9edang/inkgate/feature/telemetry/otel/pipeline"
 	lua "github.com/9edang/inkgate/feature/transform/lua/proxy"
 	cel "github.com/9edang/inkgate/feature/validation/cel"
@@ -25,23 +24,22 @@ func NewFactory(logger logging.Logger, backendFactory proxy.BackendFactory, metr
 	// The steps a request goes through, in order.
 	steps := []step{
 		func(next proxy.Factory) proxy.Factory { return otelpipeline.ProxyFactory(next) }, // 1. OpenTelemetry span for the whole pipeline
-		func(next proxy.Factory) proxy.Factory { return opencensus.ProxyFactory(next) },   // 2. OpenCensus span (legacy tracing)
-		func(next proxy.Factory) proxy.Factory { // 3. pipeline metrics
+		func(next proxy.Factory) proxy.Factory { // 2. pipeline metrics
 			return metricCollector.ProxyFactory("pipe", next)
 		},
-		func(next proxy.Factory) proxy.Factory { // 4. endpoint Lua scripts (proxy level)
+		func(next proxy.Factory) proxy.Factory { // 3. endpoint Lua scripts (proxy level)
 			return lua.ProxyFactory(logger, next)
 		},
-		func(next proxy.Factory) proxy.Factory { // 5. CEL rules on request and response
+		func(next proxy.Factory) proxy.Factory { // 4. CEL rules on request and response
 			return cel.ProxyFactory(logger, next)
 		},
-		func(next proxy.Factory) proxy.Factory { // 6. validate the request body with JSON schema
+		func(next proxy.Factory) proxy.Factory { // 5. validate the request body with JSON schema
 			return jsonschema.ProxyFactory(logger, next)
 		},
-		proxy.NewShadowFactory, // 7. send a copy to shadow backends, ignore their answers
+		proxy.NewShadowFactory, // 6. send a copy to shadow backends, ignore their answers
 	}
 
-	// 8. the core pipeline (engine/proxy): static data > Go req/resp modifier plugins >
+	// 7. the core pipeline (engine/proxy): static data > Go req/resp modifier plugins >
 	// call every backend concurrently > merge their responses (+ flatmap).
 	f := proxy.NewDefaultFactory(backendFactory, logger)
 	for _, step := range slices.Backward(steps) {

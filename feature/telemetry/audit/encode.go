@@ -18,7 +18,6 @@ import (
 	gelf "github.com/9edang/inkgate/feature/telemetry/gelf"
 	gologging "github.com/9edang/inkgate/feature/telemetry/gologging"
 	logstash "github.com/9edang/inkgate/feature/telemetry/logstash"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	httpcache "github.com/9edang/inkgate/feature/traffic/httpcache"
 	ratelimitProxy "github.com/9edang/inkgate/feature/traffic/ratelimit/proxy"
 	ratelimit "github.com/9edang/inkgate/feature/traffic/ratelimit/router"
@@ -65,7 +64,7 @@ var componentAlias = map[string]string{
 	router.Namespace:                   "e",
 	bf.Namespace:                       "f",
 	botdetector.Namespace:              "g",
-	opencensus.Namespace:               "h",
+	openCensusNamespace:                "h",
 	ratelimit.Namespace:                "i",
 	ratelimitProxy.Namespace:           "j",
 	"telemetry/newrelic":               "k",

@@ -108,12 +108,11 @@ var aliases = map[string]string{
 	"inkgate/engine/transport/http/client/graphql": "backend/graphql",
 	"inkgate/engine/transport/http/client":         "backend/http",
 
-	"inkgate/feature/telemetry/gelf":       "telemetry/gelf",
-	"inkgate/feature/telemetry/gologging":  "telemetry/logging",
-	"inkgate/feature/telemetry/logstash":   "telemetry/logstash",
-	"inkgate/feature/telemetry/metrics":    "telemetry/metrics",
-	"inkgate/feature/telemetry/influx":     "telemetry/influx",
-	"inkgate/feature/telemetry/opencensus": "telemetry/opencensus",
+	"inkgate/feature/telemetry/gelf":      "telemetry/gelf",
+	"inkgate/feature/telemetry/gologging": "telemetry/logging",
+	"inkgate/feature/telemetry/logstash":  "telemetry/logstash",
+	"inkgate/feature/telemetry/metrics":   "telemetry/metrics",
+	"inkgate/feature/telemetry/influx":    "telemetry/influx",
 
 	"inkgate/feature/transform/lua/router":        "modifier/lua-endpoint",
 	"inkgate/feature/transform/lua/proxy":         "modifier/lua-proxy",

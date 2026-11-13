@@ -17,20 +17,20 @@ flowchart TD
       HF --> GQ["GraphQL request<br/>(backend/graphql)"]
       GQ --> MP["modifier plugins (backend)"]
     end
-    MP --> S0["0 record in flow context"] --> S1["1 OpenTelemetry span"] --> S2["2 OpenCensus span"] --> S3["3 backend metrics"]
-    S3 --> S4{"4 circuit breaker<br/>(qos/circuit-breaker)"}
-    S4 -- open --> XE([error, no call])
-    S4 --> S5{"5 rate limit<br/>(qos/ratelimit/proxy)"}
-    S5 -- over --> XE
-    S5 --> S6["6 Lua (backend)"] --> S7{"7 CEL backend rules"}
-    S7 --> S8{"8 Lambda?"}
-    S8 -- yes --> AWS[(AWS Lambda)]
-    S8 -- no --> S9{"9 AMQP?"}
-    S9 -- yes --> MQ[(RabbitMQ)]
-    S9 -- no --> S10{"10 Pub/Sub?"}
-    S10 -- yes --> PS[(GCP · AWS · Kafka · NATS ...)]
-    S10 -- no --> S11["11 Martian modifiers"]
-    S11 --> HC["HTTP client:<br/>client plugins → OpenCensus → OTel → HTTP cache → OAuth2 → net/http"]
+    MP --> S0["0 record in flow context"] --> S1["1 OpenTelemetry span"] --> S2["2 backend metrics"]
+    S2 --> S3{"3 circuit breaker<br/>(qos/circuit-breaker)"}
+    S3 -- open --> XE([error, no call])
+    S3 --> S4{"4 rate limit<br/>(qos/ratelimit/proxy)"}
+    S4 -- over --> XE
+    S4 --> S5["5 Lua (backend)"] --> S6{"6 CEL backend rules"}
+    S6 --> S7{"7 Lambda?"}
+    S7 -- yes --> AWS[(AWS Lambda)]
+    S7 -- no --> S8{"8 AMQP?"}
+    S8 -- yes --> MQ[(RabbitMQ)]
+    S8 -- no --> S9{"9 Pub/Sub?"}
+    S9 -- yes --> PS[(GCP · AWS · Kafka · NATS ...)]
+    S9 -- no --> S10["10 Martian modifiers"]
+    S10 --> HC["HTTP client:<br/>client plugins → OTel → HTTP cache → OAuth2 → net/http"]
     HC --> SVC[(backend service)]
 ```
 
@@ -40,18 +40,17 @@ flowchart TD
 |---|---|---|---|
 | 0 | record the call in the flow context (+ request ID header when `propagate_request_id`) | `flow/backend/flow.go` `recordFlow` | service `context` |
 | 1 | OpenTelemetry span | `feature/telemetry/otel/pipeline` | service `telemetry/opentelemetry` |
-| 2 | OpenCensus span | `feature/telemetry/opencensus` | service `telemetry/opencensus` |
-| 3 | backend metrics | `feature/telemetry/metrics` | service `telemetry/metrics` |
-| 4 | circuit breaker | `feature/traffic/circuitbreaker/gobreaker/proxy` | `qos/circuit-breaker` |
-| 5 | rate limit | `feature/traffic/ratelimit/proxy` | `qos/ratelimit/proxy` |
-| 6 | Lua backend script | `feature/transform/lua/proxy` | `modifier/lua-backend` |
-| 7 | CEL rules | `feature/validation/cel` | `validation/cel` |
-| 8 | Lambda | `feature/connector/lambda` | `backend/lambda` |
-| 9 | AMQP | `feature/connector/amqp` | `backend/amqp/consumer`, `backend/amqp/producer` |
-| 10 | Pub/Sub | `feature/connector/pubsub` | `backend/pubsub/publisher`, `backend/pubsub/subscriber` |
-| 11 | Martian + HTTP | `feature/transform/martian`, `engine/transport/http/client` | `modifier/martian`, `backend/http`, `qos/http-cache`, `auth/client-credentials`, `plugin/http-client` |
+| 2 | backend metrics | `feature/telemetry/metrics` | service `telemetry/metrics` |
+| 3 | circuit breaker | `feature/traffic/circuitbreaker/gobreaker/proxy` | `qos/circuit-breaker` |
+| 4 | rate limit | `feature/traffic/ratelimit/proxy` | `qos/ratelimit/proxy` |
+| 5 | Lua backend script | `feature/transform/lua/proxy` | `modifier/lua-backend` |
+| 6 | CEL rules | `feature/validation/cel` | `validation/cel` |
+| 7 | Lambda | `feature/connector/lambda` | `backend/lambda` |
+| 8 | AMQP | `feature/connector/amqp` | `backend/amqp/consumer`, `backend/amqp/producer` |
+| 9 | Pub/Sub | `feature/connector/pubsub` | `backend/pubsub/publisher`, `backend/pubsub/subscriber` |
+| 10 | Martian + HTTP | `feature/transform/martian`, `engine/transport/http/client` | `modifier/martian`, `backend/http`, `qos/http-cache`, `auth/client-credentials`, `plugin/http-client` |
 
-Steps 8-10 are **connectors**. Each one checks its namespace. If the namespace is there, the connector makes the call
+Steps 7-9 are **connectors**. Each one checks its namespace. If the namespace is there, the connector makes the call
 itself and the steps below it never run. Otherwise it passes the call down. A backend with no connector namespace
 is a normal HTTP backend.
 

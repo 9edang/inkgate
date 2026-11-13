@@ -3,6 +3,7 @@ package lambda
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -10,10 +11,10 @@ import (
 	"github.com/9edang/inkgate/context"
 	"github.com/9edang/inkgate/internal/json"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
@@ -30,20 +31,43 @@ var (
 	errBadConfig     = errors.New("aws lambda: unable to parse the defined extra config")
 )
 
+// Invoker is the part of the AWS Lambda client the backend uses.
 type Invoker interface {
-	InvokeWithContext(aws.Context, *lambda.InvokeInput, ...request.Option) (*lambda.InvokeOutput, error)
+	Invoke(context.Context, *lambda.InvokeInput, ...func(*lambda.Options)) (*lambda.InvokeOutput, error)
 }
 
 func BackendFactory(logger logging.Logger, bf proxy.BackendFactory) proxy.BackendFactory {
 	return BackendFactoryWithInvoker(logger, bf, invokerFactory)
 }
 
+// invokerFactory builds the Lambda client. Credentials and, unless the config sets it, the region come from the
+// default AWS chain (environment, shared files, instance role).
 func invokerFactory(o *Options) Invoker {
-	if o.Config == nil {
-		return lambda.New(session.New())
+	var loadOpts []func(*awsconfig.LoadOptions) error
+	if o.Region != "" {
+		loadOpts = append(loadOpts, awsconfig.WithRegion(o.Region))
+	}
+	cfg, err := awsconfig.LoadDefaultConfig(context.Background(), loadOpts...)
+	if err != nil {
+		return failedInvoker{err: fmt.Errorf("aws lambda: loading the AWS configuration: %w", err)}
 	}
 
-	return lambda.New(session.Must(session.NewSession(o.Config)))
+	return lambda.NewFromConfig(cfg, func(lo *lambda.Options) {
+		if o.Endpoint != "" {
+			lo.BaseEndpoint = aws.String(o.Endpoint)
+		}
+		if o.MaxRetries != nil {
+			lo.RetryMaxAttempts = *o.MaxRetries + 1 // the first call is not a retry
+		}
+	})
+}
+
+// failedInvoker reports a client that could not be built at every call, so the backend fails on its own requests
+// instead of the gateway at startup.
+type failedInvoker struct{ err error }
+
+func (f failedInvoker) Invoke(context.Context, *lambda.InvokeInput, ...func(*lambda.Options)) (*lambda.InvokeOutput, error) {
+	return nil, f.err
 }
 
 func BackendFactoryWithInvoker(logger logging.Logger, bf proxy.BackendFactory, invokerFactory func(*Options) Invoker) proxy.BackendFactory {
@@ -71,18 +95,18 @@ func BackendFactoryWithInvoker(logger logging.Logger, bf proxy.BackendFactory, i
 			}
 			input := &lambda.InvokeInput{
 				// ClientContext:  aws.String(clientContext),
-				FunctionName:   new(ecfg.FunctionExtractor(r)),
-				InvocationType: new("RequestResponse"),
-				LogType:        new("None"),
+				FunctionName:   aws.String(ecfg.FunctionExtractor(r)),
+				InvocationType: types.InvocationTypeRequestResponse,
+				LogType:        types.LogTypeNone,
 				Payload:        payload,
 				// Qualifier:      aws.String("1"),
 			}
 
-			result, err := i.InvokeWithContext(ctx, input)
+			result, err := i.Invoke(ctx, input)
 			if err != nil {
 				return nil, err
 			}
-			if result.StatusCode == nil || *result.StatusCode != 200 {
+			if result.StatusCode != http.StatusOK {
 				return nil, errBadStatusCode
 			}
 
@@ -92,7 +116,7 @@ func BackendFactoryWithInvoker(logger logging.Logger, bf proxy.BackendFactory, i
 			}
 			response := ef.Format(proxy.Response{
 				Metadata: proxy.Metadata{
-					StatusCode: int(*result.StatusCode),
+					StatusCode: int(result.StatusCode),
 					Headers:    map[string][]string{},
 				},
 				Data:       data,
@@ -143,21 +167,18 @@ func getOptions(remote *config.Backend) (*Options, error) {
 		cfg.PayloadExtractor = fromBody
 	}
 
-	region, ok := ecfg["region"].(string)
-	if !ok {
-		return cfg, nil
+	if region, ok := ecfg["region"].(string); ok {
+		cfg.Region = region
 	}
-
-	cfg.Config = &aws.Config{
-		Region: new(region),
-	}
-
 	if endpoint, ok := ecfg["endpoint"].(string); ok {
-		cfg.Config.WithEndpoint(endpoint)
+		cfg.Endpoint = endpoint
 	}
-
-	if retries, ok := ecfg["max_retries"].(int); ok {
-		cfg.Config.WithMaxRetries(retries)
+	// a JSON number is a float64: the v1 code asked for an int, so max_retries never took effect
+	if raw, ok := ecfg["max_retries"]; ok {
+		if n, ok := config.Float64(raw); ok && n >= 0 && n == float64(int(n)) {
+			retries := int(n)
+			cfg.MaxRetries = &retries
+		}
 	}
 
 	return cfg, nil
@@ -166,7 +187,9 @@ func getOptions(remote *config.Backend) (*Options, error) {
 type Options struct {
 	PayloadExtractor  payloadExtractor
 	FunctionExtractor functionExtractor
-	Config            *aws.Config
+	Region            string // "" takes it from the AWS environment
+	Endpoint          string // "" is the AWS endpoint of the region
+	MaxRetries        *int   // nil keeps the SDK default
 }
 
 type functionExtractor func(*proxy.Request) string

@@ -22,7 +22,9 @@ Not there yet, so plan around it:
 - **`GOMEMLIMIT` is not set by the image** (see 2.2). `GOMAXPROCS` needs nothing: Go 1.25 and later read the container's
   CPU limit.
 - **Plugins** (`.so`) load only into a binary built with the same Go version, packages and glibc (Go 1.27, glibc 2.41):
-  build them in `golang:1.27-trixie` ([guides/custom-plugins.md](guides/custom-plugins.md)).
+  build them in `golang:1.27-trixie` ([guides/custom-plugins.md](guides/custom-plugins.md)). **Rebuild them for every
+  inkgate release**, patch releases included, and check the `Total plugins loaded` line after a deploy: a plugin that
+  fails to load is logged at `DEBUG` only and the gateway starts without it.
 
 ## 2. What you must do before going live
 

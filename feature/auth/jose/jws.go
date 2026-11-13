@@ -3,13 +3,15 @@ package jose
 import (
 	"errors"
 	"fmt"
-	"github.com/9edang/inkgate/internal/json"
 	"net/textproto"
 	"strings"
 
+	"github.com/9edang/inkgate/internal/json"
+
+	jose "github.com/go-jose/go-jose/v4"
+
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/internal/auth0"
-	jose "github.com/go-jose/go-jose/v3"
 )
 
 const (

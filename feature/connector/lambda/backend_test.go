@@ -11,9 +11,7 @@ import (
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/proxy"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 )
 
 func TestBackendFactoryWithInvoker_fallback(t *testing.T) {
@@ -79,8 +77,8 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 		explosiveBF,
 		func(_ *Options) Invoker {
 			return invoker(func(in *lambda.InvokeInput) (*lambda.InvokeOutput, error) {
-				if *in.InvocationType != "RequestResponse" {
-					t.Errorf("unexpected InvocationType: %s", *in.InvocationType)
+				if in.InvocationType != "RequestResponse" {
+					t.Errorf("unexpected InvocationType: %s", in.InvocationType)
 				}
 				// if *in.ClientContext != clientContext {
 				// 	t.Errorf("unexpected ClientContext: %s", *in.ClientContext)
@@ -101,7 +99,7 @@ func TestBackendFactoryWithInvoker(t *testing.T) {
 				}
 				return &lambda.InvokeOutput{
 					Payload:    fmt.Appendf(nil, `{"message":"Hello %s %s!", "foo": 42}`, payload["first_name"], payload["last_name"]),
-					StatusCode: aws.Int64(200),
+					StatusCode: 200,
 				}, nil
 			})
 		},
@@ -226,8 +224,8 @@ func TestBackendFactoryWithInvoker_error(t *testing.T) {
 		explosiveBF,
 		func(_ *Options) Invoker {
 			return invoker(func(in *lambda.InvokeInput) (*lambda.InvokeOutput, error) {
-				if *in.InvocationType != "RequestResponse" {
-					t.Errorf("unexpected InvocationType: %s", *in.InvocationType)
+				if in.InvocationType != "RequestResponse" {
+					t.Errorf("unexpected InvocationType: %s", in.InvocationType)
 				}
 				// if *in.ClientContext != clientContext {
 				// 	t.Errorf("unexpected ClientContext: %s", *in.ClientContext)
@@ -247,7 +245,7 @@ func TestBackendFactoryWithInvoker_error(t *testing.T) {
 				}
 				return &lambda.InvokeOutput{
 					Payload:    []byte(`{"message":"Hello  !"}`),
-					StatusCode: aws.Int64(200),
+					StatusCode: 200,
 				}, nil
 			})
 		},
@@ -285,8 +283,8 @@ func TestBackendFactoryWithInvoker_incomplete(t *testing.T) {
 		explosiveBF,
 		func(_ *Options) Invoker {
 			return invoker(func(in *lambda.InvokeInput) (*lambda.InvokeOutput, error) {
-				if *in.InvocationType != "RequestResponse" {
-					t.Errorf("unexpected InvocationType: %s", *in.InvocationType)
+				if in.InvocationType != "RequestResponse" {
+					t.Errorf("unexpected InvocationType: %s", in.InvocationType)
 				}
 				// if *in.ClientContext != clientContext {
 				// 	t.Errorf("unexpected ClientContext: %s", *in.ClientContext)
@@ -307,7 +305,7 @@ func TestBackendFactoryWithInvoker_incomplete(t *testing.T) {
 				}
 				return &lambda.InvokeOutput{
 					Payload:    []byte(`{"message":"Hello  !"}`),
-					StatusCode: aws.Int64(200),
+					StatusCode: 200,
 				}, nil
 			})
 		},
@@ -351,7 +349,7 @@ func TestBackendFactoryWithInvoker_wrongStatusCode(t *testing.T) {
 			return invoker(func(in *lambda.InvokeInput) (*lambda.InvokeOutput, error) {
 				return &lambda.InvokeOutput{
 					Payload:    []byte(``),
-					StatusCode: aws.Int64(404),
+					StatusCode: 404,
 				}, nil
 			})
 		},
@@ -376,6 +374,6 @@ func TestBackendFactoryWithInvoker_wrongStatusCode(t *testing.T) {
 
 type invoker func(*lambda.InvokeInput) (*lambda.InvokeOutput, error)
 
-func (i invoker) InvokeWithContext(_ aws.Context, in *lambda.InvokeInput, _ ...request.Option) (*lambda.InvokeOutput, error) {
+func (i invoker) Invoke(_ context.Context, in *lambda.InvokeInput, _ ...func(*lambda.Options)) (*lambda.InvokeOutput, error) {
 	return i(in)
 }

@@ -15,7 +15,6 @@ import (
 	influx "github.com/9edang/inkgate/feature/telemetry/influx"
 	logstash "github.com/9edang/inkgate/feature/telemetry/logstash"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	cb "github.com/9edang/inkgate/feature/traffic/circuitbreaker/gobreaker"
 	httpcache "github.com/9edang/inkgate/feature/traffic/httpcache"
 	ratelimitProxy "github.com/9edang/inkgate/feature/traffic/ratelimit/proxy"
@@ -298,7 +297,7 @@ func hasTimeoutBiggerThan(d int) func(*Service) bool {
 
 func hasNoMetrics(s *Service) bool {
 	for _, k := range []string{
-		opencensus.Namespace,
+		openCensusNamespace,
 		metrics.Namespace,
 		"telemetry/newrelic",
 		"telemetry/ganalytics",
@@ -314,7 +313,7 @@ func hasNoMetrics(s *Service) bool {
 func hasSeveralTelemetryComponents(s *Service) bool {
 	tot := 0
 	for _, k := range []string{
-		opencensus.Namespace,
+		openCensusNamespace,
 		metrics.Namespace,
 		"telemetry/newrelic",
 		"telemetry/ganalytics",
@@ -334,7 +333,7 @@ func hasSeveralTelemetryComponents(s *Service) bool {
 }
 
 func hasNoTracing(s *Service) bool {
-	_, ok1 := s.Components[opencensus.Namespace]
+	_, ok1 := s.Components[openCensusNamespace]
 	_, ok2 := s.Components["telemetry/newrelic"]
 	_, ok3 := s.Components["telemetry/instana"]
 
@@ -359,7 +358,7 @@ func hasDeprecatedGanalytics(s *Service) bool {
 }
 
 func hasDeprecatedOpenCensus(s *Service) bool {
-	_, ok := s.Components[opencensus.Namespace]
+	_, ok := s.Components[openCensusNamespace]
 	return ok
 }
 

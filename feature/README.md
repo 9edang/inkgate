@@ -11,6 +11,6 @@ One folder per business domain. A feature that needs HTTP context keeps its rout
 | `traffic` | ratelimit, circuitbreaker, httpcache | request, backend | `traffic/ratelimit/router` (endpoint limit) |
 | `transform` | lua, martian, xml, rss | boot, entry, request, endpoint, backend | `transform/lua/router`, `transform/xml/render.go` |
 | `connector` | amqp, pubsub, lambda | boot (async agents), backend | — |
-| `telemetry` | metrics, influx, opencensus, otel, gologging, gelf, logstash, usage, audit | every stage | `telemetry/metrics/metrics_router.go`, `telemetry/opencensus/endpoint.go`, `telemetry/otel/otel_router.go` |
+| `telemetry` | metrics, influx, otel, gologging, gelf, logstash, usage, audit | every stage | `telemetry/metrics/metrics_router.go`, `telemetry/otel/otel_router.go` |
 
 Each package reads its own `extra_config` namespace and does nothing when that namespace is absent.

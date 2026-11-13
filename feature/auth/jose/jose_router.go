@@ -2,21 +2,23 @@ package jose
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/json"
 	"log"
 	"net/http"
 	"net/textproto"
 	"regexp"
 	"strings"
 
+	"github.com/9edang/inkgate/context"
+	"github.com/9edang/inkgate/internal/json"
+
 	"github.com/9edang/inkgate/engine/config"
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/proxy"
 	"github.com/9edang/inkgate/engine/router"
 
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	"github.com/9edang/inkgate/internal/auth0"
-	"github.com/go-jose/go-jose/v3/jwt"
 )
 
 func HandlerFactory(hf router.HandlerFactory, paramExtractor router.ParamExtractor, logger logging.Logger, rejecterF RejecterFactory) router.HandlerFactory {
@@ -202,7 +204,8 @@ func FromCookie(key string) func(r *http.Request) (*jwt.JSONWebToken, error) {
 		if err != nil {
 			return nil, auth0.ErrTokenNotFound
 		}
-		return jwt.ParseSigned(cookie.Value)
+
+		return jwt.ParseSigned(cookie.Value, auth0.SignatureAlgorithms)
 	}
 }
 
@@ -218,7 +221,8 @@ func FromHeader(header string) func(r *http.Request) (*jwt.JSONWebToken, error) 
 		if raw == "" {
 			return nil, auth0.ErrTokenNotFound
 		}
-		return jwt.ParseSigned(raw)
+
+		return jwt.ParseSigned(raw, auth0.SignatureAlgorithms)
 	}
 }
 

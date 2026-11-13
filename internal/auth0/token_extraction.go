@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 var (
@@ -57,7 +57,8 @@ func FromHeader(r *http.Request) (*jwt.JSONWebToken, error) {
 	if raw == "" {
 		return nil, ErrTokenNotFound
 	}
-	return jwt.ParseSigned(raw)
+
+	return jwt.ParseSigned(raw, SignatureAlgorithms)
 }
 
 // FromParams returns the JWT when passed as the URL query param "token".
@@ -66,5 +67,6 @@ func FromParams(r *http.Request) (*jwt.JSONWebToken, error) {
 	if raw == "" {
 		return nil, ErrTokenNotFound
 	}
-	return jwt.ParseSigned(raw)
+
+	return jwt.ParseSigned(raw, SignatureAlgorithms)
 }

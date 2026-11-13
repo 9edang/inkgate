@@ -12,12 +12,11 @@ import (
 	jose "github.com/9edang/inkgate/feature/auth/jose"
 	influxdb "github.com/9edang/inkgate/feature/telemetry/influx"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	kotel "github.com/9edang/inkgate/feature/telemetry/otel"
 	cel "github.com/9edang/inkgate/feature/validation/cel"
 )
 
-// registerTelemetry starts InfluxDB, OpenCensus and OpenTelemetry as the config
+// registerTelemetry starts InfluxDB and OpenTelemetry as the config
 // requires. The metrics collector itself comes from the router variant.
 // The returned func releases them on shutdown.
 func registerTelemetry(ctx context.Context, cfg config.ServiceConfig, l logging.Logger, metricCollector *metrics.Metrics) func() {
@@ -27,14 +26,6 @@ func registerTelemetry(ctx context.Context, cfg config.ServiceConfig, l logging.
 		}
 	} else {
 		l.Debug("[SERVICE: InfluxDB] Service correctly registered")
-	}
-
-	if err := opencensus.Register(ctx, cfg, opencensus.DefaultViews...); err != nil {
-		if !errors.Is(err, opencensus.ErrNoConfig) {
-			l.Warning("[SERVICE: OpenCensus]", err.Error())
-		}
-	} else {
-		l.Debug("[SERVICE: OpenCensus] Service correctly registered")
 	}
 
 	shutdown := func() {}

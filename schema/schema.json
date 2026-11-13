@@ -515,7 +515,6 @@
       },
       "additionalProperties": false
     },
-    "ns_telemetry_opencensus": {"type": "object", "description": "Removed together with OpenCensus; use telemetry/opentelemetry."},
     "ns_telemetry_opentelemetry": {
       "type": "object",
       "properties": {
@@ -707,8 +706,6 @@
         "inkgate/feature/telemetry/metrics": {"$ref": "#/$defs/ns_telemetry_metrics"},
         "telemetry/influx": {"$ref": "#/$defs/ns_telemetry_influx"},
         "inkgate/feature/telemetry/influx": {"$ref": "#/$defs/ns_telemetry_influx"},
-        "telemetry/opencensus": {"$ref": "#/$defs/ns_telemetry_opencensus"},
-        "inkgate/feature/telemetry/opencensus": {"$ref": "#/$defs/ns_telemetry_opencensus"},
         "telemetry/opentelemetry": {"$ref": "#/$defs/ns_telemetry_opentelemetry"}
       },
       "additionalProperties": false,

@@ -8,15 +8,15 @@ of the endpoint, and the answers are merged into one response.
 
 ```mermaid
 flowchart TD
-    IN([proxy.Request]) --> S1["1 OpenTelemetry span"] --> S2["2 OpenCensus span"] --> S3["3 pipeline metrics"]
-    S3 --> S4["4 Lua (proxy): pre"]
-    S4 --> S5{"5 CEL request rules"}
-    S5 -- false --> XE([error])
-    S5 --> S6{"6 JSON schema<br/>(request body)"}
-    S6 -- invalid --> XE
-    S6 --> S7["7 shadow: copy request to<br/>shadow backends, ignore result"]
-    S7 --> D1
-    subgraph CORE ["8 engine/proxy default pipeline"]
+    IN([proxy.Request]) --> S1["1 OpenTelemetry span"] --> S2["2 pipeline metrics"]
+    S2 --> S3["3 Lua (proxy): pre"]
+    S3 --> S4{"4 CEL request rules"}
+    S4 -- false --> XE([error])
+    S4 --> S5{"5 JSON schema<br/>(request body)"}
+    S5 -- invalid --> XE
+    S5 --> S6["6 shadow: copy request to<br/>shadow backends, ignore result"]
+    S6 --> D1
+    subgraph CORE ["7 engine/proxy default pipeline"]
       D1["static data<br/>(strategy: always · success · errored · complete · incomplete)"] --> D2["req/resp modifier plugins"]
       D2 --> D3{"how many backends?"}
       D3 -- one --> B1[["stage 5: backend"]]
@@ -29,22 +29,21 @@ flowchart TD
     B1 --> OUT
 ```
 
-Response-side work runs on the way back up: CEL response rules (5), Lua post scripts (4) and metrics/spans close.
+Response-side work runs on the way back up: CEL response rules (4), Lua post scripts (3) and metrics/spans close.
 
 ## Steps
 
 | # | Step | Code | Config |
 |---|---|---|---|
 | 1 | OpenTelemetry pipeline span | `feature/telemetry/otel/pipeline` | `telemetry/opentelemetry` (service) |
-| 2 | OpenCensus span | `feature/telemetry/opencensus` | `telemetry/opencensus` (service) |
-| 3 | pipeline metrics | `feature/telemetry/metrics` | `telemetry/metrics` (service) |
-| 4 | Lua proxy script | `feature/transform/lua/proxy` | endpoint `modifier/lua-proxy` |
-| 5 | CEL rules | `feature/validation/cel` | endpoint `validation/cel` |
-| 6 | JSON schema | `feature/validation/jsonschema` | endpoint `validation/json-schema` |
-| 7 | shadow backends | `engine/proxy/shadow.go` | backend `proxy.shadow: true`, `shadow_timeout` |
-| 8 | default pipeline | `engine/proxy/factory.go` | see below |
+| 2 | pipeline metrics | `feature/telemetry/metrics` | `telemetry/metrics` (service) |
+| 3 | Lua proxy script | `feature/transform/lua/proxy` | endpoint `modifier/lua-proxy` |
+| 4 | CEL rules | `feature/validation/cel` | endpoint `validation/cel` |
+| 5 | JSON schema | `feature/validation/jsonschema` | endpoint `validation/json-schema` |
+| 6 | shadow backends | `engine/proxy/shadow.go` | backend `proxy.shadow: true`, `shadow_timeout` |
+| 7 | default pipeline | `engine/proxy/factory.go` | see below |
 
-## The default pipeline (step 8)
+## The default pipeline (step 7)
 
 Built by `proxy.NewDefaultFactory` in `engine/proxy/factory.go`. Details are in [../engine/proxy.md](../engine/proxy.md).
 

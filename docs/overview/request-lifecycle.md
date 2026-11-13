@@ -22,13 +22,13 @@ sequenceDiagram
         E-->>C: 404 / 405 (optional custom error_body)
     end
     E->>R: handler of the matched route
-    Note over R: OTel → bot detector → OpenCensus → metrics<br/>JWT validate + revocation → Lua (endpoint) → rate limit
+    Note over R: OTel → bot detector → metrics<br/>JWT validate + revocation → Lua (endpoint) → rate limit
     alt rejected (bot, bad JWT, over limit)
         R-->>C: 403 / 401 / 429 / 503 ...
     end
     R->>R: build proxy.Request<br/>(only allowed headers and query strings)
     R->>P: proxy(ctx, request)
-    Note over P: OTel → OpenCensus → metrics → Lua (proxy)<br/>CEL → JSON schema → shadow → static → modifier plugins
+    Note over P: OTel → metrics → Lua (proxy)<br/>CEL → JSON schema → shadow → static → modifier plugins
     par each backend (parallel, or sequential if configured)
         P->>B: backend proxy
         Note over B: filters → URL build → load balance → concurrent calls<br/>OTel → metrics → circuit breaker → rate limit → Lua → CEL

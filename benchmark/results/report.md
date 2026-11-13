@@ -1,75 +1,86 @@
 # inkgate vs KrakenD CE
 
-Run on 2026-11-11T22:08:22Z. The median of 3 rounds is shown, picked by requests per second.
+Run on 2026-11-13T05:59:25Z. 7 rounds of each scenario: the table shows the median round (by requests per second) and the range, lowest to highest round. When the ranges of the two gateways overlap the lead is marked "within noise": it is not a result.
+
+Go: inkgate 1.27.4, KrakenD CE 1.26.8. They are different, so the comparison includes the Go toolchain and runtime, not only the gateway code.
 
 ## Setup
 
 | | |
 |---|---|
 | Host | AMD Ryzen 5 5600 6-Core Processor, 12 threads, 8 GB RAM, Linux 7.3.3-300.fc45.x86_64 |
-| inkgate | `localhost/inkgate-bench:dev` (built from this repository), revision `6e90ab3`, Go 1.27.4, glibc 2.41 |
-| KrakenD CE | `docker.io/library/krakend:2.13.11` |
+| inkgate | `localhost/inkgate-bench:dev` (built from this repository), revision `1c37dfc`, Go 1.27.4, glibc 2.41 |
+| KrakenD CE | `docker.io/library/krakend:2.13.11`, built with Go 1.26.8 (MUSL-1.2.5_(alpine-3.23.5)) |
 | Backend | `docker.io/library/nginx:1.31.8-alpine`, fixed JSON answers, 2 CPUs |
 | Load generator | `ghcr.io/hatoo/oha:1.16.0`, 128 keep-alive connections, 4 CPUs |
 | Each gateway | 2 CPUs, 512m memory, one at a time |
-| Per run | 10s warm-up, then 30s measured |
+| Per run | 30s warm-up, then 30s measured |
 | Config | the same file for both: [config/gateway.json](../config/gateway.json) |
 
 ## Results
 
 ### passthrough: one backend, no-op encoding (the body is streamed, never parsed)
 
-| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
-| inkgate | 32,607 | 3.92 ms | 3.51 ms | 6.97 ms | 10.06 ms | 100.00% | 169% | 39 MB |
-| KrakenD CE | 23,354 | 5.48 ms | 5.16 ms | 9.54 ms | 12.84 ms | 100.00% | 173% | 40 MB |
+| inkgate | 32,469 (32,310 to 32,536) | 3.94 ms | 3.52 ms | 7.03 ms | 10.19 ms | 100.00% | 171% | 39 MB |
+| KrakenD CE | 23,402 (23,300 to 23,551) | 5.47 ms | 5.18 ms | 9.47 ms | 12.70 ms | 100.00% | 175% | 40 MB |
 
-inkgate serves **1.40x** the requests per second of KrakenD CE here. Runs (req/s): inkgate [27465, 32772, 32607], KrakenD [19749, 23354, 23369].
+inkgate against KrakenD CE: **1.39x**. Runs (req/s): inkgate [32374, 32354, 32514, 32536, 32498, 32469, 32310], KrakenD [23373, 23304, 23551, 23445, 23441, 23300, 23402].
 
 ### json: one backend, JSON is decoded and encoded again
 
-| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
-| inkgate | 30,191 | 4.24 ms | 3.80 ms | 7.54 ms | 10.88 ms | 100.00% | 169% | 39 MB |
-| KrakenD CE | 27,331 | 4.68 ms | 4.26 ms | 8.24 ms | 11.84 ms | 100.00% | 171% | 41 MB |
+| inkgate | 30,390 (30,132 to 30,668) | 4.21 ms | 3.78 ms | 7.48 ms | 10.78 ms | 100.00% | 172% | 38 MB |
+| KrakenD CE | 27,496 (27,454 to 27,611) | 4.65 ms | 4.23 ms | 8.19 ms | 11.76 ms | 100.00% | 173% | 43 MB |
 
-inkgate serves **1.10x** the requests per second of KrakenD CE here. Runs (req/s): inkgate [26377, 30191, 30671], KrakenD [23189, 27331, 27376].
+inkgate against KrakenD CE: **1.11x**. Runs (req/s): inkgate [30132, 30491, 30256, 30252, 30390, 30424, 30668], KrakenD [27611, 27588, 27454, 27469, 27557, 27486, 27496].
 
 ### merge: two backends called in parallel, both JSON bodies merged into one
 
-| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
-| inkgate | 17,175 | 7.45 ms | 7.00 ms | 11.71 ms | 15.36 ms | 100.00% | 173% | 45 MB |
-| KrakenD CE | 15,900 | 8.05 ms | 7.69 ms | 12.46 ms | 16.50 ms | 100.00% | 174% | 44 MB |
+| inkgate | 17,242 (17,219 to 17,349) | 7.42 ms | 7.02 ms | 11.63 ms | 15.27 ms | 100.00% | 176% | 45 MB |
+| KrakenD CE | 15,897 (15,867 to 16,125) | 8.05 ms | 7.66 ms | 12.47 ms | 16.62 ms | 100.00% | 176% | 45 MB |
 
-inkgate serves **1.08x** the requests per second of KrakenD CE here. Runs (req/s): inkgate [14525, 17175, 17342], KrakenD [14878, 15900, 15970].
+inkgate against KrakenD CE: **1.08x**. Runs (req/s): inkgate [17245, 17223, 17293, 17238, 17349, 17219, 17242], KrakenD [15998, 15896, 15897, 15938, 15877, 15867, 16125].
+
+### routes: 500 endpoints (250 static, 150 with one parameter, 100 with two), one backend each, requests spread over all of them
+
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+|---|--:|--:|--:|--:|--:|--:|--:|--:|
+| inkgate | 24,712 (24,474 to 24,923) | 5.18 ms | 4.63 ms | 9.19 ms | 13.49 ms | 100.00% | 176% | 48 MB |
+| KrakenD CE | 26,897 (26,664 to 27,124) | 4.76 ms | 4.30 ms | 8.44 ms | 12.14 ms | 100.00% | 173% | 43 MB |
+
+inkgate against KrakenD CE: **0.92x**. Runs (req/s): inkgate [24762, 24474, 24888, 24604, 24712, 24582, 24923], KrakenD [26664, 26962, 26794, 26858, 26897, 26984, 27124].
 
 ### plugin-modifier: one backend, a request modifier plugin adds a header and a response modifier plugin adds a field
 
-| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
-| inkgate | 30,371 | 4.21 ms | 3.74 ms | 7.55 ms | 11.26 ms | 100.00% | 170% | 48 MB |
-| KrakenD CE | 27,953 | 4.58 ms | 4.15 ms | 8.08 ms | 11.66 ms | 100.00% | 171% | 46 MB |
+| inkgate | 30,151 (29,861 to 30,193) | 4.24 ms | 3.78 ms | 7.59 ms | 11.09 ms | 100.00% | 172% | 44 MB |
+| KrakenD CE | 28,074 (27,766 to 28,324) | 4.56 ms | 4.14 ms | 8.02 ms | 11.49 ms | 100.00% | 172% | 42 MB |
 
-inkgate serves **1.09x** the requests per second of KrakenD CE here. Runs (req/s): inkgate [30371, 30262, 30450], KrakenD [27178, 27953, 28147].
+inkgate against KrakenD CE: **1.07x**. Runs (req/s): inkgate [30179, 30031, 29861, 30193, 30156, 30101, 30151], KrakenD [28122, 28074, 27766, 27835, 28222, 28062, 28324].
 
 ### plugin-server: one backend, a server plugin wraps the HTTP handler and adds a response header
 
-| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
-| inkgate | 30,044 | 4.26 ms | 3.79 ms | 7.62 ms | 11.32 ms | 100.00% | 170% | 48 MB |
-| KrakenD CE | 26,891 | 4.76 ms | 4.32 ms | 8.38 ms | 11.95 ms | 100.00% | 171% | 44 MB |
+| inkgate | 29,880 (29,832 to 30,079) | 4.28 ms | 3.81 ms | 7.67 ms | 11.15 ms | 100.00% | 172% | 44 MB |
+| KrakenD CE | 27,117 (26,288 to 27,304) | 4.72 ms | 4.29 ms | 8.30 ms | 11.90 ms | 100.00% | 173% | 42 MB |
 
-inkgate serves **1.12x** the requests per second of KrakenD CE here. Runs (req/s): inkgate [30034, 30044, 30291], KrakenD [27028, 26891, 26681].
+inkgate against KrakenD CE: **1.10x**. Runs (req/s): inkgate [29888, 29852, 29927, 29871, 29880, 30079, 29832], KrakenD [27117, 27177, 27263, 27030, 26288, 27032, 27304].
 
 ### plugin-client: one backend, a client plugin replaces the backend client and calls the API itself
 
-| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
+| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|
-| inkgate | 20,926 | 6.11 ms | 5.73 ms | 10.75 ms | 14.20 ms | 100.00% | 175% | 44 MB |
-| KrakenD CE | 20,034 | 6.39 ms | 5.99 ms | 11.18 ms | 15.13 ms | 100.00% | 176% | 45 MB |
+| inkgate | 21,025 (20,998 to 21,226) | 6.09 ms | 5.70 ms | 10.71 ms | 14.19 ms | 100.00% | 177% | 45 MB |
+| KrakenD CE | 19,998 (19,943 to 20,165) | 6.40 ms | 6.07 ms | 11.05 ms | 14.95 ms | 100.00% | 177% | 42 MB |
 
-inkgate serves **1.04x** the requests per second of KrakenD CE here. Runs (req/s): inkgate [21145, 20926, 20839], KrakenD [20018, 20034, 20098].
+inkgate against KrakenD CE: **1.05x**. Runs (req/s): inkgate [21226, 21006, 21078, 21007, 21025, 20998, 21186], KrakenD [20165, 19953, 20016, 19943, 19970, 19998, 20023].
 
 ## Plugin cost
 
@@ -77,8 +88,8 @@ Requests per second of each plugin scenario as a share of the same gateway on `j
 
 | Scenario | inkgate | KrakenD CE |
 |---|--:|--:|
-| plugin-modifier | 101% | 102% |
-| plugin-server | 100% | 98% |
+| plugin-modifier | 99% | 102% |
+| plugin-server | 98% | 99% |
 | plugin-client | 69% | 73% |
 
 ![requests per second](rps.svg)

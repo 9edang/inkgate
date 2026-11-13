@@ -16,7 +16,6 @@ import (
 	jose "github.com/9edang/inkgate/feature/auth/jose"
 	"github.com/9edang/inkgate/feature/security/botdetector/gateway"
 	"github.com/9edang/inkgate/feature/telemetry/metrics"
-	"github.com/9edang/inkgate/feature/telemetry/opencensus"
 	kotel "github.com/9edang/inkgate/feature/telemetry/otel"
 	ratelimitrouter "github.com/9edang/inkgate/feature/traffic/ratelimit/router"
 	luarouter "github.com/9edang/inkgate/feature/transform/lua/router"
@@ -36,20 +35,19 @@ func NewHandlerFactory(logger logging.Logger, metricCollector *metrics.HTTPMetri
 		func(next router.HandlerFactory) router.HandlerFactory { // 2. block known bots
 			return gateway.New(next, logger)
 		},
-		opencensus.New,                        // 3. OpenCensus span (legacy tracing)
-		metricCollector.NewHTTPHandlerFactory, // 4. count the request
-		func(next router.HandlerFactory) router.HandlerFactory { // 5. validate the JWT, check revocation
+		metricCollector.NewHTTPHandlerFactory, // 3. count the request
+		func(next router.HandlerFactory) router.HandlerFactory { // 4. validate the JWT, check revocation
 			return jose.HandlerFactory(next, params, logger, rejecter)
 		},
-		func(next router.HandlerFactory) router.HandlerFactory { // 6. run endpoint Lua scripts
+		func(next router.HandlerFactory) router.HandlerFactory { // 5. run endpoint Lua scripts
 			return luarouter.HandlerFactory(logger, next, params)
 		},
-		func(next router.HandlerFactory) router.HandlerFactory { // 7. endpoint rate limit
+		func(next router.HandlerFactory) router.HandlerFactory { // 6. endpoint rate limit
 			return ratelimitrouter.NewRateLimiterMw(logger, next)
 		},
 	}
 
-	// 8. turn the request (with its path params) into a proxy.Request, call stage 4
+	// 7. turn the request (with its path params) into a proxy.Request, call stage 4
 	// (flow/endpoint) and write the response with the endpoint's output encoding.
 	h := router.CustomEndpointHandlerWithHTTPError(router.NewRequestWithPathParams, server.DefaultToHTTPError)
 	for _, step := range slices.Backward(steps) {

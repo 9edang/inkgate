@@ -7,7 +7,7 @@ A connector is a stage-5 step that **makes the backend call itself** when its na
 
 ```mermaid
 flowchart LR
-    S[stage 5 steps 1-7] --> L{lambda ns?}
+    S[stage 5 steps 1-6] --> L{lambda ns?}
     L -- yes --> AWS[(AWS Lambda<br/>invoke function)]
     L -- no --> A{amqp ns?}
     A -- produce --> MQP[(RabbitMQ publish)]
@@ -49,6 +49,9 @@ The URL scheme picks the provider: `gcppubsub://`, `awssns://` / `awssqs://`, `a
 
 | Namespace | `inkgate/feature/connector/lambda` (alias `backend/lambda`) |
 |---|---|
-| Options | `function_name` (fixed) or `function_param_name` (taken from a request param), `region`, `endpoint` (custom, e.g. LocalStack), `max_retries` |
+| Options | `function_name` (fixed) or `function_param_name` (taken from a request param), `region` (default: `AWS_REGION` or the shared AWS config), `endpoint` (custom, e.g. LocalStack), `max_retries` (retries after the first call; default: the SDK's, 3 attempts) |
+
+The client is the AWS SDK for Go v2. Credentials come from its default chain (environment, shared files, instance or
+task role). If the AWS configuration cannot be loaded, the backend answers an error on each request; the gateway still starts.
 
 For `GET` backends the request params are the payload; for other methods it's the request body. The function's result payload is decoded as JSON and becomes the backend response.

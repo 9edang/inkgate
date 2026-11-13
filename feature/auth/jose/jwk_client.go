@@ -5,9 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	"github.com/9edang/inkgate/internal/auth0"
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
 )
 
 // TokenIDGetter extracts the keyID from the JSON web token

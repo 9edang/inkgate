@@ -25,14 +25,14 @@ inkgate/
 │       ├── engine.go              GorillaEngine: gorilla router, one route per endpoint + method
 │       ├── options.go             NewEngine: router options, 404/405, redirects, health with agents
 │       ├── params.go              path params from gorilla Vars, WithParams, ClientIP
-│       ├── endpoint.go            the endpoint handler (stage 3 step 8), error writing
+│       ├── endpoint.go            the endpoint handler (stage 3 step 7), error writing
 │       ├── render.go, negotiate.go  output encodings, Accept negotiation, YAML
 │       └── debug.go, echo.go
 └── feature/                       router code, each next to its feature
     ├── auth/jose                  jose_router.go: JWT validator/signer middleware
     ├── security/{cors,httpsecure} cors_router.go, middleware.go
     ├── security/botdetector/gateway
-    ├── telemetry/{metrics,opencensus,otel}
+    ├── telemetry/{metrics,otel}
     ├── traffic/ratelimit/router
     └── transform/{lua/router,xml}
 ```
@@ -57,9 +57,9 @@ flowchart TD
     NR -- "lower-case path exists" --> RD
     NR -- else --> N404["404 / error_body.404"]
     subgraph RQ ["request.NewHandlerFactory"]
-      R1["1 otel"] --> R2["2 bot detector"] --> R3["3 opencensus"] --> R4["4 metrics"] --> R5["5 JWT"] --> R6["6 Lua"] --> R7["7 rate limit"] --> R8["8 endpoint handler<br/>CustomEndpointHandlerWithHTTPError<br/>+ NewRequestWithPathParams"]
+      R1["1 otel"] --> R2["2 bot detector"] --> R3["3 metrics"] --> R4["4 JWT"] --> R5["5 Lua"] --> R6["6 rate limit"] --> R7["7 endpoint handler<br/>CustomEndpointHandlerWithHTTPError<br/>+ NewRequestWithPathParams"]
     end
-    R8 --> EP[["flow/endpoint"]]
+    R7 --> EP[["flow/endpoint"]]
 ```
 
 ## How it plugs into boot
