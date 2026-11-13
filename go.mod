@@ -13,7 +13,7 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/eapache/go-resiliency v1.7.0
 	github.com/fatih/color v1.18.0
-	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/go-jose/go-jose/v4 v4.1.9
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/google/cel-go v0.30.0
