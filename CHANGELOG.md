@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Security
+- go-jose v4.1.4 to v4.1.9. The releases in between fix, among others: panics on an empty ciphertext or an invalid
+  key, unbounded JSON nesting, out-of-range `NumericDate` values, an `alg` that did not match the key's curve,
+  verification with the wrong key when a token has several signatures, headers set to a falsy value being treated
+  as absent, and limits on the number of recipients and signatures (see the five advisories in the v4.1.7 notes).
+  Behaviour that changes: a JWK with an RSA key above 4096 bits is refused (v4.1.6), so a JWKS endpoint cannot make
+  every verification expensive; an identity provider that really uses a larger key needs `MaxRSAModulusBits`
+  raised, which inkgate does not expose.
 - Go 1.27.4 is the minimum toolchain (`go.mod`): 1.27.3's `net/http` can crash an HTTP/1 server through a race
   between `MaxBytesReader` and the headers (GO-2026-6859), and inkgate wraps every request body in `MaxBytesReader`
   (`max_body_bytes`, on by default). The Docker image already built with 1.27.4.

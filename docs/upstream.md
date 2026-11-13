@@ -147,7 +147,7 @@ Record what was skipped and why in the changelog.
 | `krakend-audit` | v0.9.3 | v0.9.4 | a rule now also counts `qos/circuit-breaker/http` |
 | Lura | the commit above | v2.14.1 (a tag older than the baseline) | nothing newer |
 | `krakend-ce` | v2.13.x | v2.13.11 | none |
-| `go-jose/v4` (imported directly) | v4.1.4 | v4.1.9 | not checked for fixes; `govulncheck` reports none that inkgate calls. Worth a bump and a read of the notes |
+| `go-jose/v4` (imported directly) | v4.1.9 | v4.1.9 | bumped from v4.1.4 on 13 November 2026 (security fixes in v4.1.5 to v4.1.7, see the changelog) |
 
 ## 4. Removal candidates
 
