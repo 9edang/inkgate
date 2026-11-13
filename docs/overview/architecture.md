@@ -107,6 +107,7 @@ Details: [startup.md](startup.md), [../flow/1-boot.md](../flow/1-boot.md).
 - `extra_config` namespaces are inkgate package paths (for example `inkgate/feature/traffic/httpcache`), the same in
   every inkgate build, and every namespace has a short alias (`qos/http-cache`). See
   [../guides/config-reference.md](../guides/config-reference.md). The Go module of this project is `inkgate`.
-- Unknown namespaces are ignored without an error: a typo silently leaves the feature off.
+- Unknown namespaces are refused by `run` and `check` (`--allow-unknown-namespaces` for configs migrated from KrakenD).
+  A feature never reads a key it does not know, so a typo would leave the feature off.
 - HTTP values: `X-Inkgate: Version <v>`, `X-Inkgate-Completed: true|false`, and `User-Agent: Inkgate Version <v>`
   towards backends.

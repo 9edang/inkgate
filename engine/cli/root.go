@@ -108,11 +108,13 @@ func init() {
 	lintCustomSchemaFlag := StringFlagBuilder(&lintCustomSchemaPath, "lint-schema", "s", lintCustomSchemaPath, "Lint against a custom schema path or URL")
 	lintNoNetworkFlag := BoolFlagBuilder(&lintNoNetwork, "lint-no-network", "n", lintNoNetwork, "Lint against the builtin Inkgate JSON schema, no network is required")
 	checkDebugFlag := CountFlagBuilder(&checkDebug, "debug", "d", "Information about how inkgate is interpreting your configuration file")
-	CheckCommand = NewCommand(checkCmd, cfgFlag, checkDebugFlag, routesFlag, prefixFlag, lintCurrentSchemaFlag, lintCustomSchemaFlag, lintNoNetworkFlag)
+	allowUnknownFlag := BoolFlagBuilder(&allowUnknownNamespaces, "allow-unknown-namespaces", "", false,
+		"Accepts extra_config namespaces inkgate does not know (they stay ignored), for configs migrated from KrakenD")
+	CheckCommand = NewCommand(checkCmd, cfgFlag, checkDebugFlag, routesFlag, prefixFlag, lintCurrentSchemaFlag, lintCustomSchemaFlag, lintNoNetworkFlag, allowUnknownFlag)
 	CheckCommand.AddConstraint(MutuallyExclusive("lint", "lint-no-network", "lint-schema"))
 
 	portFlag := IntFlagBuilder(&port, "port", "p", 0, "Listening port for the http service")
-	RunCommand = NewCommand(runCmd, cfgFlag, debugFlag, portFlag)
+	RunCommand = NewCommand(runCmd, cfgFlag, debugFlag, portFlag, allowUnknownFlag)
 
 	goSumFlag := StringFlagBuilder(&goSum, "sum", "s", goSum, "Path to the go.sum file to analyze")
 	goVersionFlag := StringFlagBuilder(&goVersion, "go", "g", goVersion, "The version of the go compiler used for your plugin")

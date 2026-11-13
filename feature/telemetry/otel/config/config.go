@@ -79,6 +79,7 @@ func (c *ConfigData) UnsetFieldsToDefaults() {
 		// to avoid using defaultSkipPaths, provide a list with an empty string
 		c.SkipPaths = []string{
 			"/__health",
+			"/__ready",
 			"/__debug/",
 			"/__echo/",
 			"/__stats/",

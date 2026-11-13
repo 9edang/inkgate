@@ -1,1 +1,913 @@
-{}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/9edang/inkgate/main/schema/schema.json",
+  "title": "inkgate configuration",
+  "description": "The configuration file of inkgate. Unknown keys are refused at the service, endpoint and backend level and in every namespace, because the gateway would ignore them silently. Where a namespace may be written (service, endpoint, backend) follows docs/guides/config-reference.md.",
+  "type": "object",
+  "properties": {
+    "$schema": {"type": "string"},
+    "version": {"const": 3},
+    "name": {"type": "string"},
+    "port": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "listen_ip": {"type": "string"},
+    "host": {"type": "array", "items": {"type": "string"}},
+    "timeout": {"$ref": "#/$defs/duration"},
+    "cache_ttl": {"$ref": "#/$defs/duration"},
+    "output_encoding": {"enum": ["json", "json-collection", "string", "no-op", "negotiate", "yaml", "xml"]},
+    "read_timeout": {"$ref": "#/$defs/duration"},
+    "write_timeout": {"$ref": "#/$defs/duration"},
+    "idle_timeout": {"$ref": "#/$defs/duration"},
+    "read_header_timeout": {"$ref": "#/$defs/duration"},
+    "max_header_bytes": {"type": "integer", "minimum": 0},
+    "max_body_bytes": {"type": "integer"},
+    "disable_keep_alives": {"type": "boolean"},
+    "disable_compression": {"type": "boolean"},
+    "max_idle_connections": {"type": "integer", "minimum": 0},
+    "max_idle_connections_per_host": {"type": "integer", "minimum": 0},
+    "idle_connection_timeout": {"$ref": "#/$defs/duration"},
+    "response_header_timeout": {"$ref": "#/$defs/duration"},
+    "expect_continue_timeout": {"$ref": "#/$defs/duration"},
+    "dialer_timeout": {"$ref": "#/$defs/duration"},
+    "dialer_fallback_delay": {"$ref": "#/$defs/duration"},
+    "dialer_keep_alive": {"$ref": "#/$defs/duration"},
+    "disable_rest": {"type": "boolean"},
+    "use_h2c": {"type": "boolean"},
+    "debug_endpoint": {"type": "boolean"},
+    "echo_endpoint": {"type": "boolean"},
+    "sequential_start": {"type": "boolean"},
+    "allow_insecure_connections": {"type": "boolean"},
+    "dns_cache_ttl": {"$ref": "#/$defs/duration"},
+    "max_shutdown_wait_time": {"$ref": "#/$defs/duration"},
+    "plugin": {
+      "type": "object",
+      "properties": {"folder": {"type": "string"}, "pattern": {"type": "string"}},
+      "additionalProperties": false
+    },
+    "tls": {"$ref": "#/$defs/tls"},
+    "client_tls": {"$ref": "#/$defs/clientTLS"},
+    "endpoints": {"type": "array", "items": {"$ref": "#/$defs/endpoint"}},
+    "async_agent": {"type": "array", "items": {"$ref": "#/$defs/asyncAgent"}},
+    "extra_config": {"$ref": "#/$defs/extraConfigService"}
+  },
+  "required": ["version"],
+  "additionalProperties": false,
+  "$defs": {
+    "duration": {
+      "type": "string",
+      "pattern": "^(0|-?([0-9]+(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+)$",
+      "description": "A Go duration such as \"500ms\", \"3s\" or \"1h30m\"; negative means no limit where a timeout allows it. A bare number would be read as nanoseconds."
+    },
+    "stringList": {"type": "array", "items": {"type": "string"}},
+    "pathPattern": {
+      "type": "string",
+      "pattern": "^/",
+      "description": "Must start with /. `*` only as the last character; /__debug, /__echo, /__health and /__ready are reserved."
+    },
+    "ns_router": {
+      "type": "object",
+      "properties": {
+        "return_error_msg": {"type": "boolean"},
+        "disable_health": {"type": "boolean"},
+        "health_path": {"type": "string"},
+        "disable_redirect_trailing_slash": {"type": "boolean"},
+        "disable_redirect_fixed_path": {"type": "boolean"},
+        "error_body": {"type": "object", "properties": {"404": {}, "405": {}}, "additionalProperties": false},
+        "json_passthrough": {"type": "boolean"},
+        "trusted_proxies": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "ns_context": {
+      "type": "object",
+      "properties": {
+        "request_id_header": {"type": "string"},
+        "trust_request_id": {"type": "boolean"},
+        "propagate_request_id": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_router_stream": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "mode": {"enum": ["event", "socket"]},
+        "idle_timeout": {"$ref": "#/$defs/duration"},
+        "max_message_size": {"type": "integer", "minimum": 0},
+        "keep_alive": {"$ref": "#/$defs/duration"},
+        "max_connections": {"type": "integer", "minimum": 0},
+        "allowed_origins": {"type": "array", "items": {"type": "string"}},
+        "subprotocols": {"type": "array", "items": {"type": "string"}},
+        "max_messages_per_second": {"type": "number", "exclusiveMinimum": 0},
+        "message_burst": {"type": "integer", "minimum": 1}
+      },
+      "additionalProperties": false,
+      "description": "Streaming endpoint: Server-Sent Events (event) or WebSocket (socket).",
+      "dependentRequired": {"message_burst": ["max_messages_per_second"]}
+    },
+    "ns_proxy": {
+      "type": "object",
+      "properties": {
+        "combiner": {"type": "string"},
+        "sequential": {"type": "boolean"},
+        "sequential_propagated_params": {"type": "array", "items": {"type": "string"}},
+        "shadow": {"type": "boolean"},
+        "shadow_timeout": {"$ref": "#/$defs/duration"},
+        "static": {
+          "type": "object",
+          "properties": {
+            "data": {"type": "object"},
+            "strategy": {"enum": ["always", "success", "errored", "complete", "incomplete"]}
+          },
+          "additionalProperties": false,
+          "required": ["data"]
+        },
+        "flatmap_filter": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"type": {"type": "string"}, "args": {"type": "array", "items": {"type": "string"}}},
+            "additionalProperties": false,
+            "required": ["type"]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ns_backend_http": {
+      "type": "object",
+      "properties": {"return_error_details": {"type": "string"}, "return_error_code": {"type": "boolean"}},
+      "additionalProperties": false
+    },
+    "ns_backend_http_client": {"type": "object", "properties": {"send_body_on_redirect": {"type": "boolean"}}, "additionalProperties": false},
+    "ns_backend_graphql": {
+      "type": "object",
+      "properties": {
+        "type": {"enum": ["query", "mutation", "QUERY", "MUTATION", "Query", "Mutation"]},
+        "method": {"enum": ["GET", "POST", "get", "post"]},
+        "query": {"type": "string"},
+        "query_path": {"type": "string"},
+        "variables": {"type": "object"},
+        "operationName": {"type": "string"}
+      },
+      "additionalProperties": false,
+      "description": "One of query or query_path is needed."
+    },
+    "ns_plugin_http_server": {
+      "type": "object",
+      "properties": {"name": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}},
+      "additionalProperties": true,
+      "description": "`name` picks the plugins to run; any other key is the settings of a plugin, read by that plugin."
+    },
+    "ns_plugin_http_client": {
+      "type": "object",
+      "properties": {"name": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}},
+      "additionalProperties": true,
+      "description": "`name` picks the plugins to run; any other key is the settings of a plugin, read by that plugin."
+    },
+    "ns_plugin_req_resp_modifier": {
+      "type": "object",
+      "properties": {"name": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]}},
+      "additionalProperties": true,
+      "description": "`name` picks the plugins to run; any other key is the settings of a plugin, read by that plugin."
+    },
+    "ns_auth_validator": {
+      "type": "object",
+      "properties": {
+        "alg": {"type": "string"},
+        "auth_header_name": {"type": "string"},
+        "jwk_url": {"type": "string"},
+        "cache": {"type": "boolean"},
+        "cache_duration": {"type": "integer", "minimum": 0},
+        "issuer": {"type": "string"},
+        "audience": {"type": "array", "items": {"type": "string"}},
+        "roles": {"type": "array", "items": {"type": "string"}},
+        "propagate_claims": {"type": "array", "items": {"type": "array", "items": {"type": "string"}}},
+        "propagate_claims_preserve_array": {"type": "boolean"},
+        "roles_key": {"type": "string"},
+        "roles_key_is_nested": {"type": "boolean"},
+        "cookie_key": {"type": "string"},
+        "cipher_suites": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "disable_jwk_security": {"type": "boolean"},
+        "jwk_fingerprints": {"type": "array", "items": {"type": "string"}},
+        "jwk_local_ca": {"type": "string"},
+        "jwk_local_path": {"type": "string"},
+        "secret_url": {"type": "string"},
+        "cypher_key": {"type": "string"},
+        "scopes": {"type": "array", "items": {"type": "string"}},
+        "scopes_key": {"type": "string"},
+        "scopes_matcher": {"type": "string"},
+        "key_identify_strategy": {"type": "string"},
+        "operation_debug": {"type": "boolean"},
+        "leeway": {"type": "string"},
+        "failed_jwk_key_cooldown": {"type": "string"},
+        "shared_cache_duration": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "ns_auth_signer": {
+      "type": "object",
+      "properties": {
+        "alg": {"type": "string"},
+        "kid": {"type": "string"},
+        "typ": {"type": "string"},
+        "jwk_url": {"type": "string"},
+        "full": {"type": "boolean"},
+        "keys_to_sign": {"type": "array", "items": {"type": "string"}},
+        "cipher_suites": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "disable_jwk_security": {"type": "boolean"},
+        "jwk_fingerprints": {"type": "array", "items": {"type": "string"}},
+        "jwk_local_ca": {"type": "string"},
+        "jwk_local_path": {"type": "string"},
+        "secret_url": {"type": "string"},
+        "cypher_key": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "ns_auth_revoker": {
+      "type": "object",
+      "properties": {
+        "n": {"type": "integer", "minimum": 0},
+        "p": {"type": "number"},
+        "hash_name": {"type": "string"},
+        "ttl": {"type": "integer", "minimum": 0},
+        "port": {"type": "integer", "minimum": 0, "maximum": 65535},
+        "token_keys": {"type": "array", "items": {"type": "string"}},
+        "headers": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "ns_auth_client_credentials": {
+      "type": "object",
+      "properties": {
+        "is_disabled": {"type": "boolean"},
+        "client_id": {"type": "string"},
+        "client_secret": {"type": "string"},
+        "token_url": {"type": "string"},
+        "scopes": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+        "endpoint_params": {"type": "object"}
+      },
+      "additionalProperties": false
+    },
+    "ns_security_cors": {
+      "type": "object",
+      "properties": {
+        "allow_origins": {"type": "array", "items": {"type": "string"}},
+        "allow_methods": {"type": "array", "items": {"type": "string"}},
+        "allow_headers": {"type": "array", "items": {"type": "string"}},
+        "expose_headers": {"type": "array", "items": {"type": "string"}},
+        "allow_credentials": {"type": "boolean"},
+        "allow_private_network": {"type": "boolean"},
+        "options_passthrough": {"type": "boolean"},
+        "options_success_status": {"type": "integer"},
+        "max_age": {"type": "string"},
+        "debug": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_security_http": {
+      "type": "object",
+      "properties": {
+        "allowed_hosts": {"type": "array", "items": {"type": "string"}},
+        "allowed_hosts_are_regex": {"type": "boolean"},
+        "host_proxy_headers": {"type": "array", "items": {"type": "string"}},
+        "sts_seconds": {"type": "integer"},
+        "force_sts_header": {"type": "boolean"},
+        "custom_frame_options_value": {"type": "string"},
+        "content_security_policy": {"type": "string"},
+        "public_key": {"type": "string"},
+        "ssl_host": {"type": "string"},
+        "referrer_policy": {"type": "string"},
+        "content_type_nosniff": {"type": "boolean"},
+        "browser_xss_filter": {"type": "boolean"},
+        "is_development": {"type": "boolean"},
+        "sts_include_subdomains": {"type": "boolean"},
+        "frame_deny": {"type": "boolean"},
+        "ssl_redirect": {"type": "boolean"},
+        "ssl_proxy_headers": {"type": "object", "additionalProperties": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "ns_security_bot_detector": {
+      "type": "object",
+      "properties": {
+        "deny": {"type": "array", "items": {"type": "string"}},
+        "allow": {"type": "array", "items": {"type": "string"}},
+        "patterns": {"type": "array", "items": {"type": "string"}},
+        "cache_size": {"type": "integer", "minimum": 0},
+        "empty_user_agent_is_bot": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_validation_cel": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {"check_expr": {"type": "string"}, "mod_expr": {"type": "string"}},
+        "additionalProperties": false
+      }
+    },
+    "ns_validation_json_schema": {"type": ["object", "boolean"], "description": "A JSON schema the request or response body must satisfy."},
+    "ns_qos_ratelimit_router": {
+      "type": "object",
+      "properties": {
+        "max_rate": {"type": "number", "minimum": 0},
+        "capacity": {"type": "integer", "minimum": 0},
+        "strategy": {"type": "string", "pattern": "^(?i)(ip|header|param)$"},
+        "client_max_rate": {"type": "number", "minimum": 0},
+        "client_capacity": {"type": "integer", "minimum": 0},
+        "key": {"type": "string"},
+        "every": {"$ref": "#/$defs/duration"},
+        "num_shards": {"type": "integer", "minimum": 0},
+        "cleanup_period": {"$ref": "#/$defs/duration"},
+        "cleanup_threads": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "ns_qos_ratelimit_proxy": {
+      "type": "object",
+      "properties": {
+        "max_rate": {"type": "number", "minimum": 0},
+        "capacity": {"type": "integer", "minimum": 0},
+        "every": {"$ref": "#/$defs/duration"}
+      },
+      "additionalProperties": false
+    },
+    "ns_qos_circuit_breaker": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "interval": {"type": "integer", "minimum": 0},
+        "timeout": {"type": "integer", "minimum": 0},
+        "max_errors": {"type": "integer", "minimum": 0},
+        "log_status_change": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_qos_http_cache": {
+      "type": "object",
+      "properties": {
+        "shared": {"type": "boolean"},
+        "max_size": {"type": "integer", "minimum": 0},
+        "max_items": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "ns_modifier_lua_endpoint": {
+      "type": "object",
+      "properties": {
+        "sources": {"type": "array", "items": {"type": "string"}},
+        "pre": {"type": "string"},
+        "post": {"type": "string"},
+        "live": {"type": "boolean"},
+        "allow_open_libs": {"type": "boolean"},
+        "skip_next": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_modifier_lua_proxy": {
+      "type": "object",
+      "properties": {
+        "sources": {"type": "array", "items": {"type": "string"}},
+        "pre": {"type": "string"},
+        "post": {"type": "string"},
+        "live": {"type": "boolean"},
+        "allow_open_libs": {"type": "boolean"},
+        "skip_next": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_modifier_lua_backend": {
+      "type": "object",
+      "properties": {
+        "sources": {"type": "array", "items": {"type": "string"}},
+        "pre": {"type": "string"},
+        "post": {"type": "string"},
+        "live": {"type": "boolean"},
+        "allow_open_libs": {"type": "boolean"},
+        "skip_next": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_modifier_martian": {"type": "object", "description": "A martian modifier tree; its structure is martian's own."},
+    "ns_backend_amqp_consumer": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "exchange": {"type": "string"},
+        "backoff_strategy": {"type": "string"},
+        "routing_key": {"type": "array", "items": {"type": "string"}},
+        "durable": {"type": "boolean"},
+        "delete": {"type": "boolean"},
+        "exclusive": {"type": "boolean"},
+        "no_wait": {"type": "boolean"},
+        "prefetch_count": {"type": "integer", "minimum": 0},
+        "prefetch_size": {"type": "integer", "minimum": 0},
+        "max_retries": {"type": "integer", "minimum": 0},
+        "auto_ack": {"type": "boolean"},
+        "no_local": {"type": "boolean"},
+        "nack_discard": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_backend_amqp_producer": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "exchange": {"type": "string"},
+        "backoff_strategy": {"type": "string"},
+        "routing_key": {"type": "array", "items": {"type": "string"}},
+        "durable": {"type": "boolean"},
+        "delete": {"type": "boolean"},
+        "exclusive": {"type": "boolean"},
+        "no_wait": {"type": "boolean"},
+        "prefetch_count": {"type": "integer", "minimum": 0},
+        "prefetch_size": {"type": "integer", "minimum": 0},
+        "max_retries": {"type": "integer", "minimum": 0},
+        "mandatory": {"type": "boolean"},
+        "immediate": {"type": "boolean"},
+        "exp_key": {"type": "string"},
+        "reply_to_key": {"type": "string"},
+        "msg_id_key": {"type": "string"},
+        "priority_key": {"type": "string"},
+        "static_routing_key": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_async_amqp": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "exchange": {"type": "string"},
+        "backoff_strategy": {"type": "string"},
+        "routing_key": {"type": "array", "items": {"type": "string"}},
+        "durable": {"type": "boolean"},
+        "delete": {"type": "boolean"},
+        "exclusive": {"type": "boolean"},
+        "no_wait": {"type": "boolean"},
+        "prefetch_count": {"type": "integer", "minimum": 0},
+        "prefetch_size": {"type": "integer", "minimum": 0},
+        "max_retries": {"type": "integer", "minimum": 0},
+        "host": {"type": "string"},
+        "auto_ack": {"type": "boolean"},
+        "no_local": {"type": "boolean"},
+        "nack_discard": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_backend_pubsub_publisher": {"type": "object", "properties": {"topic_url": {"type": "string"}}, "additionalProperties": false},
+    "ns_backend_pubsub_subscriber": {"type": "object", "properties": {"subscription_url": {"type": "string"}}, "additionalProperties": false},
+    "ns_backend_lambda": {
+      "type": "object",
+      "properties": {
+        "function_name": {"type": "string"},
+        "function_param_name": {"type": "string"},
+        "region": {"type": "string"},
+        "endpoint": {"type": "string"},
+        "max_retries": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    },
+    "ns_telemetry_logging": {
+      "type": "object",
+      "properties": {
+        "level": {"type": "string"},
+        "prefix": {"type": "string"},
+        "stdout": {"type": "boolean"},
+        "syslog": {"type": "boolean"},
+        "syslog_facility": {"type": "string"},
+        "format": {"enum": ["default", "logstash", "custom"]},
+        "custom_format": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "ns_telemetry_gelf": {
+      "type": "object",
+      "properties": {"address": {"type": "string"}, "enable_tcp": {"type": "boolean"}},
+      "additionalProperties": false
+    },
+    "ns_telemetry_logstash": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false,
+      "description": "No options: its presence switches the log output to logstash JSON lines."
+    },
+    "ns_telemetry_metrics": {
+      "type": "object",
+      "properties": {
+        "collection_time": {"$ref": "#/$defs/duration"},
+        "listen_address": {"type": "string"},
+        "proxy_disabled": {"type": "boolean"},
+        "router_disabled": {"type": "boolean"},
+        "backend_disabled": {"type": "boolean"},
+        "endpoint_disabled": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "ns_telemetry_influx": {
+      "type": "object",
+      "properties": {
+        "address": {"type": "string"},
+        "username": {"type": "string"},
+        "password": {"type": "string"},
+        "buffer_size": {"type": "integer", "minimum": 0},
+        "ttl": {"$ref": "#/$defs/duration"},
+        "db": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "ns_telemetry_opencensus": {"type": "object", "description": "Removed together with OpenCensus; use telemetry/opentelemetry."},
+    "ns_telemetry_opentelemetry": {
+      "type": "object",
+      "properties": {
+        "service_name": {"type": "string"},
+        "service_version": {"type": "string"},
+        "deploy_env": {"type": "string"},
+        "skip_paths": {"type": "array", "items": {"type": "string"}},
+        "metric_reporting_period": {"type": "integer", "minimum": 0},
+        "trace_sample_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "layers": {
+          "type": "object",
+          "properties": {
+            "global": {
+              "type": "object",
+              "properties": {
+                "disable_metrics": {"type": "boolean"},
+                "disable_traces": {"type": "boolean"},
+                "disable_propagation": {"type": "boolean"},
+                "report_headers": {"type": "boolean"},
+                "skip_headers": {"type": "array", "items": {"type": "string"}},
+                "metrics_static_attributes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {"key": {"type": "string"}, "value": {"type": "string"}},
+                    "additionalProperties": false,
+                    "required": ["key", "value"]
+                  }
+                },
+                "traces_static_attributes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {"key": {"type": "string"}, "value": {"type": "string"}},
+                    "additionalProperties": false,
+                    "required": ["key", "value"]
+                  }
+                },
+                "semantic_convention": {"type": "string"}
+              },
+              "additionalProperties": false
+            },
+            "proxy": {
+              "type": "object",
+              "properties": {
+                "disable_metrics": {"type": "boolean"},
+                "disable_traces": {"type": "boolean"},
+                "report_headers": {"type": "boolean"},
+                "skip_headers": {"type": "array", "items": {"type": "string"}},
+                "metrics_static_attributes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {"key": {"type": "string"}, "value": {"type": "string"}},
+                    "additionalProperties": false,
+                    "required": ["key", "value"]
+                  }
+                },
+                "traces_static_attributes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {"key": {"type": "string"}, "value": {"type": "string"}},
+                    "additionalProperties": false,
+                    "required": ["key", "value"]
+                  }
+                }
+              },
+              "additionalProperties": false
+            },
+            "backend": {
+              "type": "object",
+              "properties": {
+                "metrics": {
+                  "type": "object",
+                  "properties": {
+                    "disable_stage": {"type": "boolean"},
+                    "round_trip": {"type": "boolean"},
+                    "read_payload": {"type": "boolean"},
+                    "detailed_connection": {"type": "boolean"},
+                    "static_attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {"key": {"type": "string"}, "value": {"type": "string"}},
+                        "additionalProperties": false,
+                        "required": ["key", "value"]
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "traces": {
+                  "type": "object",
+                  "properties": {
+                    "disable_stage": {"type": "boolean"},
+                    "round_trip": {"type": "boolean"},
+                    "read_payload": {"type": "boolean"},
+                    "detailed_connection": {"type": "boolean"},
+                    "static_attributes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {"key": {"type": "string"}, "value": {"type": "string"}},
+                        "additionalProperties": false,
+                        "required": ["key", "value"]
+                      }
+                    },
+                    "report_headers": {"type": "boolean"},
+                    "skip_headers": {"type": "array", "items": {"type": "string"}}
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "exporters": {
+          "type": "object",
+          "properties": {
+            "otlp": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "host": {"type": "string"},
+                  "port": {"type": "integer", "minimum": 0, "maximum": 65535},
+                  "use_http": {"type": "boolean"},
+                  "disable_metrics": {"type": "boolean"},
+                  "disable_traces": {"type": "boolean"},
+                  "custom_metric_reporting_period": {"type": "integer", "minimum": 0}
+                },
+                "additionalProperties": false,
+                "required": ["name"]
+              }
+            },
+            "prometheus": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {"type": "string"},
+                  "port": {"type": "integer", "minimum": 0, "maximum": 65535},
+                  "host": {"type": "string"},
+                  "process_metrics": {"type": "boolean"},
+                  "go_metrics": {"type": "boolean"},
+                  "disable_metrics": {"type": "boolean"}
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "extraConfigService": {
+      "type": "object",
+      "properties": {
+        "router": {"$ref": "#/$defs/ns_router"},
+        "inkgate/engine/router": {"$ref": "#/$defs/ns_router"},
+        "context": {"$ref": "#/$defs/ns_context"},
+        "inkgate/context": {"$ref": "#/$defs/ns_context"},
+        "plugin/http-server": {"$ref": "#/$defs/ns_plugin_http_server"},
+        "inkgate/engine/transport/http/server/plugin": {"$ref": "#/$defs/ns_plugin_http_server"},
+        "auth/validator": {"$ref": "#/$defs/ns_auth_validator"},
+        "inkgate/feature/auth/jose/validator": {"$ref": "#/$defs/ns_auth_validator"},
+        "auth/revoker": {"$ref": "#/$defs/ns_auth_revoker"},
+        "inkgate/feature/auth/bloomfilter": {"$ref": "#/$defs/ns_auth_revoker"},
+        "security/cors": {"$ref": "#/$defs/ns_security_cors"},
+        "inkgate/feature/security/cors": {"$ref": "#/$defs/ns_security_cors"},
+        "security/http": {"$ref": "#/$defs/ns_security_http"},
+        "inkgate/feature/security/httpsecure": {"$ref": "#/$defs/ns_security_http"},
+        "security/bot-detector": {"$ref": "#/$defs/ns_security_bot_detector"},
+        "inkgate/feature/security/botdetector": {"$ref": "#/$defs/ns_security_bot_detector"},
+        "modifier/lua-endpoint": {"$ref": "#/$defs/ns_modifier_lua_endpoint"},
+        "inkgate/feature/transform/lua/router": {"$ref": "#/$defs/ns_modifier_lua_endpoint"},
+        "telemetry/logging": {"$ref": "#/$defs/ns_telemetry_logging"},
+        "inkgate/feature/telemetry/gologging": {"$ref": "#/$defs/ns_telemetry_logging"},
+        "telemetry/gelf": {"$ref": "#/$defs/ns_telemetry_gelf"},
+        "inkgate/feature/telemetry/gelf": {"$ref": "#/$defs/ns_telemetry_gelf"},
+        "telemetry/logstash": {"$ref": "#/$defs/ns_telemetry_logstash"},
+        "inkgate/feature/telemetry/logstash": {"$ref": "#/$defs/ns_telemetry_logstash"},
+        "telemetry/metrics": {"$ref": "#/$defs/ns_telemetry_metrics"},
+        "inkgate/feature/telemetry/metrics": {"$ref": "#/$defs/ns_telemetry_metrics"},
+        "telemetry/influx": {"$ref": "#/$defs/ns_telemetry_influx"},
+        "inkgate/feature/telemetry/influx": {"$ref": "#/$defs/ns_telemetry_influx"},
+        "telemetry/opencensus": {"$ref": "#/$defs/ns_telemetry_opencensus"},
+        "inkgate/feature/telemetry/opencensus": {"$ref": "#/$defs/ns_telemetry_opencensus"},
+        "telemetry/opentelemetry": {"$ref": "#/$defs/ns_telemetry_opentelemetry"}
+      },
+      "additionalProperties": false,
+      "description": "extra_config at the service level. A key that is not a namespace inkgate reads is refused: it would be ignored."
+    },
+    "extraConfigEndpoint": {
+      "type": "object",
+      "properties": {
+        "proxy": {"$ref": "#/$defs/ns_proxy"},
+        "inkgate/engine/proxy": {"$ref": "#/$defs/ns_proxy"},
+        "router/stream": {"$ref": "#/$defs/ns_router_stream"},
+        "inkgate/engine/router/stream": {"$ref": "#/$defs/ns_router_stream"},
+        "plugin/req-resp-modifier": {"$ref": "#/$defs/ns_plugin_req_resp_modifier"},
+        "inkgate/engine/proxy/plugin": {"$ref": "#/$defs/ns_plugin_req_resp_modifier"},
+        "auth/validator": {"$ref": "#/$defs/ns_auth_validator"},
+        "inkgate/feature/auth/jose/validator": {"$ref": "#/$defs/ns_auth_validator"},
+        "auth/signer": {"$ref": "#/$defs/ns_auth_signer"},
+        "inkgate/feature/auth/jose/signer": {"$ref": "#/$defs/ns_auth_signer"},
+        "security/bot-detector": {"$ref": "#/$defs/ns_security_bot_detector"},
+        "inkgate/feature/security/botdetector": {"$ref": "#/$defs/ns_security_bot_detector"},
+        "validation/cel": {"$ref": "#/$defs/ns_validation_cel"},
+        "inkgate/feature/validation/cel": {"$ref": "#/$defs/ns_validation_cel"},
+        "validation/json-schema": {"$ref": "#/$defs/ns_validation_json_schema"},
+        "inkgate/feature/validation/jsonschema": {"$ref": "#/$defs/ns_validation_json_schema"},
+        "qos/ratelimit/router": {"$ref": "#/$defs/ns_qos_ratelimit_router"},
+        "modifier/lua-endpoint": {"$ref": "#/$defs/ns_modifier_lua_endpoint"},
+        "inkgate/feature/transform/lua/router": {"$ref": "#/$defs/ns_modifier_lua_endpoint"},
+        "modifier/lua-proxy": {"$ref": "#/$defs/ns_modifier_lua_proxy"},
+        "inkgate/feature/transform/lua/proxy": {"$ref": "#/$defs/ns_modifier_lua_proxy"}
+      },
+      "additionalProperties": false,
+      "description": "extra_config at the endpoint level. A key that is not a namespace inkgate reads is refused: it would be ignored."
+    },
+    "extraConfigBackend": {
+      "type": "object",
+      "properties": {
+        "proxy": {"$ref": "#/$defs/ns_proxy"},
+        "inkgate/engine/proxy": {"$ref": "#/$defs/ns_proxy"},
+        "backend/http": {"$ref": "#/$defs/ns_backend_http"},
+        "inkgate/engine/transport/http/client": {"$ref": "#/$defs/ns_backend_http"},
+        "backend/http/client": {"$ref": "#/$defs/ns_backend_http_client"},
+        "backend/graphql": {"$ref": "#/$defs/ns_backend_graphql"},
+        "inkgate/engine/transport/http/client/graphql": {"$ref": "#/$defs/ns_backend_graphql"},
+        "plugin/http-client": {"$ref": "#/$defs/ns_plugin_http_client"},
+        "inkgate/engine/transport/http/client/plugin": {"$ref": "#/$defs/ns_plugin_http_client"},
+        "plugin/req-resp-modifier": {"$ref": "#/$defs/ns_plugin_req_resp_modifier"},
+        "inkgate/engine/proxy/plugin": {"$ref": "#/$defs/ns_plugin_req_resp_modifier"},
+        "auth/client-credentials": {"$ref": "#/$defs/ns_auth_client_credentials"},
+        "inkgate/feature/auth/oauth2client": {"$ref": "#/$defs/ns_auth_client_credentials"},
+        "validation/cel": {"$ref": "#/$defs/ns_validation_cel"},
+        "inkgate/feature/validation/cel": {"$ref": "#/$defs/ns_validation_cel"},
+        "qos/ratelimit/proxy": {"$ref": "#/$defs/ns_qos_ratelimit_proxy"},
+        "qos/circuit-breaker": {"$ref": "#/$defs/ns_qos_circuit_breaker"},
+        "inkgate/feature/traffic/circuitbreaker/gobreaker": {"$ref": "#/$defs/ns_qos_circuit_breaker"},
+        "qos/http-cache": {"$ref": "#/$defs/ns_qos_http_cache"},
+        "inkgate/feature/traffic/httpcache": {"$ref": "#/$defs/ns_qos_http_cache"},
+        "modifier/lua-backend": {"$ref": "#/$defs/ns_modifier_lua_backend"},
+        "inkgate/feature/transform/lua/proxy/backend": {"$ref": "#/$defs/ns_modifier_lua_backend"},
+        "modifier/martian": {"$ref": "#/$defs/ns_modifier_martian"},
+        "inkgate/feature/transform/martian": {"$ref": "#/$defs/ns_modifier_martian"},
+        "backend/amqp/producer": {"$ref": "#/$defs/ns_backend_amqp_producer"},
+        "inkgate/feature/connector/amqp/produce": {"$ref": "#/$defs/ns_backend_amqp_producer"},
+        "backend/amqp/consumer": {"$ref": "#/$defs/ns_backend_amqp_consumer"},
+        "inkgate/feature/connector/amqp/consume": {"$ref": "#/$defs/ns_backend_amqp_consumer"},
+        "backend/pubsub/publisher": {"$ref": "#/$defs/ns_backend_pubsub_publisher"},
+        "inkgate/feature/connector/pubsub/publisher": {"$ref": "#/$defs/ns_backend_pubsub_publisher"},
+        "backend/pubsub/subscriber": {"$ref": "#/$defs/ns_backend_pubsub_subscriber"},
+        "inkgate/feature/connector/pubsub/subscriber": {"$ref": "#/$defs/ns_backend_pubsub_subscriber"},
+        "backend/lambda": {"$ref": "#/$defs/ns_backend_lambda"},
+        "inkgate/feature/connector/lambda": {"$ref": "#/$defs/ns_backend_lambda"}
+      },
+      "additionalProperties": false,
+      "description": "extra_config at the backend level. A key that is not a namespace inkgate reads is refused: it would be ignored."
+    },
+    "extraConfigAgent": {
+      "type": "object",
+      "properties": {
+        "async/amqp": {"$ref": "#/$defs/ns_async_amqp"},
+        "inkgate/feature/connector/amqp/agent": {"$ref": "#/$defs/ns_async_amqp"}
+      },
+      "additionalProperties": false,
+      "description": "extra_config at the async agent level. A key that is not a namespace inkgate reads is refused: it would be ignored."
+    },
+    "backend": {
+      "type": "object",
+      "properties": {
+        "group": {"type": "string"},
+        "method": {"type": "string"},
+        "host": {"type": "array", "items": {"type": "string"}},
+        "disable_host_sanitize": {"type": "boolean"},
+        "url_pattern": {"type": "string"},
+        "allow": {"type": "array", "items": {"type": "string"}},
+        "deny": {"type": "array", "items": {"type": "string"}},
+        "mapping": {"type": "object", "additionalProperties": {"type": "string"}},
+        "encoding": {"enum": ["json", "safejson", "string", "no-op", "xml", "rss"]},
+        "is_collection": {"type": "boolean"},
+        "target": {"type": "string"},
+        "sd": {"enum": ["static", "dns"]},
+        "sd_scheme": {"type": "string"},
+        "timeout": {"$ref": "#/$defs/duration"},
+        "extra_config": {"$ref": "#/$defs/extraConfigBackend"},
+        "input_headers": {"type": "array", "items": {"type": "string"}},
+        "input_query_strings": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false,
+      "required": ["url_pattern"]
+    },
+    "endpoint": {
+      "type": "object",
+      "properties": {
+        "endpoint": {"$ref": "#/$defs/pathPattern"},
+        "method": {"type": "string", "pattern": "^(?i)[a-z]+$"},
+        "backend": {"type": "array", "items": {"$ref": "#/$defs/backend"}, "minItems": 1},
+        "concurrent_calls": {"type": "integer", "minimum": 1},
+        "timeout": {"$ref": "#/$defs/duration"},
+        "cache_ttl": {"$ref": "#/$defs/duration"},
+        "input_query_strings": {"type": "array", "items": {"type": "string"}},
+        "input_headers": {"type": "array", "items": {"type": "string"}},
+        "output_encoding": {"enum": ["json", "json-collection", "string", "no-op", "negotiate", "yaml", "xml"]},
+        "extra_config": {"$ref": "#/$defs/extraConfigEndpoint"}
+      },
+      "additionalProperties": false,
+      "required": ["endpoint", "backend"]
+    },
+    "asyncAgent": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "connection": {
+          "type": "object",
+          "properties": {
+            "max_retries": {"type": "integer", "minimum": 0},
+            "backoff_strategy": {"type": "string"},
+            "health_interval": {"$ref": "#/$defs/duration"}
+          },
+          "additionalProperties": false
+        },
+        "consumer": {
+          "type": "object",
+          "properties": {
+            "timeout": {"$ref": "#/$defs/duration"},
+            "workers": {"type": "integer", "minimum": 0},
+            "topic": {"type": "string"},
+            "max_rate": {"type": "number", "minimum": 0}
+          },
+          "additionalProperties": false
+        },
+        "encoding": {"enum": ["json", "safejson", "string", "no-op", "xml", "rss"]},
+        "backend": {"type": "array", "items": {"$ref": "#/$defs/backend"}},
+        "extra_config": {"$ref": "#/$defs/extraConfigAgent"}
+      },
+      "additionalProperties": false,
+      "required": ["name"]
+    },
+    "tls": {
+      "type": "object",
+      "properties": {
+        "disabled": {"type": "boolean"},
+        "public_key": {"type": "string"},
+        "private_key": {"type": "string"},
+        "ca_certs": {"type": "array", "items": {"type": "string"}},
+        "min_version": {"type": "string"},
+        "max_version": {"type": "string"},
+        "curve_preferences": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "prefer_server_cipher_suites": {"type": "boolean"},
+        "cipher_suites": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "enable_mtls": {"type": "boolean"},
+        "disable_system_ca_pool": {"type": "boolean"},
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"public_key": {"type": "string"}, "private_key": {"type": "string"}},
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "clientTLS": {
+      "type": "object",
+      "properties": {
+        "allow_insecure_connections": {"type": "boolean"},
+        "ca_certs": {"type": "array", "items": {"type": "string"}},
+        "disable_system_ca_pool": {"type": "boolean"},
+        "min_version": {"type": "string"},
+        "max_version": {"type": "string"},
+        "curve_preferences": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "cipher_suites": {"type": "array", "items": {"type": "integer", "minimum": 0}},
+        "client_certs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"certificate": {"type": "string"}, "private_key": {"type": "string"}},
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

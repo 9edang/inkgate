@@ -18,6 +18,34 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `golang:1.27-trixie`.
 
 ### Added
+- `/__ready`, a readiness endpoint apart from `/__health`: 200 while the instance takes requests, 503 (with
+  `Connection: close`) as soon as the shutdown starts, so a load balancer takes the instance out of rotation before its
+  connections drain. It does not look at the backends. Before the server listens a probe gets "connection refused".
+  `/__ready` is reserved: an endpoint cannot use it. It is skipped by OpenTelemetry like `/__health`.
+
+### Removed
+- The anonymous usage reporter (`feature/telemetry/usage`) and the `INKGATE_USAGE_URL` variable. It was off unless the
+  variable was set, so no running setup changes. The `go-contrib/uuid` and `hashcash` dependencies left with it.
+
+### Changed (breaking for configs)
+- A socket endpoint without `router/stream` `allowed_origins` allows only the same origin now: an upgrade whose `Origin`
+  host is not the `Host` of the request gets 403 before the backend is dialed. Before, every origin was allowed, which
+  left cross-site WebSocket hijacking open by default. A request without `Origin` (not a browser) still passes. A page
+  on another host needs `allowed_origins`; `["*"]` restores the old behaviour. Behind a proxy that rewrites `Host`,
+  list the public origin.
+- `inkgate run` and `inkgate check` refuse an `extra_config` namespace that inkgate does not read, at the service,
+  endpoint, backend and async agent level: a typo (`qos/ratelimt/router`) or a KrakenD namespace. The message names the
+  endpoint and the closest known namespace. Before, the key was ignored and its feature was off without a message.
+  `--allow-unknown-namespaces` keeps the old behaviour, for a config migrated from KrakenD. A config that
+  carries only namespaces of the docs (`docs/guides/config-reference.md`) is not affected.
+- `router/stream` refuses a value that is not an object (`"router/stream": true` used to turn event mode on) and an
+  option that does not exist (`max_conections`). `inkgate check` validates the section too; before, only `check -t`
+  and `run` found a bad one.
+
+### Added
+- `schema/schema.json` is a real JSON schema now (it was `{}`), so `inkgate check -n` works offline: it refuses unknown
+  keys at the top level, in endpoints and backends and inside every namespace, a namespace at a level that does not read
+  it, wrong types, bad durations and bad enum values.
 - `router/stream` `max_messages_per_second` and `message_burst` for socket endpoints: a token bucket per connection on
   what the client sends (pings included); over it both sides get close 1008 (policy violation). The endpoint rate
   limit counts upgrades, not messages.
@@ -47,7 +75,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **Breaking:** the server has request limits by default: `read_header_timeout` 10s, `read_timeout` 30s,
   `idle_timeout` 120s and the new `max_body_bytes` 10 MB (a larger body gets 413). A config that relies on no limit
   sets a negative value (`"read_timeout": "-1s"`, `"max_body_bytes": -1`). Streams and WebSocket connections are not
-  affected. The config hash (the anonymous cluster ID of the usage reporter) changes with them.
+  affected. The config hash changes with them.
 - Fixed sleeps and random ports in the HTTP server tests are replaced by waiting for the port and asking the OS for
   a free one; `make test` is green.
 - Request IDs are UUID v7 (time ordered). `trust_request_id` now defaults to `false` (an incoming `X-Request-Id`

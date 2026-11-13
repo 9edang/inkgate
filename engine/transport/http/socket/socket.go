@@ -183,8 +183,9 @@ func Proxy(ctx context.Context, u *Upgrade, req *proxy.Request) (*proxy.Response
 	upgrader := websocket.Upgrader{
 		// answer with the subprotocol the backend picked, and no other
 		Subprotocols: []string{backend.Subprotocol()},
-		// the endpoint already checked the Origin against its allowed_origins (CORS does not apply to WebSocket);
-		// without that list the backend decides, as it sees the same Origin
+		// the endpoint already checked the Origin before dialing the backend: against its allowed_origins, or, without
+		// that list, against the Host of the request (CORS does not apply to WebSocket). Checking again here would
+		// refuse the origins the list allows.
 		CheckOrigin: func(*http.Request) bool { return true },
 	}
 	if backend.Subprotocol() == "" {

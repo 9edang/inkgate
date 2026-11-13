@@ -14,16 +14,17 @@
 
 ## Behaviour to be aware of
 
-- **Unknown `extra_config` namespaces are ignored silently.** A typo turns a feature off without an error.
-- **`check -l` needs `INKGATE_SCHEMA_URL`**, and `check -n` uses a placeholder schema (`schema/schema.json`
-  is `{}`), so offline linting accepts everything until a schema is written.
+- **`check` finds unknown namespaces and `router/stream` mistakes; `check -n` finds the rest.** A typo in an option
+  inside another namespace (`"max_rte"` in `qos/ratelimit/router`), a misspelled top-level, endpoint or backend key and
+  a namespace written at a level that does not read it are accepted by `run` and by plain `check`, and the feature is
+  silently off. Run `check -n` before a deploy.
+- **`check -l` needs `INKGATE_SCHEMA_URL`.** `check -n` uses the schema in the binary.
 - **inkgate supports a subset of the router options.** See [engine/gateway.md](engine/gateway.md).
   The others are ignored.
 - **Rate-limit buckets are per instance**: N instances allow N × the configured rate.
 
 ## Follow-ups worth doing
 
-1. Write a real JSON schema for `check -n` / `check -l`.
 2. List the per-backend stack that `engine/proxy.NewDefaultFactory` builds (filters, load balancer, concurrency) as
    explicit steps in `flow/backend`.
 3. Replace the name-based registries in `engine/register` (`sd`, `encoding`, renders) with plain switches.

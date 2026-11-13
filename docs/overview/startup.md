@@ -33,7 +33,6 @@ flowchart TD
 |---|---|---|---|
 | 0 | CLI + parse | `flow/boot/main.go`, `engine/cli`, `engine/config` | fails fast on invalid config; `check` stops here |
 | 1 | logger | `flow/boot/logging.go` | first configured wins; the GELF writer is passed to entry for access logs |
-| 1b | usage reporter | `flow/boot/telemetry.go` | only when `INKGATE_USAGE_URL` is set |
 | 2 | plugins | `flow/boot/plugins.go` | loads every `.so` matching `plugin.pattern` in `plugin.folder` |
 | 3 | telemetry | `entry.Router.NewMetrics` + `flow/boot/telemetry.go` | entry creates the collector and its `/__stats` server; exporters do nothing without their namespace |
 | 3b | token rejecter | `flow/boot/telemetry.go` `newTokenRejecter` | bloom filter (`auth/revoker`) + CEL rules that use `JWT` |

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -40,20 +41,17 @@ func TestOriginPolicy(t *testing.T) {
 		"https://app.example.com/path":     false, // not an origin
 		"https://user@app.example.com":     false,
 	} {
-		if got := p.allows(origin); got != want {
+		if got := p.allows(origin, "gateway.test"); got != want {
 			t.Errorf("allows(%q) = %v, want %v", origin, got, want)
 		}
 	}
 
-	if !(originPolicy{}).allows("https://evil.com") {
-		t.Error("no list must allow every origin")
-	}
 	none, _ := parseOriginPolicy([]string{})
-	if none.allows("https://app.example.com") || !none.allows("") {
+	if none.allows("https://app.example.com", "app.example.com") || !none.allows("", "app.example.com") {
 		t.Error("an empty list must refuse every browser origin and let clients without Origin through")
 	}
 	star, _ := parseOriginPolicy([]string{"*"})
-	if !star.allows("https://evil.com") {
+	if !star.allows("https://evil.com", "gateway.test") {
 		t.Error(`"*" must allow every origin`)
 	}
 
@@ -120,6 +118,82 @@ func countingEcho(hits *atomic.Int32, offered *atomic.Value) *httptest.Server {
 		r.Header.Del("Origin")
 		inner.Config.Handler.ServeHTTP(w, r)
 	}))
+}
+
+// Without allowed_origins only the same origin passes: the Origin host is the Host of the request.
+func TestOriginPolicy_sameOriginWhenNoList(t *testing.T) {
+	var p originPolicy // no list configured
+	for _, tc := range []struct {
+		origin, host string
+		want         bool
+	}{
+		{"https://gw.example.com", "gw.example.com", true},
+		{"http://gw.example.com", "gw.example.com", true}, // behind a proxy that ends TLS the scheme differs
+		{"https://GW.example.com", "gw.example.com:443", true},
+		{"http://localhost:8080", "localhost:8080", true},
+		{"http://[::1]:8080", "[::1]:8080", true},
+		{"", "gw.example.com", true}, // not a browser
+		{"https://evil.com", "gw.example.com", false},
+		{"https://gw.example.com.evil.com", "gw.example.com", false},
+		{"https://evil.com", "evil.com:8443", false}, // same host name, but the port says another service
+		{"http://localhost:3000", "localhost:8080", false},
+		{"http://localhost:3000", "localhost", false},
+		{"null", "gw.example.com", false}, // sandboxed pages and redirects send "null"
+	} {
+		if got := p.allows(tc.origin, tc.host); got != tc.want {
+			t.Errorf("origin %q, host %q: allows = %v, want %v", tc.origin, tc.host, got, tc.want)
+		}
+	}
+}
+
+// The default of an endpoint without allowed_origins, end to end: a cross-origin upgrade gets 403 before the backend
+// is dialed; the same origin, no Origin and ["*"] connect.
+func TestSocketEndpoint_defaultIsSameOrigin(t *testing.T) {
+	for name, extra := range map[string]map[string]any{
+		"absent list": {"mode": "socket"},
+		"star":        {"mode": "socket", "allowed_origins": []any{"*"}},
+	} {
+		var hits atomic.Int32
+		var offered atomic.Value
+		backend := countingEcho(&hits, &offered)
+		gw := socketGateway(backend.URL, extra, 0)
+		gwHost := strings.TrimPrefix(gw.URL, "http://")
+
+		dial := func(origin string) int {
+			h := http.Header{}
+			if origin != "" {
+				h.Set("Origin", origin)
+			}
+			c, resp, err := websocket.DefaultDialer.Dial(wsURLOf(gw), h)
+			if c != nil {
+				c.Close()
+			}
+			if resp == nil {
+				t.Fatalf("%s, origin %q: %v", name, origin, err)
+			}
+
+			return resp.StatusCode
+		}
+		crossWant := http.StatusForbidden
+		if name == "star" {
+			crossWant = http.StatusSwitchingProtocols
+		}
+		before := hits.Load()
+		if code := dial("https://evil.example"); code != crossWant {
+			t.Errorf("%s, cross-origin: got %d, want %d", name, code, crossWant)
+		}
+		if crossWant == http.StatusForbidden && hits.Load() != before {
+			t.Errorf("%s: the backend was dialed for a refused origin", name)
+		}
+		if code := dial("http://" + gwHost); code != http.StatusSwitchingProtocols {
+			t.Errorf("%s, same origin: got %d", name, code)
+		}
+		if code := dial(""); code != http.StatusSwitchingProtocols {
+			t.Errorf("%s, no Origin: got %d", name, code)
+		}
+		gw.Close()
+		backend.Close()
+	}
 }
 
 func TestSocketEndpoint_allowedOrigins(t *testing.T) {

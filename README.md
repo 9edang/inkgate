@@ -12,7 +12,7 @@ copyright notices are kept in [NOTICE](NOTICE), as the Apache-2.0 license requir
 ## Get it
 
 ```sh
-git clone git@github.com:9edang/inkgate.git
+git clone https://github.com/9edang/inkgate.git
 cd inkgate
 go install github.com/9edang/inkgate/cmd/inkgate@latest    # or build it here, below
 ```

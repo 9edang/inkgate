@@ -9,6 +9,7 @@ import (
 	"io"
 	"math"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -46,7 +47,9 @@ import (
 //	"idle_timeout":     socket only, e.g. "60s": close when nothing moves for that long
 //	"max_message_size": socket only, bytes; larger messages close the connection
 //	"allowed_origins":  socket only, e.g. ["https://app.example.com", "https://*.example.com"]: an upgrade with
-//	                    another Origin gets 403 before the backend is dialed; one without Origin (not a browser) passes
+//	                    another Origin gets 403 before the backend is dialed; one without Origin (not a browser) passes.
+//	                    Without the option only the same origin is allowed (the Origin host is the Host of the request);
+//	                    ["*"] allows every origin
 //	"subprotocols":     socket only, e.g. ["graphql-transport-ws"]: only these reach the backend; a client that offers
 //	                    some and none of these gets 400
 //	"max_messages_per_second": socket only: messages and pings a client may send per second; over it the socket is
@@ -65,22 +68,44 @@ type streamConfig struct {
 	maxMessageSize int64
 	maxConnections int               // open streams or sockets of the endpoint at once; 0 means no limit
 	keepAlive      time.Duration     // an SSE stream silent that long gets a comment line; 0 means never
-	origins        originPolicy      // socket only: who may open a socket; the zero value allows all
+	origins        originPolicy      // socket only: who may open a socket; the zero value allows the same origin only
 	subprotocols   subprotocolPolicy // socket only: the subprotocols passed to the backend; nil passes all
 	messageRate    float64           // socket only: client messages per second; 0 means no limit
 	messageBurst   int               // socket only: messages above the rate a client may send at once
 }
 
-// parseStream reads the router/stream section of the endpoint. An invalid
-// section is an error, so a typo fails at startup and not silently at runtime.
+// streamKeys are the options of the router/stream section. A key that is not here is a typo: it would be ignored.
+var streamKeys = map[string]bool{
+	"enabled": true, "mode": true, "idle_timeout": true, "max_message_size": true, "keep_alive": true,
+	"max_connections": true, "allowed_origins": true, "subprotocols": true,
+	"max_messages_per_second": true, "message_burst": true,
+}
+
+// ValidateStream checks the router/stream section of an endpoint, the same way the router does when it builds the
+// endpoint, so `inkgate check` and `inkgate run` refuse a bad section before anything is served. It finds the
+// section under its alias too, so it can run before Normalize.
+func ValidateStream(cfg *config.EndpointConfig) error {
+	_, err := parseStream(cfg)
+
+	return err
+}
+
+// parseStream reads the router/stream section of the endpoint. A section that is not an object, an option it does not
+// know or an invalid value is an error, so a typo fails at startup and not silently at runtime.
 func parseStream(cfg *config.EndpointConfig) (streamConfig, error) {
-	v, ok := cfg.ExtraConfig[StreamNamespace]
+	v, ok := cfg.ExtraConfig.Get(StreamNamespace)
 	if !ok {
 		return streamConfig{}, nil
 	}
 	m, ok := v.(map[string]any)
 	if !ok {
-		m = map[string]any{}
+		return streamConfig{}, fmt.Errorf("endpoint %s: router/stream must be an object like {\"mode\": \"event\"}, got %v", cfg.Endpoint, v)
+	}
+	for _, k := range sortedKeys(m) {
+		if !streamKeys[k] {
+			return streamConfig{}, fmt.Errorf("endpoint %s: router/stream has an unknown option %q%s", cfg.Endpoint, k,
+				didYouMean(k, sortedKeys(streamKeys)))
+		}
 	}
 	if enabled, ok := m["enabled"].(bool); ok && !enabled {
 		return streamConfig{}, nil
@@ -410,4 +435,22 @@ func parseMessageRate(m map[string]any, sc *streamConfig) error {
 	}
 
 	return nil
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	return keys
+}
+
+func didYouMean(name string, candidates []string) string {
+	if c := config.Suggest(name, candidates); c != "" {
+		return fmt.Sprintf(" (did you mean %q?)", c)
+	}
+
+	return ""
 }

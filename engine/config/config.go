@@ -397,7 +397,7 @@ var ExtraConfigAlias = map[string]string{}
 var (
 	simpleURLKeysPattern    = regexp.MustCompile(`\{([\w\-\.:/]+)\}`)
 	sequentialParamsPattern = regexp.MustCompile(`^(resp[\d]+_.+)?(JWT\.([\w\-\.:/]+))?$`)
-	invalidPattern          = `^[^/]|\*.|/__(debug|echo|health)(/.*)?$`
+	invalidPattern          = `^[^/]|\*.|/__(debug|echo|health|ready)(/.*)?$`
 	errInvalidHost          = errors.New("invalid host")
 	errInvalidNoOpEncoding  = errors.New("can not use NoOp encoding with more than one backends connected to the same endpoint")
 	defaultPort             = 8080

@@ -343,8 +343,8 @@ inkgate check-plugin -s my-plugins/go.sum -l 2.39          # also compare glibc
 
 | Command | Required | Optional |
 |---|---|---|
-| `inkgate check` | `-c, --config <file>` | `-d` (repeat for more detail), `-t, --test-routes`, `-i, --indent`, `-l, --lint`, `-n, --lint-no-network`, `-s, --lint-schema <path>` (`-l`, `-n` and `-s` exclude each other) |
-| `inkgate run` | `-c, --config <file>` | `-d, --debug` (enables the debug endpoint and shows plugin `Debug` logs), `-p, --port <n>` (overrides the config port) |
+| `inkgate check` | `-c, --config <file>` | `-d` (repeat for more detail), `-t, --test-routes`, `-i, --indent`, `-l, --lint`, `-n, --lint-no-network`, `-s, --lint-schema <path>` (`-l`, `-n` and `-s` exclude each other), `--allow-unknown-namespaces` |
+| `inkgate run` | `-c, --config <file>` | `--allow-unknown-namespaces`, `-d, --debug` (enables the debug endpoint and shows plugin `Debug` logs), `-p, --port <n>` (overrides the config port) |
 
 `check` validates the JSON but does not open the `.so` files; use `test-plugin` for that. Plugins are loaded by
 `run`, from `plugin.folder` and `plugin.pattern` of the config.

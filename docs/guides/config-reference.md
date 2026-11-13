@@ -2,7 +2,11 @@
 
 A namespace can be written two ways in `inkgate.json`: as the **full name** (the inkgate package path) or as the
 **alias**. Aliases are mapped to full names at parse time (`flow/boot/main.go` → `aliases`), so code always sees
-the full name. Unknown namespaces are **ignored without an error**: a typo silently turns the feature off, and `check` will not warn you.
+the full name. A namespace that is neither is **refused** by `inkgate run` and `inkgate check`, with the closest known name
+("did you mean"), because the gateway would ignore it and the feature would be off. For a config migrated from KrakenD,
+`--allow-unknown-namespaces` accepts the KrakenD namespaces inkgate does not read; they stay ignored. `check -n`
+(the schema in [`schema/schema.json`](../../schema/schema.json)) also checks the options inside each namespace and
+where it is written. See [engine/cli](../engine/cli.md#what-run-and-check-refuse).
 
 `Level` says where the key goes: **S** service (top-level `extra_config`), **E** endpoint, **B** backend.
 
@@ -13,6 +17,7 @@ the full name. Unknown namespaces are **ignored without an error**: a typo silen
 | `proxy` | `inkgate/engine/proxy` | E, B | endpoint | [engine/proxy](../engine/proxy.md) |
 | `router/stream` | `inkgate/engine/router/stream` | E | endpoint | [engine/router](../engine/router.md#streaming-server-sent-events-and-websocket) |
 | `backend/http` | `inkgate/engine/transport/http/client` | B | backend | [engine/transport](../engine/transport.md) |
+| `backend/http/client` | (same, no alias) | B | backend | [engine/transport](../engine/transport.md) |
 | `backend/graphql` | `inkgate/engine/transport/http/client/graphql` | B | backend | [engine/transport](../engine/transport.md) |
 | `plugin/http-server` | `inkgate/engine/transport/http/server/plugin` | S | entry | [engine/async-and-plugins](../engine/async-and-plugins.md) |
 | `plugin/http-client` | `inkgate/engine/transport/http/client/plugin` | B | backend | [engine/async-and-plugins](../engine/async-and-plugins.md) |

@@ -42,6 +42,9 @@ func Main(r Router) {
 		config.ExtraConfigAlias[alias] = key
 	}
 
+	cmd.KnownNamespaces = KnownNamespaces()
+	cmd.CustomValidationFunc = validateEndpoints
+
 	var cfg config.Parser
 	cfg = koanf.New()
 	if env.App().FCEnable != "" {

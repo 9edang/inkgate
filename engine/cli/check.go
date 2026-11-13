@@ -58,17 +58,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		return
 	}
 
-	if customErrs := CustomValidationFunc(v); len(customErrs) > 0 {
-		eb := strings.Builder{}
-		for _, err := range customErrs {
-			fmt.Fprintf(&eb, "\t%s\n", err.Error())
-		}
-
-		cmd.Println(errorMsg("ERROR validating the configuration file:\n") + eb.String())
-		os.Exit(1) // skipcq: RVV-A0003
-
-		return
-	}
+	exitOnInvalidConfig(cmd, v)
 
 	shouldLint := lintCurrentSchema || lintNoNetwork || (lintCustomSchemaPath != "")
 
@@ -188,10 +178,6 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 		return
 	}
 	cmd.Println("Syntax OK!")
-}
-
-var CustomValidationFunc = func(_ config.ServiceConfig) []error {
-	return nil
 }
 
 // RunRouterFunc registers the config's endpoints on a real router to catch

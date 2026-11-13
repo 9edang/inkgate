@@ -100,6 +100,29 @@ func HealthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
+// ReadyPath is where ReadyHandler is served. Unlike /__health, which says the process is alive, it says the instance
+// takes traffic: a load balancer or an orchestrator stops sending requests when it answers 503.
+const ReadyPath = "/__ready"
+
+// ReadyHandler answers 200 while the server accepts requests and 503 once the shutdown has started, so the instance
+// leaves the load balancer before its connections drain. Before the server listens there is nothing to answer: the
+// probe gets "connection refused", which a probe counts as not ready. Not tied to any backend: a backend that is down
+// is for the circuit breaker, and taking every instance out of rotation for it would only turn a partial failure into
+// a total one.
+func ReadyHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set(constant.HeaderContentType, constant.MIMEJSON)
+	select {
+	case <-server.DrainFrom(r.Context()).Done():
+		w.Header().Set("Connection", "close")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		// #nosec G104 -- response write is best effort, the client may be gone
+		w.Write([]byte(`{"status":"shutting down"}`))
+	default:
+		// #nosec G104 -- response write is best effort, the client may be gone
+		w.Write([]byte(`{"status":"ready"}`))
+	}
+}
+
 // Run implements the router interface.
 func (r httpRouter) Run(cfg config.ServiceConfig) {
 	if cfg.Debug {
@@ -142,6 +165,8 @@ func (r httpRouter) Run(cfg config.ServiceConfig) {
 	case r.cfg.HealthPath != "":
 		r.cfg.Engine.Handle(r.cfg.HealthPath, "GET", r.cfg.HealthHandler)
 	}
+
+	r.cfg.Engine.Handle(ReadyPath, "GET", http.HandlerFunc(ReadyHandler))
 
 	server.InitHTTPDefaultTransport(cfg)
 

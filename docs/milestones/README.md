@@ -9,7 +9,7 @@ benchmark figure, a line of code or a reproduction. An item without evidence is 
 | [M2](m2-request-cost.md) | Cut the cost of a request | medium | the slowest features cost 40% to 93% of throughput, measured | 2.1, 2.2, 2.4, 2.5 done; 2.3 dropped; 2.6 to 2.8 open |
 | [M3](m3-streaming.md) | Harden live streams and WebSocket | medium | the stream code had no limits, no metrics and no shutdown drain | 3.1 to 3.6 done; 3.7, 3.8 and OpenTelemetry stream metrics open |
 | [M4](m4-traffic-resilience.md) | Traffic and resilience features | large | what an API gateway is usually expected to do next | not started |
-| [M5](m5-operability.md) | Config, observability and test hygiene | medium | makes everything above safer to change | 5.5 done; the rest open |
+| [M5](m5-operability.md) | Config, observability and test hygiene | medium | makes everything above safer to change | 5.1, 5.2 and 5.5 done; the rest open |
 
 M1 and the quick items of M2 can start at once; M3 to M5 can run in parallel after that.
 
@@ -35,8 +35,8 @@ against KrakenD CE, 2 CPUs and 512m each), so do not compare these numbers with 
 | 200 SSE streams | 19,999 events/s, p99 delay 0.9 ms | | 12.9 per event | 28 |
 | 200 WebSocket connections | 60,124 round trips/s (the backend alone: 427,880) | | 15.4 per message | 39 |
 
-Compared with KrakenD CE 2.13.11 on the same core: inkgate is 1.45× faster on average and uses 68% of its CPU per
-request.
+The comparison with KrakenD CE is in the [README](../../README.md#benchmark) and [benchmark/](../../benchmark/README.md),
+the one place that makes a performance claim.
 
 ## How an item is done
 

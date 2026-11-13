@@ -66,7 +66,7 @@ A 100 KB body is served at 5.4× the rate with half the memory. Design: [../desi
 Endpoints use `{param}` (`/users/{id}`). `cmd/inkgate` sets `config.RoutingPattern = BracketsRouterPatternBuilder`, so endpoints keep `{param}`
 and are registered as gorilla/mux route templates (`{id}`, `{id:[0-9]+}`); values come from `mux.Vars`. Parameters go to backends through `url_pattern`
 (`/api/users/{id}`). A path must start with `/`, may only use `*` as its last character, and cannot use the reserved
-`/__debug`, `/__echo` or `/__health` prefixes (`invalidPattern` in `engine/config/config.go`).
+`/__debug`, `/__echo`, `/__health` or `/__ready` prefixes (`invalidPattern` in `engine/config/config.go`).
 
 ## Streaming: Server-Sent Events and WebSocket
 
@@ -90,8 +90,9 @@ Common to both modes:
 - `max_connections` caps the streams or sockets open on the endpoint at once (default: no limit). Over it, the
   request gets `503` with `Retry-After: 1` before the backend is called; the open ones are not affected. Each open
   stream holds a goroutine, two connections and buffers, so set it to what the instance can hold
-- `"enabled": false` in the section turns it off without removing it. An unknown `mode` or a bad option value stops
-  the gateway at startup
+- `"enabled": false` in the section turns it off without removing it. A section that is not an object (`"router/stream":
+  true`), an option that does not exist (`max_conections`), an unknown `mode` or a bad option value stops the gateway at
+  startup, and `inkgate check` reports it with the endpoint and, for a typo, the option it looks like
 
 ### `mode: "event"` (SSE)
 
@@ -153,7 +154,10 @@ waits for its end. Off by default.
   with the user's cookies (cross-site WebSocket hijacking), unless the backend checks `Origin` itself. Scheme, host and
   port must match (default ports may be omitted); `*.` matches subdomains, not the domain itself; `"*"` allows all.
   A request without `Origin` passes: browsers always send it, other clients can send any value. An empty list refuses
-  every browser. Without the option the backend decides, as before
+  every browser. **Without the option only the same origin is allowed**: the host (and port) of `Origin` must be the
+  `Host` of the request, the scheme is not compared (behind a proxy that ends TLS the gateway sees `http`). A page on
+  another host gets 403; use the list to allow it, or `["*"]` for the old behaviour. Behind a proxy that rewrites
+  `Host`, list the public origin
 - `subprotocols` (for example `["graphql-transport-ws"]`): only these of the subprotocols the client offers are passed
   to the backend, in the client's order. A client that offers some and none of these gets **400** before the backend
   is dialed; one that offers none connects without a subprotocol. With or without the list, a backend that answers

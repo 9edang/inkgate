@@ -85,7 +85,7 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF server.ToHTTPErr
 			var offer []string // the subprotocols passed to the backend
 			if socketMode {
 				// refused before a connection slot is taken or the backend is dialed
-				if !sc.origins.allows(r.Header.Get("Origin")) {
+				if !sc.origins.allows(r.Header.Get("Origin"), r.Host) {
 					w.Header().Set(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
 					http.Error(w, "origin not allowed", http.StatusForbidden)
 
