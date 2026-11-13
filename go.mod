@@ -15,11 +15,9 @@ require (
 	github.com/aws/aws-sdk-go v1.55.8
 	github.com/bytedance/sonic v1.15.5
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/catalinc/hashcash v0.0.0-20161205220751-e6bc29ff4de9
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/eapache/go-resiliency v1.7.0
 	github.com/fatih/color v1.18.0
-	github.com/go-contrib/uuid v1.2.0
 	github.com/go-jose/go-jose/v3 v3.0.5
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/goccy/go-yaml v1.19.2

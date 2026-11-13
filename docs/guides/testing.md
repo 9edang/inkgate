@@ -80,8 +80,8 @@ docker run --rm -v "$PWD":/src:z -w /src golang:1.27-trixie make test   # :z for
 Tests that depend on time or ports must not use fixed sleeps or fixed ports: ask the OS for a free port and wait until
 it listens (see `engine/transport/http/server/server_test.go`), and never call a service on the internet (the `rss`
 integration case used to fetch showrss.info; the test backend now serves its feeds). A test that is slow under
-`-race` fails at random; `TestReport` in `feature/telemetry/usage` did, because of a proof of work of a million hashes
-per report, and now uses a small one.
+`-race` fails at random; the test of the removed usage reporter did, because of a proof of work of a million hashes
+per report.
 
 ## Known failures
 

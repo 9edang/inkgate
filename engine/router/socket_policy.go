@@ -11,10 +11,11 @@ import (
 
 // originPolicy is the allowed_origins list of a socket endpoint. A browser always sends Origin with a WebSocket
 // upgrade and, unlike fetch, does not apply CORS to it: without a check here any page the user visits can open a socket
-// with the user's cookies (cross-site WebSocket hijacking). The zero value allows every origin; an empty list allows
-// none (only clients that send no Origin).
+// with the user's cookies (cross-site WebSocket hijacking). The zero value, with no list configured, allows only the
+// same origin: an Origin whose host is the Host of the request. An empty list allows none (only clients that send no
+// Origin); ["*"] allows all.
 type originPolicy struct {
-	on       bool // the list is configured
+	on       bool // the list is configured; when not, only the same origin is allowed
 	any      bool
 	exact    map[string]bool // "https://app.example.com" (normalized)
 	suffixes []originSuffix  // "https://*.example.com"
@@ -27,15 +28,18 @@ type originSuffix struct {
 
 func (p originPolicy) enabled() bool { return p.on }
 
-// allows tells if a request with this Origin header may open a socket. No Origin means the client is not a browser:
-// the attack needs a browser, and a non-browser client can send any Origin it wants anyway.
-func (p originPolicy) allows(origin string) bool {
-	if !p.enabled() || p.any || origin == "" {
+// allows tells if a request with this Origin header, for this Host, may open a socket. No Origin means the client is
+// not a browser: the attack needs a browser, and a non-browser client can send any Origin it wants anyway.
+func (p originPolicy) allows(origin, host string) bool {
+	if p.any || origin == "" {
 		return true
 	}
 	o, ok := splitOrigin(origin)
 	if !ok {
 		return false
+	}
+	if !p.enabled() {
+		return sameHost(o, host)
 	}
 	if p.exact[o.String()] {
 		return true
@@ -47,6 +51,20 @@ func (p originPolicy) allows(origin string) bool {
 	}
 
 	return false
+}
+
+// sameHost tells if the origin is the host the request was sent to. The scheme is not compared: behind a proxy that
+// ends TLS the gateway sees http where the browser used https. A port left out is the default one of the origin's scheme.
+func sameHost(o webOrigin, host string) bool {
+	h, port, err := net.SplitHostPort(host)
+	if err != nil { // no port in the Host header
+		h, port = strings.Trim(host, "[]"), ""
+	}
+	if !strings.EqualFold(h, o.host) {
+		return false
+	}
+
+	return port == o.port || (port == "" && (o.port == "80" || o.port == "443"))
 }
 
 // webOrigin is scheme://host:port, lower case, with the port always set.

@@ -44,7 +44,6 @@ func Run(ctx context.Context, cfg config.ServiceConfig, r Router) {
 		return
 	}
 	logger.Info("Starting inkgate v" + core.InkgateVersion)
-	startUsageReporter(ctx, logger, cfg)
 	if wd, err := os.Getwd(); err == nil {
 		logger.Info("Working directory is", wd)
 	}

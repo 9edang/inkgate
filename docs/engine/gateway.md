@@ -102,9 +102,28 @@ flowchart TD
 | Path | When | Answer |
 |---|---|---|
 | `/__health` (or `health_path`) | unless `disable_health` | `{"status":"ok","agents":{...},"now":"..."}` |
+| `/__ready` | always | `{"status":"ready"}`; 503 `{"status":"shutting down"}` once the shutdown has started (not tied to the backends) |
 | `/__debug/{params:.*}` | `debug_endpoint: true` or `run -d` | logs and echoes the request |
 | `/__echo/{params:.*}` | `echo_endpoint: true` | returns the request as JSON |
 | `/__stats` on `:8090` | `telemetry/metrics` enabled | metrics snapshot |
+
+### Readiness for a load balancer or Kubernetes
+
+`/__health` says the process is alive; `/__ready` says it takes traffic. It answers 200 while the server runs and 503
+as soon as the shutdown (SIGTERM) starts. It does not look at the backends: a backend that is down is the circuit
+breaker's job, and taking every instance out of rotation for it turns a partial failure into a total one.
+
+- **Kubernetes:** `livenessProbe` on `/__health`, `readinessProbe` on `/__ready`, and a `startupProbe` on `/__ready` if
+  startup is slow. Before the server listens a probe gets "connection refused", which counts as not ready.
+- **ECS behind an ALB:** the target group health check on `/__ready`; liveness is the container health check on
+  `/__health`.
+
+Know the limit: on SIGTERM the listener closes at once (`http.Server.Shutdown`), so a probe sees 503 only on a
+connection that was already open, and "connection refused" otherwise. Either way it fails, but a load balancer needs
+several failed probes (ALB: the unhealthy threshold) and Kubernetes removes the endpoint a moment after the pod is
+terminating, so some requests still arrive after the instance stopped listening. Cover that gap with a pre-stop delay
+(`lifecycle.preStop: sleep 10` in Kubernetes, the target group's deregistration delay on ECS), and keep
+`max_shutdown_wait_time` shorter than the termination grace period minus that delay.
 
 ## Output encodings
 

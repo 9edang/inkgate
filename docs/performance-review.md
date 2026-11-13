@@ -54,7 +54,7 @@ Each finding was then checked against the code. The status column says what that
 | # | Finding | Status | Where it goes |
 |---|---|---|---|
 | 21 | With only `client_max_rate` set, every client gets a burst of 1. | confirmed: `feature/traffic/ratelimit/router/ratelimit.go:73` tests `cfg.MaxRate` (the endpoint rate, 0 here) instead of `cfg.ClientMaxRate` | [M1 1.5](milestones/m1-confirmed-bugs.md#15-client-rate-limit-burst-is-1): **fixed** |
-| 22 | An unknown `extra_config` namespace is ignored silently, so a typo turns a feature off. | tracked | [M5 5.1](milestones/m5-operability.md#51-strict-config) |
+| 22 | An unknown `extra_config` namespace is ignored silently, so a typo turns a feature off. | fixed: `run` and `check` refuse it | [M5 5.1](milestones/m5-operability.md#51-strict-config) |
 
 ## E. Platform
 

@@ -2,27 +2,18 @@ package boot
 
 import (
 	"errors"
-	"net/http"
-	"time"
 
 	"github.com/9edang/inkgate/context"
-	"github.com/9edang/inkgate/internal/env"
-
-	"github.com/go-contrib/uuid"
 
 	"github.com/9edang/inkgate/engine/config"
-	"github.com/9edang/inkgate/engine/core"
 	"github.com/9edang/inkgate/engine/logging"
 	"github.com/9edang/inkgate/engine/sd/dnssrv"
-	serverhttp "github.com/9edang/inkgate/engine/transport/http/server"
 	revoker "github.com/9edang/inkgate/feature/auth/bloomfilter/gateway"
 	jose "github.com/9edang/inkgate/feature/auth/jose"
-	audit "github.com/9edang/inkgate/feature/telemetry/audit"
 	influxdb "github.com/9edang/inkgate/feature/telemetry/influx"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
 	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	kotel "github.com/9edang/inkgate/feature/telemetry/otel"
-	usage "github.com/9edang/inkgate/feature/telemetry/usage"
 	cel "github.com/9edang/inkgate/feature/validation/cel"
 )
 
@@ -84,48 +75,4 @@ func newTokenRejecter(ctx context.Context, cfg config.ServiceConfig, l logging.L
 			return jose.FixedRejecter(false)
 		}),
 	})
-}
-
-const (
-	usageDelay = 5 * time.Second
-)
-
-// startUsageReporter sends anonymous usage stats to INKGATE_USAGE_URL. Off when the variable is unset.
-func startUsageReporter(ctx context.Context, logger logging.Logger, cfg config.ServiceConfig) {
-	logPrefix := "[SERVICE: Telemetry]"
-	reportURL := env.App().UsageURL
-	if reportURL == "" {
-		return
-	}
-
-	clusterID, err := cfg.Hash()
-	if err != nil {
-		logger.Debug(logPrefix, "Unable to create the Cluster ID hash:", err.Error())
-		return
-	}
-
-	go func() {
-		time.Sleep(usageDelay)
-
-		serverID := uuid.NewV4().String()
-		logger.Debug(logPrefix, "Registering usage stats for Cluster ID", clusterID)
-
-		s := audit.Parse(&cfg)
-		a, _ := audit.Marshal(&s)
-		if err := usage.Report(
-			ctx,
-			usage.Options{
-				URL:          reportURL,
-				ClusterID:    clusterID,
-				ServerID:     serverID,
-				Version:      core.InkgateVersion,
-				UserAgent:    core.InkgateUserAgent,
-				ExtraPayload: a,
-				Client:       &http.Client{Transport: serverhttp.NewTransport(cfg, logger)},
-			},
-			nil,
-		); err != nil {
-			logger.Debug(logPrefix, "Unable to create the usage report client:", err.Error())
-		}
-	}()
 }

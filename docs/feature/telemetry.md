@@ -67,11 +67,6 @@ implements one so far.
 
 OpenCensus is deprecated upstream and kept for parity. For new setups use OpenTelemetry.
 
-## usage
-
-`feature/telemetry/usage` sends anonymous usage stats (cluster ID hash, version, uptime and an audit summary) 5 s
-after start, **only when `INKGATE_USAGE_URL` is set** (the report server). Unset, nothing is sent.
-
 ## audit
 
 `feature/telemetry/audit` backs the `audit` command of both binaries. It turns the config into a compact bit-vector

@@ -16,6 +16,7 @@ func runFunc(cmd *cobra.Command, _ []string) {
 		cmd.Printf("ERROR parsing the configuration file: %s\n", err.Error())
 		os.Exit(-1)
 	}
+	exitOnInvalidConfig(cmd, serviceConfig)
 	serviceConfig.Debug = serviceConfig.Debug || (debug > 0)
 	if port != 0 {
 		serviceConfig.Port = port

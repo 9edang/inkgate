@@ -27,14 +27,14 @@ flowchart LR
 | `router.go` | the contract with the HTTP side: `Router` (Name, NewMetrics, RegisterEncoders, TestRoutes, Serve) and `Services` |
 | `boot.go` | `NewExecutor` and `Run`, the numbered startup checklist |
 | `logging.go` | `newLogger`: logstash → gologging → stdout, plus the GELF writer |
-| `telemetry.go` | `registerTelemetry` (Influx, OpenCensus, OTel), `newTokenRejecter`, `startUsageReporter` (opt-in: `INKGATE_USAGE_URL`) |
+| `telemetry.go` | `registerTelemetry` (Influx, OpenCensus, OTel), `newTokenRejecter` |
 | `plugins.go` | `LoadPluginsWithContext` and the `test-plugin` command |
 | `encoding.go` | `RegisterEncoders`: XML and RSS decoders (renders are registered by `entry.Router`) |
 
 ## `Run` step by step
 
 1. **Logging.** If the logger can't be built, `Run` returns. Then it logs `Starting inkgate v<version>`,
-   starts the usage reporter when configured, and logs the working directory.
+   and logs the working directory.
 2. **Global settings and plugins.** DNS SRV cache TTL (`dns_cache_ttl`); `.so` plugins from `plugin.folder`.
 3. **Shared services.** `r.NewMetrics` creates the collector (and serves `/__stats` with its own router). `registerTelemetry` starts the exporters and returns a shutdown func. `newTokenRejecter` builds the
    revocation check used by the JWT validator.

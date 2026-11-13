@@ -68,7 +68,7 @@ on one goroutine, and a client that leaves still ends the backend stream.
 
 ## 3.5 Origin and subprotocol allow-lists
 
-Today the gateway accepts any `Origin` on the client side and leaves the check to the backend, and passes any
+The gateway accepted any `Origin` on the client side, left the check to the backend and passed any
 subprotocol the client offers. Add `allowed_origins` and `subprotocols` to the socket mode, checked before the backend
 is dialed.
 
@@ -76,7 +76,8 @@ is dialed.
 gateway at startup: an SSE request is a fetch, which CORS already covers). A refused upgrade gets 403 (origin) or 400
 (no allowed subprotocol) before a connection slot is taken or the backend is dialed. Origins match on scheme, host and
 port, with `https://*.example.com` for subdomains; a request without `Origin` passes, an empty list refuses every
-browser. Found on the way: gorilla's dialer takes any subprotocol the backend answers with, so a backend could hand the
+browser. Without the list only the same origin passes (the default was allow-all until it was changed, see the
+changelog). Found on the way: gorilla's dialer takes any subprotocol the backend answers with, so a backend could hand the
 client one it never offered; the gateway now refuses that, with or without a list. Tests in
 `engine/router/socket_policy_test.go`, each checked to fail with its check removed.
 

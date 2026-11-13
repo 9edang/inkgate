@@ -12,15 +12,13 @@ check before you send it real traffic.
 | Request limits | on by default: `read_header_timeout` 10s, `read_timeout` 30s, `idle_timeout` 120s, `max_body_bytes` 10 MB (413 above). See [engine/transport.md](engine/transport.md#request-limits) |
 | Graceful shutdown | on SIGTERM, in-flight requests finish within `max_shutdown_wait_time`; SSE streams end as complete responses, WebSockets get a close frame 1001 (going away) |
 | Streams | per-endpoint `max_connections`, `keep_alive` for SSE; for sockets `allowed_origins`, `subprotocols` and a message rate per connection; metrics under `router.stream.<endpoint>.*`. See [engine/router.md](engine/router.md) |
-| Observability | metrics (`telemetry/metrics`, served on its own port at `/__stats`) and OpenTelemetry with a Prometheus exporter; structured logs; a UUID v7 request ID on every request ([overview/flow-context.md](overview/flow-context.md)); a liveness endpoint, `/__health` |
+| Observability | metrics (`telemetry/metrics`, served on its own port at `/__stats`) and OpenTelemetry with a Prometheus exporter; structured logs; a UUID v7 request ID on every request ([overview/flow-context.md](overview/flow-context.md)); a liveness endpoint, `/__health`, and a readiness endpoint, `/__ready` |
 | Security | the image runs as user 10001 on `debian:trixie-slim`; `govulncheck` and `gosec` report no findings |
 | Images | multi-arch (`linux/amd64`, `linux/arm64/v8`) on Docker Hub as `120200/inkgate` |
 
 Not there yet, so plan around it:
 
-- **No readiness endpoint** separate from `/__health`: the process answers it as soon as it listens.
 - **Rate limits are per instance**: N replicas allow N times the configured rate ([known-issues.md](known-issues.md)).
-- **An unknown `extra_config` namespace is ignored silently**: a typo turns a feature off without an error.
 - **`GOMEMLIMIT` is not set by the image** (see 2.2). `GOMAXPROCS` needs nothing: Go 1.25 and later read the container's
   CPU limit.
 - **Plugins** (`.so`) load only into a binary built with the same Go version, packages and glibc (Go 1.27, glibc 2.41):
@@ -33,7 +31,8 @@ restart drops no request, and a staged rollout to production succeeded.
 
 ### 2.1 Configuration
 
-- [ ] Every config change is validated with `inkgate check` before it is deployed
+- [ ] Every config change is validated with `inkgate check -n` before it is deployed: it refuses an unknown namespace,
+      a misspelled option and a wrong type, which the gateway would otherwise ignore
 - [ ] The request limits fit your traffic: raise `max_body_bytes` and `read_timeout` together for large uploads, set
       `max_connections` on streaming endpoints
 - [ ] `max_shutdown_wait_time` is shorter than the platform's termination grace period (Kubernetes
@@ -68,14 +67,16 @@ Put a fault injector such as [toxiproxy](https://github.com/Shopify/toxiproxy) b
 - [ ] Rate limits and authentication are tested with bad input, and sized for N replicas (limits are per instance);
       socket endpoints have `max_messages_per_second`, since the endpoint rate limit counts upgrades, not messages
 - [ ] TLS terminates where you intend: at the load balancer, or in inkgate with `tls` in the config
-- [ ] Every WebSocket endpoint that browsers reach with cookies has `allowed_origins`, or its backend checks `Origin`:
-      CORS does not apply to WebSocket ([engine/router.md](engine/router.md#mode-socket-websocket))
+- [ ] Every WebSocket endpoint that a page on another host must reach has `allowed_origins` (without it only the same
+      origin connects), and none uses `["*"]` for browsers with cookies: CORS does not apply to WebSocket ([engine/router.md](engine/router.md#mode-socket-websocket))
 
 ### 2.5 Observability
 
 - [ ] Metrics are scraped: request rate, latency histogram, errors and, for streaming endpoints, open connections
 - [ ] Logs are collected with the request ID, at `INFO` or above (DEBUG logs every request)
-- [ ] The platform's liveness check points at `/__health` (or the `health_path` you set in the `router` section)
+- [ ] The platform's liveness check points at `/__health` (or the `health_path` you set in the `router` section), and its
+      readiness check or load balancer health check at `/__ready` ([engine/gateway.md](engine/gateway.md#readiness-for-a-load-balancer-or-kubernetes)):
+      it turns 503 when the shutdown starts, so the instance leaves the rotation before it drains
 - [ ] Alerts on error rate, p99 latency, memory and restarts
 
 ### 2.6 Rollout
