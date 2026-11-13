@@ -16,7 +16,7 @@ flowchart TD
 
     subgraph RUN ["boot.Run (shared)"]
       H1["1 logger: logstash | gologging (+GELF) | stdout"] --> H2["2 DNS TTL, load .so plugins"]
-      H2 --> H3["3 router.NewMetrics → metrics + /__stats<br/>Influx, OpenCensus, OTel<br/>JWK cache, JWT revocation (bloom filter + CEL)"]
+      H2 --> H3["3 router.NewMetrics → metrics + /__stats<br/>Influx, OTel<br/>JWK cache, JWT revocation (bloom filter + CEL)"]
       H3 --> H4["4 backend.NewFactory → endpoint.NewFactory"]
       H4 --> H5{"async agents?"}
       H5 -- no --> H6["router.Serve(ctx, Services)"]

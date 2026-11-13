@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/9edang/inkgate/engine/config"
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 )
 
 func Test_getSignatureConfig(t *testing.T) {

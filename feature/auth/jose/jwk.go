@@ -19,7 +19,7 @@ import (
 	"github.com/9edang/inkgate/context"
 	"github.com/9edang/inkgate/internal/json"
 
-	jose "github.com/go-jose/go-jose/v3"
+	jose "github.com/go-jose/go-jose/v4"
 
 	"github.com/9edang/inkgate/engine/core"
 	auth0 "github.com/9edang/inkgate/internal/auth0"

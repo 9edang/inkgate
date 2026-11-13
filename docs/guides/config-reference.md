@@ -50,7 +50,6 @@ where it is written. See [engine/cli](../engine/cli.md#what-run-and-check-refuse
 | `telemetry/logstash` | `inkgate/feature/telemetry/logstash` | S | boot | [feature/telemetry](../feature/telemetry.md) |
 | `telemetry/metrics` | `inkgate/feature/telemetry/metrics` | S | all | [feature/telemetry](../feature/telemetry.md) |
 | `telemetry/influx` | `inkgate/feature/telemetry/influx` | S | boot | [feature/telemetry](../feature/telemetry.md) |
-| `telemetry/opencensus` | `inkgate/feature/telemetry/opencensus` | S | all | [feature/telemetry](../feature/telemetry.md) |
 | `telemetry/opentelemetry` | (same, no alias) | S | all | [feature/telemetry](../feature/telemetry.md) |
 
 ## Minimal example

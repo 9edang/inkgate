@@ -23,9 +23,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   connections drain. It does not look at the backends. Before the server listens a probe gets "connection refused".
   `/__ready` is reserved: an endpoint cannot use it. It is skipped by OpenTelemetry like `/__health`.
 
-### Removed
+### Removed (breaking for configs)
 - The anonymous usage reporter (`feature/telemetry/usage`) and the `INKGATE_USAGE_URL` variable. It was off unless the
   variable was set, so no running setup changes. The `go-contrib/uuid` and `hashcash` dependencies left with it.
+- OpenCensus: the `telemetry/opencensus` service namespace and all its exporters (Jaeger, Zipkin, Datadog, Stackdriver,
+  X-Ray, InfluxDB, Prometheus, OC agent, logger), the OpenCensus request, pipeline and backend spans, and
+  `feature/telemetry/opencensus`. OpenTelemetry (`telemetry/opentelemetry`) is the only tracing path. A config that still
+  has `telemetry/opencensus` is now refused by `inkgate run` and `inkgate check` as an unknown namespace (see the
+  strict config entry; `--allow-unknown-namespaces` ignores it, and the traces and metrics it exported stop). Move the exporters to `telemetry/opentelemetry` (OTLP or Prometheus). `inkgate
+  audit` still reads the namespace in a KrakenD config and flags it as deprecated. Ten direct dependencies left `go.mod`
+  (the OpenCensus exporters and library, `zipkin-go`), 26 lines with the indirect ones.
 
 ### Changed (breaking for configs)
 - A socket endpoint without `router/stream` `allowed_origins` allows only the same origin now: an upgrade whose `Origin`
@@ -41,6 +48,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `router/stream` refuses a value that is not an object (`"router/stream": true` used to turn event mode on) and an
   option that does not exist (`max_conections`). `inkgate check` validates the section too; before, only `check -t`
   and `run` found a bad one.
+- Logging: `telemetry/logging` runs on `log/slog` instead of `op/go-logging` (unmaintained since 2016), behind the same
+  `logging.Logger` interface. Output is unchanged for the default and logstash formats: the same lines, colors,
+  prefix, arguments joined with a space, checked against the old build. A `custom_format` may use `time`, `level`,
+  `module`, `message`, `id`, `pid`, `program` and `color`; the call-site variables (`%{shortfile}`, `%{longfile}`,
+  `%{shortfunc}`, `%{longfunc}`, `%{shortpkg}`, `%{longpkg}`, `%{callpath}`) are refused at startup, where they used to
+  print the logger's own location and not the caller's. A bad `custom_format` is now an error and not a panic.
+  `%{id}` counts per logger, not per process. `op/go-logging` left `go.mod`.
+- JWT: go-jose v3 to v4 (`feature/auth/jose`, `internal/auth0`). v4 refuses an HMAC key shorter than the hash output
+  (RFC 7518 3.2): 32 bytes for `HS256`, 48 for `HS384`, 64 for `HS512`. A JWK or secret that is shorter now fails on
+  every token (validator) or every signature (signer); use a longer key. The `audience` rule is unchanged: every
+  configured audience must be in the token (v4's own check accepts any one, so inkgate checks each). Tokens are parsed
+  against the 13 supported algorithms only, and the configured `alg` is still enforced after parsing.
 
 ### Added
 - `schema/schema.json` is a real JSON schema now (it was `{}`), so `inkgate check -n` works offline: it refuses unknown
@@ -84,6 +103,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Decoded backend responses carry the backend status in `Metadata.StatusCode`; a merged response keeps it when all
   backends agree. An `auth/signer` endpoint now sends the backend status (a backend 201 is no longer turned into 200).
 - Built with Go 1.27.3.
+- The Lambda connector (`backend/lambda`) uses the AWS SDK for Go v2 (`aws-sdk-go-v2/service/lambda`) instead of the
+  archived v1, which left `go.mod` with `jmespath/go-jmespath`. Same config, same credential chain. Two differences:
+  `max_retries` now works (the v1 code read it as an int, but a JSON number is a float64, so it was always ignored)
+  and counts retries after the first call; `endpoint` and `max_retries` also apply when `region` is not set. A config
+  that sets `max_retries` now retries as many times as it says instead of the SDK default. Upgrading the SDK moved the
+  indirect AWS modules (`sts`, `sso`, `smithy-go`, ...) used by the Pub/Sub connector to newer versions.
 - Benchmark harness: 7 rounds and a 30 s warm-up by default (were 3 and 10 s). The report gives the median and the
   range of each gateway and marks a lead as "within noise" when the ranges overlap. New `routes` scenario: 500
   endpoints, static and parameterised, with the load spread over all of them. `meta.json` and the report record the Go

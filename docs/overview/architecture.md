@@ -20,7 +20,7 @@ inkgate/
 │   ├── traffic/        ratelimit, circuitbreaker, httpcache
 │   ├── transform/      lua, martian, xml, rss
 │   ├── connector/      amqp (+ async agents), pubsub, lambda
-│   └── telemetry/      metrics, influx, opencensus, otel, gologging, gelf, logstash, usage, audit
+│   └── telemetry/      metrics, influx, otel, gologging, gelf, logstash, usage, audit
 │                       a feature that needs HTTP context keeps its router code next to its logic
 │
 ├── engine/             ③ PLUMBING — generic machinery
@@ -60,18 +60,18 @@ client
   │   secure headers → Lua (service) → bot detector → gorilla/mux router
   │                                                     │ 404 / 405 / redirects
   ▼  request  (one per endpoint) ─────────────────────────────────────────────
-  │   1 OpenTelemetry   2 bot detector   3 OpenCensus   4 metrics
-  │   5 JWT validation + revocation   6 Lua (endpoint)   7 rate limit
-  │   8 endpoint handler: build proxy.Request, write response in output encoding
+  │   1 OpenTelemetry   2 bot detector   3 metrics
+  │   4 JWT validation + revocation   5 Lua (endpoint)   6 rate limit
+  │   7 endpoint handler: build proxy.Request, write response in output encoding
   ▼  endpoint ────────────────────────────────────────────────────────────────
-  │   1 OpenTelemetry   2 OpenCensus   3 metrics   4 Lua (proxy)
-  │   5 CEL rules   6 JSON schema   7 shadow backends
-  │   8 engine/proxy: static data → modifier plugins → fan out to backends → merge → flatmap
+  │   1 OpenTelemetry   2 metrics   3 Lua (proxy)
+  │   4 CEL rules   5 JSON schema   6 shadow backends
+  │   7 engine/proxy: static data → modifier plugins → fan out to backends → merge → flatmap
   ▼  backend  (one per backend) ──────────────────────────────────────────────
   │   (engine/proxy already ran: query/header filter → URL build → concurrent calls → load balancer)
-  │   1 OpenTelemetry   2 OpenCensus   3 metrics   4 circuit breaker   5 rate limit
-  │   6 Lua (backend)   7 CEL   8 Lambda   9 AMQP   10 Pub/Sub
-  │   11 Martian → HTTP client: client plugins → OpenCensus → OpenTelemetry → cache → OAuth2 → net/http
+  │   1 OpenTelemetry   2 metrics   3 circuit breaker   4 rate limit
+  │   5 Lua (backend)   6 CEL   7 Lambda   8 AMQP   9 Pub/Sub
+  │   10 Martian → HTTP client: client plugins → OpenTelemetry → cache → OAuth2 → net/http
   ▼
 backend service
 ```
@@ -84,7 +84,7 @@ In every stage file the steps are a slice written **in request order**, with the
 
 1. logging and (opt-in) usage reporter
 2. DNS TTL, load Go `.so` plugins
-3. shared services: metrics collector (`entry.Router.NewMetrics`), Influx, OpenCensus, OpenTelemetry, JWK cache, JWT revocation
+3. shared services: metrics collector (`entry.Router.NewMetrics`), Influx, OpenTelemetry, JWK cache, JWT revocation
 4. build `backend.NewFactory` → `endpoint.NewFactory`
 5. `entry.Serve(ctx, Services)` builds stages 2 and 3 and serves; async agents run beside it
 

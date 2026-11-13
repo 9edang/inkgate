@@ -10,7 +10,7 @@ then asks `entry.Router` (a `boot.Router`) to build and serve the HTTP side.
 flowchart LR
     subgraph shared ["boot"]
       CLI[CLI + config parse] --> L[logger]
-      L --> T[metrics from entry.Router<br/>Influx · OpenCensus · OTel]
+      L --> T[metrics from entry.Router<br/>Influx · OTel]
       T --> J[JWT rejecter<br/>bloom filter + CEL]
       J --> PL[.so plugins]
       PL --> BF[backend.NewFactory] --> EF[endpoint.NewFactory]
@@ -27,7 +27,7 @@ flowchart LR
 | `router.go` | the contract with the HTTP side: `Router` (Name, NewMetrics, RegisterEncoders, TestRoutes, Serve) and `Services` |
 | `boot.go` | `NewExecutor` and `Run`, the numbered startup checklist |
 | `logging.go` | `newLogger`: logstash → gologging → stdout, plus the GELF writer |
-| `telemetry.go` | `registerTelemetry` (Influx, OpenCensus, OTel), `newTokenRejecter` |
+| `telemetry.go` | `registerTelemetry` (Influx, OTel), `newTokenRejecter` |
 | `plugins.go` | `LoadPluginsWithContext` and the `test-plugin` command |
 | `encoding.go` | `RegisterEncoders`: XML and RSS decoders (renders are registered by `entry.Router`) |
 

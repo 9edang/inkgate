@@ -2,17 +2,19 @@ package jose
 
 import (
 	"fmt"
-	"github.com/9edang/inkgate/internal/json"
 	"math"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 
+	"github.com/9edang/inkgate/internal/json"
+
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	"github.com/9edang/inkgate/engine/proxy"
 	"github.com/9edang/inkgate/internal/auth0"
-	jose "github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
 )
 
 var ErrNoHeadersToPropagate = fmt.Errorf("header propagation is disabled because there is no propagate_claims attribute")

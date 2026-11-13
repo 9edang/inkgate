@@ -15,7 +15,6 @@ import (
 	server "github.com/9edang/inkgate/engine/transport/http/server/plugin"
 	bf "github.com/9edang/inkgate/feature/auth/bloomfilter/gateway"
 	botdetector "github.com/9edang/inkgate/feature/security/botdetector/gateway"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	ratelimit "github.com/9edang/inkgate/feature/traffic/ratelimit/router"
 )
 
@@ -55,7 +54,7 @@ func generateCfg() *config.ServiceConfig {
 			router.Namespace:      map[string]any{},
 			bf.Namespace:          map[string]any{},
 			botdetector.Namespace: map[string]any{},
-			opencensus.Namespace:  map[string]any{},
+			openCensusNamespace:   map[string]any{},
 			ratelimit.Namespace:   map[string]any{},
 		},
 		AsyncAgents: []*config.AsyncAgent{

@@ -1,7 +1,7 @@
 # feature/telemetry — seeing what happens
 
 **Code:** [feature/telemetry](../../feature/telemetry): logging (`gologging`, `gelf`, `logstash`), metrics (`metrics`,
-`influx`), tracing (`otel`, `opencensus`), `usage`, `audit`
+`influx`), tracing (`otel`), `usage`, `audit`
 
 ```mermaid
 flowchart LR
@@ -11,7 +11,6 @@ flowchart LR
     S3 & S4 & S5 --> M[metrics collector] --> ME[":8090 /__stats"]
     M --> IF[(InfluxDB)]
     S3 & S4 & S5 & SV --> OT[OpenTelemetry] --> OTLP[(OTLP collector)] & PR[(Prometheus)]
-    S3 & S4 & S5 --> OC[OpenCensus] --> EXP[(Jaeger · Zipkin · Datadog · Stackdriver<br/>X-Ray · Influx · Prometheus · OC agent)]
     LOG[logger] --> STD[stdout / syslog] & GELF[(Graylog)] & LS[logstash JSON]
 ```
 
@@ -26,6 +25,13 @@ HTTP client.
 | `telemetry/logging` | `inkgate/feature/telemetry/gologging` | `level` (`DEBUG`…`CRITICAL`), `prefix`, `stdout`, `syslog`, `syslog_facility`, `format` (`default`, `logstash`, `custom`), `custom_format` |
 | `telemetry/gelf` | `inkgate/feature/telemetry/gelf` | `address`, `enable_tcp` |
 | `telemetry/logstash` | `inkgate/feature/telemetry/logstash` | no options: its presence switches the output to logstash JSON lines; level and prefix come from `telemetry/logging` |
+
+`telemetry/logging` is built on `log/slog`: a handler renders each record with the pattern and writes it to every writer
+(stdout, syslog, GELF), behind the engine's `logging.Logger` interface. `level` is `DEBUG`, `INFO`, `NOTICE`
+(shows like `WARNING`), `WARNING`, `ERROR` or `CRITICAL`, in any case. `custom_format` is text with variables written
+`%{name}` or `%{name:layout}`: `time` (a Go time layout, e.g. `%{time:15:04:05}`), `level`, `module`, `message`, `id`,
+`pid`, `program` (the layout is a fmt verb, e.g. `%{level:-8s}`) and `color` (`%{color}`, `%{color:bold}`,
+`%{color:reset}`). Another variable, such as `%{shortfile}`, is refused at startup. Arguments are joined with a space.
 
 Selection (`flow/boot/logging.go`): logstash if configured, otherwise gologging (with GELF as an extra writer),
 otherwise a plain DEBUG logger on stdout.
@@ -63,13 +69,12 @@ implements one so far.
 | Alias / namespace | Options |
 |---|---|
 | `telemetry/opentelemetry` | `service_name`, `service_version`, `deploy_env`, `metric_reporting_period`, `trace_sample_rate`, `exporters.otlp[]` (`name`, `host`, `port`, `use_http`, `disable_metrics`, `disable_traces`), `exporters.prometheus[]`, `layers.global` / `.proxy` / `.backend` (`disable_metrics`, `disable_traces`, `report_headers`, `round_trip`, `read_payload`, `detailed_connection`, `static_attributes`), `skip_paths`, `disable_propagation` |
-| `telemetry/opencensus` (`inkgate/feature/telemetry/opencensus`) | `sample_rate`, `reporting_period`, `enabled_layers` (`router`, `pipe`, `backend`), `exporters` (`jaeger`, `zipkin`, `datadog`, `stackdriver`, `xray`, `influxdb`, `prometheus`, `ocagent`, `logger`) |
 
-OpenCensus is deprecated upstream and kept for parity. For new setups use OpenTelemetry.
+OpenCensus is not supported any more (see the changelog): OpenTelemetry is the only tracing and exporter path.
 
 ## audit
 
 `feature/telemetry/audit` backs the `audit` command of both binaries. It turns the config into a compact bit-vector
 description (`audit.Parse`), runs about 40 rules on it (`rules.go`, for example `hasNoTLS`, `hasDebugEnabled`, `hasNoRatelimit`, `hasNoCB`,
-`hasNoJWT`, `hasNoCORS`, `hasEndpointWildcard`, `hasUnlimitedCache`, `hasDeprecatedOpenCensus`) and prints the
+`hasNoJWT`, `hasNoCORS`, `hasEndpointWildcard`, `hasUnlimitedCache`, `hasDeprecatedOpenCensus`, which flags the namespace in a KrakenD config) and prints the
 findings with severities.

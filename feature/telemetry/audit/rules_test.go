@@ -13,7 +13,6 @@ import (
 	gologging "github.com/9edang/inkgate/feature/telemetry/gologging"
 	logstash "github.com/9edang/inkgate/feature/telemetry/logstash"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	cb "github.com/9edang/inkgate/feature/traffic/circuitbreaker/gobreaker"
 	ratelimitProxy "github.com/9edang/inkgate/feature/traffic/ratelimit/proxy"
 	ratelimit "github.com/9edang/inkgate/feature/traffic/ratelimit/router"
@@ -169,7 +168,7 @@ func Test_hasTimeoutBiggerThan(t *testing.T) {
 }
 
 func Test_hasNoMetrics(t *testing.T) {
-	if hasNoMetrics(&Service{Components: Component{opencensus.Namespace: []int{1 << 17}}}) {
+	if hasNoMetrics(&Service{Components: Component{openCensusNamespace: []int{1 << 17}}}) {
 		t.Error("false positive")
 	}
 	if hasNoMetrics(&Service{Components: Component{metrics.Namespace: []int{1 << 17}}}) {
@@ -191,7 +190,7 @@ func Test_hasNoMetrics(t *testing.T) {
 }
 
 func Test_hasSeveralTelemetryComponents(t *testing.T) {
-	if hasSeveralTelemetryComponents(&Service{Components: Component{opencensus.Namespace: []int{1 << 17}}}) {
+	if hasSeveralTelemetryComponents(&Service{Components: Component{openCensusNamespace: []int{1 << 17}}}) {
 		t.Error("false positive")
 	}
 	if hasSeveralTelemetryComponents(&Service{Components: Component{metrics.Namespace: []int{1 << 17}}}) {
@@ -211,15 +210,15 @@ func Test_hasSeveralTelemetryComponents(t *testing.T) {
 	}
 
 	if !hasSeveralTelemetryComponents(&Service{Components: Component{
-		opencensus.Namespace: []int{1 << 17},
-		metrics.Namespace:    []int{1 << 17},
+		openCensusNamespace: []int{1 << 17},
+		metrics.Namespace:   []int{1 << 17},
 	}}) {
 		t.Error("false negative")
 	}
 }
 
 func Test_hasNoTracing(t *testing.T) {
-	if hasNoTracing(&Service{Components: Component{opencensus.Namespace: []int{1 << 17}}}) {
+	if hasNoTracing(&Service{Components: Component{openCensusNamespace: []int{1 << 17}}}) {
 		t.Error("false positive")
 	}
 	if hasNoTracing(&Service{Components: Component{"telemetry/newrelic": []int{1 << 17}}}) {

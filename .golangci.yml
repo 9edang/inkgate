@@ -155,7 +155,7 @@ linters:
         - -QF1001 # De Morgan suggestions
         - -QF1003
         - -QF1008 # embedded field selectors
-        - -SA1019 # deprecated APIs (h2c, DualStack, opencensus names): upgrade them separately
+        - -SA1019 # deprecated APIs (h2c, DualStack): upgrade them separately
 
     testifylint:
       enable-all: true

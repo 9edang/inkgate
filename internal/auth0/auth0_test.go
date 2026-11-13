@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v4"
 )
 
 func genTestConfiguration(configuration Configuration, token string) (*JWTValidator, *http.Request) {
@@ -215,7 +215,7 @@ func TestValidateRequestAndClaims(t *testing.T) {
 				defaultIssuer,
 				time.Now().Add(-24*time.Hour),
 				jose.HS384,
-				defaultSecret,
+				defaultSecret384,
 			),
 			expectedErrorMsg: "algorithm is invalid",
 		},
@@ -232,7 +232,7 @@ func TestValidateRequestAndClaims(t *testing.T) {
 				defaultIssuer,
 				time.Now().Add(24*time.Hour),
 				jose.HS256,
-				[]byte("invalid secret"),
+				[]byte("another-secret-of-32-bytes-or-more!"),
 			),
 			expectedErrorMsg: "error in cryptographic primitive",
 		},

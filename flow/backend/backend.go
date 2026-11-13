@@ -15,7 +15,6 @@ import (
 	lambda "github.com/9edang/inkgate/feature/connector/lambda"
 	pubsub "github.com/9edang/inkgate/feature/connector/pubsub"
 	metrics "github.com/9edang/inkgate/feature/telemetry/metrics"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	otelpipeline "github.com/9edang/inkgate/feature/telemetry/otel/pipeline"
 	cb "github.com/9edang/inkgate/feature/traffic/circuitbreaker/gobreaker/proxy"
 	httpcache "github.com/9edang/inkgate/feature/traffic/httpcache"
@@ -38,20 +37,19 @@ func NewFactory(ctx context.Context, logger logging.Logger, metricCollector *met
 	steps := []step{
 		recordFlow,                  // 0. record the call in the flow context (+ optional request ID header)
 		otelpipeline.BackendFactory, // 1. OpenTelemetry span for this backend
-		opencensus.BackendFactory,   // 2. OpenCensus span (legacy tracing)
-		func(next proxy.BackendFactory) proxy.BackendFactory { // 3. backend metrics
+		func(next proxy.BackendFactory) proxy.BackendFactory { // 2. backend metrics
 			return metricCollector.BackendFactory("backend", next)
 		},
-		func(next proxy.BackendFactory) proxy.BackendFactory { // 4. circuit breaker
+		func(next proxy.BackendFactory) proxy.BackendFactory { // 3. circuit breaker
 			return cb.BackendFactory(next, logger)
 		},
-		func(next proxy.BackendFactory) proxy.BackendFactory { // 5. backend rate limit
+		func(next proxy.BackendFactory) proxy.BackendFactory { // 4. backend rate limit
 			return ratelimit.BackendFactory(logger, next)
 		},
-		func(next proxy.BackendFactory) proxy.BackendFactory { // 6. backend Lua scripts
+		func(next proxy.BackendFactory) proxy.BackendFactory { // 5. backend Lua scripts
 			return lua.BackendFactory(logger, next)
 		},
-		func(next proxy.BackendFactory) proxy.BackendFactory { // 7. backend CEL rules
+		func(next proxy.BackendFactory) proxy.BackendFactory { // 6. backend CEL rules
 			return cel.BackendFactory(logger, next)
 		},
 		// 8-10. non-HTTP backends: each one answers the call itself when the
@@ -65,10 +63,10 @@ func NewFactory(ctx context.Context, logger logging.Logger, metricCollector *met
 		func(next proxy.BackendFactory) proxy.BackendFactory {
 			return pubsub.NewBackendFactory(ctx, logger, next).New
 		},
-		socket.BackendFactory, // 11. WebSocket endpoints (router/stream mode socket): proxy the socket instead of one HTTP call
+		socket.BackendFactory, // 10. WebSocket endpoints (router/stream mode socket): proxy the socket instead of one HTTP call
 	}
 
-	// 12. the HTTP call: Martian request/response modifiers around the HTTP client.
+	// 11. the HTTP call: Martian request/response modifiers around the HTTP client.
 	f := martian.NewConfiguredBackendFactory(logger, newHTTPClient(ctx, logger))
 	for _, step := range slices.Backward(steps) {
 		f = step(f)
@@ -81,7 +79,7 @@ func NewFactory(ctx context.Context, logger logging.Logger, metricCollector *met
 }
 
 // newHTTPClient builds the HTTP client of a backend. Outermost first:
-// Go http-client plugins > OpenCensus > OpenTelemetry > HTTP cache > OAuth2
+// Go http-client plugins > OpenTelemetry > HTTP cache > OAuth2
 // client credentials (when configured) > net/http client.
 func newHTTPClient(ctx context.Context, logger logging.Logger) func(*config.Backend) client.HTTPRequestExecutor {
 	return clientplugin.HTTPRequestExecutorWithContext(ctx, logger,
@@ -92,6 +90,7 @@ func newHTTPClient(ctx context.Context, logger logging.Logger) func(*config.Back
 			}
 			newClient = httpcache.NewHTTPClient(cfg, newClient)
 			newClient = otelpipeline.InstrumentedHTTPClientFactory(newClient, cfg)
-			return opencensus.HTTPRequestExecutorFromConfig(newClient, cfg)
+
+			return client.DefaultHTTPRequestExecutor(newClient)
 		})
 }

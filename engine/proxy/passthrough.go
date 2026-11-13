@@ -28,7 +28,6 @@ func (r *Response) JSONBody() ([]byte, error) {
 var passthroughNamespaces = map[string]bool{
 	// endpoint
 	"inkgate/feature/telemetry/metrics":     true,
-	"inkgate/feature/telemetry/opencensus":  true,
 	"telemetry/opentelemetry":               true,
 	"qos/ratelimit/router":                  true,
 	"inkgate/feature/auth/jose/validator":   true,

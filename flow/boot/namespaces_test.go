@@ -23,6 +23,7 @@ var notConfigKeys = map[string]string{
 	"inkgate/engine/proxy/plugin/response": "internal name of the response modifier register",
 	"dns":                                  "name of the dns service-discovery module, picked with \"sd\" in a backend",
 	"backend/grpc":                         "only read by `inkgate audit`, to count a KrakenD gRPC backend as unsafe; inkgate has no gRPC backend",
+	"inkgate/feature/telemetry/opencensus": "removed; `inkgate audit` still recognises it in a KrakenD config and reports it as deprecated",
 	// the package exists but no flow builds it, so a config naming it would do nothing: refusing it is right
 	"inkgate/feature/traffic/circuitbreaker/eapache": "not wired into the backend flow; use qos/circuit-breaker",
 }

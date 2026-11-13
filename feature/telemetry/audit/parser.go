@@ -18,7 +18,6 @@ import (
 	server "github.com/9edang/inkgate/engine/transport/http/server/plugin"
 	bf "github.com/9edang/inkgate/feature/auth/bloomfilter/gateway"
 	botdetector "github.com/9edang/inkgate/feature/security/botdetector/gateway"
-	opencensus "github.com/9edang/inkgate/feature/telemetry/opencensus"
 	httpcache "github.com/9edang/inkgate/feature/traffic/httpcache"
 	ratelimit "github.com/9edang/inkgate/feature/traffic/ratelimit/router"
 	luaproxy "github.com/9edang/inkgate/feature/transform/lua/proxy"
@@ -333,7 +332,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 			components[c] = res
 
-		case opencensus.Namespace:
+		case openCensusNamespace:
 			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
