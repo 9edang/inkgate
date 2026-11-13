@@ -12,6 +12,7 @@ SCENARIO_DOC = {
     "passthrough": "one backend, no-op encoding (the body is streamed, never parsed)",
     "json": "one backend, JSON is decoded and encoded again",
     "merge": "two backends called in parallel, both JSON bodies merged into one",
+    "routes": "500 endpoints (250 static, 150 with one parameter, 100 with two), one backend each, requests spread over all of them",
     "plugin-modifier": "one backend, a request modifier plugin adds a header and a response modifier plugin adds a field",
     "plugin-server": "one backend, a server plugin wraps the HTTP handler and adds a response header",
     "plugin-client": "one backend, a client plugin replaces the backend client and calls the API itself",
@@ -70,11 +71,29 @@ def main():
             runs = [read_run(gw, scenario, r) for r in range(1, meta["run"]["rounds"] + 1)]
             best = median_run(runs)
             best["rps_runs"] = [round(r["rps"]) for r in runs]
+            best["rps_min"], best["rps_max"] = min(r["rps"] for r in runs), max(r["rps"] for r in runs)
             summary.setdefault(scenario, {})[gw] = best
     (ROOT / "summary.json").write_text(json.dumps(summary, indent=2))
     (ROOT / "report.md").write_text(markdown(meta, summary))
     (ROOT / "rps.svg").write_text(svg(meta, summary))
     update_readme(meta, summary)
+
+
+def overlap(a, b):
+    """True when the req/s ranges (min to max over the rounds) of the two gateways overlap: the lead is within noise."""
+    return a["rps_min"] <= b["rps_max"] and b["rps_min"] <= a["rps_max"]
+
+
+def lead(a, b):
+    """"1.10x" for inkgate over KrakenD, with a mark when the ranges overlap or the order is the other way."""
+    ratio = a["rps"] / b["rps"] if b["rps"] else 0
+    if overlap(a, b):
+        return f"{ratio:.2f}x, within noise"
+    return f"{ratio:.2f}x"
+
+
+def rng(r):
+    return f"{r['rps_min']:,.0f} to {r['rps_max']:,.0f}"
 
 
 def update_readme(meta, summary):
@@ -86,22 +105,26 @@ def update_readme(meta, summary):
         return
     lim, run = meta["limits"], meta["run"]
     rows = [
-        "| Scenario | inkgate req/s | KrakenD CE req/s | inkgate p99 | KrakenD CE p99 | inkgate memory | KrakenD CE memory |",
-        "|---|--:|--:|--:|--:|--:|--:|",
+        "| Scenario | inkgate req/s (range) | KrakenD CE req/s (range) | inkgate vs KrakenD CE | inkgate p99 | KrakenD CE p99 | inkgate memory | KrakenD CE memory |",
+        "|---|--:|--:|--:|--:|--:|--:|--:|",
     ]
     for scenario, per in summary.items():
         a, b = per["inkgate"], per["krakend"]
         rows.append(
-            f"| {scenario} | **{a['rps']:,.0f}** ({a['rps'] / b['rps']:.2f}x) | {b['rps']:,.0f} | {a['p99_ms']:.1f} ms "
+            f"| {scenario} | **{a['rps']:,.0f}** ({rng(a)}) | {b['rps']:,.0f} ({rng(b)}) | {lead(a, b)} | {a['p99_ms']:.1f} ms "
             f"| {b['p99_ms']:.1f} ms | {a['mem_mb']:.0f} MB | {b['mem_mb']:.0f} MB |"
         )
     block = "\n".join([
         start,
         f"inkgate against KrakenD CE `{meta['images']['krakend'].split(':')[-1]}`, in containers with the same config and the "
         f"same limits ({lim['gateway_cpus']} CPUs and {lim['gateway_memory']} memory each, {run['connections']} connections, "
-        f"{run['duration']} per run, median of {run['rounds']} rounds), on {meta['host']['cpu']}.",
+        f"{run['duration']} per run after {run['warmup']} of warm-up, {run['rounds']} rounds: the median is shown, with the "
+        f"lowest to highest round in brackets), on {meta['host']['cpu']}. \"Within noise\" means the ranges of the two "
+        f"gateways overlap, so the lead is not a result.",
         "",
         *rows,
+        "",
+        go_note(meta),
         "",
         "![requests per second](benchmark/results/rps.svg)",
         "",
@@ -114,6 +137,17 @@ def update_readme(meta, summary):
     readme.write_text(head + block + tail)
 
 
+def go_note(meta):
+    """Says which Go built each gateway, and when they differ, that the comparison includes the compiler."""
+    i, k = meta.get("inkgate_build"), meta.get("krakend_build")
+    if not i or not k:
+        return ""
+    text = f"Go: inkgate {i['go']}, KrakenD CE {k['go']}."
+    if i["go"] != k["go"]:
+        text += " They are different, so the comparison includes the Go toolchain and runtime, not only the gateway code."
+    return text
+
+
 def build_note(meta):
     """What the inkgate image holds: git revision, Go and glibc. Older results do not have it."""
     b = meta.get("inkgate_build")
@@ -122,12 +156,21 @@ def build_note(meta):
     return f", revision `{b['revision']}`, Go {b['go']}, glibc {b['glibc']}"
 
 
+def krakend_note(meta):
+    k = meta.get("krakend_build")
+    return f", built with Go {k['go']} ({k['libc']})" if k else ""
+
+
 def markdown(meta, summary):
     h, lim, run, img = meta["host"], meta["limits"], meta["run"], meta["images"]
     out = [
         "# inkgate vs KrakenD CE",
         "",
-        f"Run on {meta['date']}. The median of {run['rounds']} rounds is shown, picked by requests per second.",
+        f"Run on {meta['date']}. {run['rounds']} rounds of each scenario: the table shows the median round (by requests "
+        "per second) and the range, lowest to highest round. When the ranges of the two gateways overlap the lead is "
+        "marked \"within noise\": it is not a result.",
+        "",
+        go_note(meta),
         "",
         "## Setup",
         "",
@@ -135,7 +178,7 @@ def markdown(meta, summary):
         "|---|---|",
         f"| Host | {h['cpu']}, {h['threads']} threads, {h['memory_gb']} GB RAM, {h['kernel']} |",
         f"| inkgate | `{img['inkgate']}` (built from this repository){build_note(meta)} |",
-        f"| KrakenD CE | `{img['krakend']}` |",
+        f"| KrakenD CE | `{img['krakend']}`{krakend_note(meta)} |",
         f"| Backend | `{img['backend']}`, fixed JSON answers, {lim['backend_cpus']} CPUs |",
         f"| Load generator | `{img['load']}`, {run['connections']} keep-alive connections, {lim['load_cpus']} CPUs |",
         f"| Each gateway | {lim['gateway_cpus']} CPUs, {lim['gateway_memory']} memory, one at a time |",
@@ -150,17 +193,16 @@ def markdown(meta, summary):
             "",
             f"### {scenario}: {SCENARIO_DOC.get(scenario, '')}",
             "",
-            "| Gateway | Requests/s | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |",
+            "| Gateway | Requests/s (range) | Avg | p50 | p90 | p99 | Success | CPU (of 100% per CPU) | Peak memory |",
             "|---|--:|--:|--:|--:|--:|--:|--:|--:|",
         ]
         for gw in GATEWAYS:
             r = per[gw]
             out.append(
-                f"| {LABEL[gw]} | {r['rps']:,.0f} | {r['avg_ms']:.2f} ms | {r['p50_ms']:.2f} ms | {r['p90_ms']:.2f} ms "
+                f"| {LABEL[gw]} | {r['rps']:,.0f} ({rng(r)}) | {r['avg_ms']:.2f} ms | {r['p50_ms']:.2f} ms | {r['p90_ms']:.2f} ms "
                 f"| {r['p99_ms']:.2f} ms | {r['success']:.2f}% | {r['cpu_pct']:.0f}% | {r['mem_mb']:.0f} MB |"
             )
-        ratio = a["rps"] / b["rps"] if b["rps"] else 0
-        out += ["", f"inkgate serves **{ratio:.2f}x** the requests per second of KrakenD CE here. "
+        out += ["", f"inkgate against KrakenD CE: **{lead(a, b)}**. "
                     f"Runs (req/s): inkgate {a['rps_runs']}, KrakenD {b['rps_runs']}."]
     plugins = [s for s in summary if s.startswith("plugin-") and PLUGIN_BASELINE in summary]
     if plugins:

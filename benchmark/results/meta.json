@@ -1,9 +1,45 @@
 {
-  "date": "2026-11-11T22:08:22Z",
-  "host": {"cpu": "AMD Ryzen 5 5600 6-Core Processor", "threads": 12, "memory_gb": 8, "kernel": "Linux 7.3.3-300.fc45.x86_64"},
-  "inkgate_build": {"revision": "6e90ab3", "go": "1.27.4", "glibc": "2.41"},
-  "images": {"inkgate": "localhost/inkgate-bench:dev", "krakend": "docker.io/library/krakend:2.13.11", "backend": "docker.io/library/nginx:1.31.8-alpine", "load": "ghcr.io/hatoo/oha:1.16.0"},
-  "limits": {"gateway_cpus": 2, "gateway_memory": "512m", "backend_cpus": 2, "load_cpus": 4},
-  "run": {"duration": "30s", "warmup": "10s", "connections": 128, "rounds": 3},
-  "scenarios": ["passthrough", "json", "merge", "plugin-modifier", "plugin-server", "plugin-client"]
+  "date": "2026-11-13T05:59:25Z",
+  "host": {
+    "cpu": "AMD Ryzen 5 5600 6-Core Processor",
+    "threads": 12,
+    "memory_gb": 8,
+    "kernel": "Linux 7.3.3-300.fc45.x86_64"
+  },
+  "inkgate_build": {
+    "revision": "1c37dfc",
+    "go": "1.27.4",
+    "glibc": "2.41"
+  },
+  "krakend_build": {
+    "go": "1.26.8",
+    "libc": "MUSL-1.2.5_(alpine-3.23.5)"
+  },
+  "images": {
+    "inkgate": "localhost/inkgate-bench:dev",
+    "krakend": "docker.io/library/krakend:2.13.11",
+    "backend": "docker.io/library/nginx:1.31.8-alpine",
+    "load": "ghcr.io/hatoo/oha:1.16.0"
+  },
+  "limits": {
+    "gateway_cpus": 2,
+    "gateway_memory": "512m",
+    "backend_cpus": 2,
+    "load_cpus": 4
+  },
+  "run": {
+    "duration": "30s",
+    "warmup": "30s",
+    "connections": 128,
+    "rounds": 7
+  },
+  "scenarios": [
+    "passthrough",
+    "json",
+    "merge",
+    "routes",
+    "plugin-modifier",
+    "plugin-server",
+    "plugin-client"
+  ]
 }

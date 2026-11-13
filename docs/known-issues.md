@@ -22,6 +22,10 @@
 - **inkgate supports a subset of the router options.** See [engine/gateway.md](engine/gateway.md).
   The others are ignored.
 - **Rate-limit buckets are per instance**: N instances allow N × the configured rate.
+- **With 500 routes inkgate is slower than KrakenD CE** (the `routes` scenario: 24,712 against 26,897 req/s, 0.92x, ranges
+  not overlapping, while it leads in every other scenario). The router is gorilla/mux, which tries its routes in order
+  and matches each with a regular expression, so the cost grows with the number of routes. This is the likely cause, not
+  yet measured with a profile; see [benchmark/](../benchmark/README.md).
 
 ## Follow-ups worth doing
 

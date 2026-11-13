@@ -84,6 +84,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Decoded backend responses carry the backend status in `Metadata.StatusCode`; a merged response keeps it when all
   backends agree. An `auth/signer` endpoint now sends the backend status (a backend 201 is no longer turned into 200).
 - Built with Go 1.27.3.
+- Benchmark harness: 7 rounds and a 30 s warm-up by default (were 3 and 10 s). The report gives the median and the
+  range of each gateway and marks a lead as "within noise" when the ranges overlap. New `routes` scenario: 500
+  endpoints, static and parameterised, with the load spread over all of them. `meta.json` and the report record the Go
+  version KrakenD CE was built with next to inkgate's. The first 7-round run shows inkgate behind KrakenD CE with 500
+  routes (0.92x) and ahead in every other scenario.
 
 ### Performance
 - Lua endpoint, proxy and backend scripts run on reused, isolated Lua states with code compiled once: about 13× less work per

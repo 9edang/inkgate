@@ -1,24 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="492" viewBox="0 0 720 492" font-family="sans-serif" font-size="13">
-<rect width="720" height="492" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="564" viewBox="0 0 720 564" font-family="sans-serif" font-size="13">
+<rect width="720" height="564" fill="#ffffff"/>
 <text x="16" y="24" font-size="15" font-weight="bold" fill="#111827">Requests per second (higher is better)</text>
 <rect x="16" y="34" width="12" height="12" fill="#2563eb"/><text x="34" y="45" fill="#111827">inkgate</text>
 <rect x="136" y="34" width="12" height="12" fill="#9ca3af"/><text x="154" y="45" fill="#111827">KrakenD CE</text>
 <text x="16" y="88" fill="#111827">passthrough</text>
-<rect x="120" y="66" width="510.0" height="22" fill="#2563eb"/><text x="636.0" y="82" fill="#111827">32,607</text>
-<rect x="120" y="92" width="365.3" height="22" fill="#9ca3af"/><text x="491.3" y="108" fill="#111827">23,354</text>
+<rect x="120" y="66" width="510.0" height="22" fill="#2563eb"/><text x="636.0" y="82" fill="#111827">32,469</text>
+<rect x="120" y="92" width="367.6" height="22" fill="#9ca3af"/><text x="493.6" y="108" fill="#111827">23,402</text>
 <text x="16" y="154" fill="#111827">json</text>
-<rect x="120" y="132" width="472.2" height="22" fill="#2563eb"/><text x="598.2" y="148" fill="#111827">30,191</text>
-<rect x="120" y="158" width="427.5" height="22" fill="#9ca3af"/><text x="553.5" y="174" fill="#111827">27,331</text>
+<rect x="120" y="132" width="477.3" height="22" fill="#2563eb"/><text x="603.3" y="148" fill="#111827">30,390</text>
+<rect x="120" y="158" width="431.9" height="22" fill="#9ca3af"/><text x="557.9" y="174" fill="#111827">27,496</text>
 <text x="16" y="220" fill="#111827">merge</text>
-<rect x="120" y="198" width="268.6" height="22" fill="#2563eb"/><text x="394.6" y="214" fill="#111827">17,175</text>
-<rect x="120" y="224" width="248.7" height="22" fill="#9ca3af"/><text x="374.7" y="240" fill="#111827">15,900</text>
-<text x="16" y="286" fill="#111827">plugin-modifier</text>
-<rect x="120" y="264" width="475.0" height="22" fill="#2563eb"/><text x="601.0" y="280" fill="#111827">30,371</text>
-<rect x="120" y="290" width="437.2" height="22" fill="#9ca3af"/><text x="563.2" y="306" fill="#111827">27,953</text>
-<text x="16" y="352" fill="#111827">plugin-server</text>
-<rect x="120" y="330" width="469.9" height="22" fill="#2563eb"/><text x="595.9" y="346" fill="#111827">30,044</text>
-<rect x="120" y="356" width="420.6" height="22" fill="#9ca3af"/><text x="546.6" y="372" fill="#111827">26,891</text>
-<text x="16" y="418" fill="#111827">plugin-client</text>
-<rect x="120" y="396" width="327.3" height="22" fill="#2563eb"/><text x="453.3" y="412" fill="#111827">20,926</text>
-<rect x="120" y="422" width="313.3" height="22" fill="#9ca3af"/><text x="439.3" y="438" fill="#111827">20,034</text>
+<rect x="120" y="198" width="270.8" height="22" fill="#2563eb"/><text x="396.8" y="214" fill="#111827">17,242</text>
+<rect x="120" y="224" width="249.7" height="22" fill="#9ca3af"/><text x="375.7" y="240" fill="#111827">15,897</text>
+<text x="16" y="286" fill="#111827">routes</text>
+<rect x="120" y="264" width="388.2" height="22" fill="#2563eb"/><text x="514.2" y="280" fill="#111827">24,712</text>
+<rect x="120" y="290" width="422.5" height="22" fill="#9ca3af"/><text x="548.5" y="306" fill="#111827">26,897</text>
+<text x="16" y="352" fill="#111827">plugin-modifier</text>
+<rect x="120" y="330" width="473.6" height="22" fill="#2563eb"/><text x="599.6" y="346" fill="#111827">30,151</text>
+<rect x="120" y="356" width="441.0" height="22" fill="#9ca3af"/><text x="567.0" y="372" fill="#111827">28,074</text>
+<text x="16" y="418" fill="#111827">plugin-server</text>
+<rect x="120" y="396" width="469.3" height="22" fill="#2563eb"/><text x="595.3" y="412" fill="#111827">29,880</text>
+<rect x="120" y="422" width="425.9" height="22" fill="#9ca3af"/><text x="551.9" y="438" fill="#111827">27,117</text>
+<text x="16" y="484" fill="#111827">plugin-client</text>
+<rect x="120" y="462" width="330.2" height="22" fill="#2563eb"/><text x="456.2" y="478" fill="#111827">21,025</text>
+<rect x="120" y="488" width="314.1" height="22" fill="#9ca3af"/><text x="440.1" y="504" fill="#111827">19,998</text>
 </svg>

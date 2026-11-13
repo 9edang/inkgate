@@ -10,8 +10,8 @@ config, the same limits and the same load generator, and writes
 |---|---|
 | Gateways | inkgate (built from the checkout) and KrakenD CE 2.13.11, one at a time |
 | Limits | each gateway `--cpus 2 --memory 512m`; nginx backend 2 CPUs; `oha` 4 CPUs; all on one host |
-| Load | 128 keep-alive connections, 10 s warm-up, 30 s measured, 3 rounds, median reported |
-| Scenarios | passthrough, json, merge, plugin-modifier, plugin-server, plugin-client |
+| Load | 128 keep-alive connections, 30 s warm-up, 30 s measured, 7 rounds; median and min to max reported, a lead whose ranges overlap is marked "within noise" |
+| Scenarios | passthrough, json, merge, routes (500 endpoints), plugin-modifier, plugin-server, plugin-client |
 | Bodies | small fixed JSON (under 200 bytes) |
 | Config | logging at `ERROR`, no metrics, no CORS, no rate limit |
 
@@ -21,7 +21,7 @@ Most important first. The status column is where the harness stands today.
 
 | # | Improvement | Status |
 |---|---|---|
-| 1 | More rounds and spread | todo |
+| 1 | More rounds and spread | **done** (7 rounds, median and range, "within noise") |
 | 2 | Pin CPUs | todo |
 | 3 | GOMAXPROCS=2 on both gateways | already the default, make it explicit |
 | 4 | Document the memory choice | todo |
@@ -36,8 +36,8 @@ Most important first. The status column is where the harness stands today.
 
 ### 1. More rounds and spread
 
-Use 5 or more rounds and report min/max or the standard deviation next to the median. Only call a gap real if it is
-larger than the noise. The 3-round run of November 2026 shows why: inkgate's first round was 15 to 20% below its other
+Done: 7 rounds with a 30 s warm-up, the median and the min to max range per gateway, and a lead is marked "within
+noise" when the two ranges overlap. Only call a gap real if it is larger than the noise. The 3-round run of November 2026 shows why: inkgate's first round was 15 to 20% below its other
 two in passthrough, json and merge, and in `merge` one KrakenD round beat one inkgate round. Gaps under about 10% are
 within that spread.
 
@@ -102,7 +102,7 @@ Two setups exist and their numbers must not be mixed:
 | Numbers | Setup |
 |---|---|
 | [milestones/README.md](../milestones/README.md) baseline | a separate harness outside this repository: inkgate alone, 1 CPU, 2 GB, 128 connections, median of 3 |
-| [benchmark/](../../benchmark/README.md), root README | this repository: inkgate against KrakenD CE, 2 CPUs and 512m each, 128 connections, median of 3 |
+| [benchmark/](../../benchmark/README.md), root README | this repository: inkgate against KrakenD CE, 2 CPUs and 512m each, 128 connections, 7 rounds |
 
 Each page now names its setup. Still to do: run the milestone jobs (100 KB bodies, JWT, Lua, metrics) in
 `benchmark/` too, so there is one harness.

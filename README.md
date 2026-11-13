@@ -50,16 +50,19 @@ Start reading at [docs/README.md](docs/README.md). What comes next is in [docs/m
 ## Benchmark
 
 <!-- benchmark:start -->
-inkgate against KrakenD CE `2.13.11`, in containers with the same config and the same limits (2 CPUs and 512m memory each, 128 connections, 30s per run, median of 3 rounds), on AMD Ryzen 5 5600 6-Core Processor.
+inkgate against KrakenD CE `2.13.11`, in containers with the same config and the same limits (2 CPUs and 512m memory each, 128 connections, 30s per run after 30s of warm-up, 7 rounds: the median is shown, with the lowest to highest round in brackets), on AMD Ryzen 5 5600 6-Core Processor. "Within noise" means the ranges of the two gateways overlap, so the lead is not a result.
 
-| Scenario | inkgate req/s | KrakenD CE req/s | inkgate p99 | KrakenD CE p99 | inkgate memory | KrakenD CE memory |
-|---|--:|--:|--:|--:|--:|--:|
-| passthrough | **32,607** (1.40x) | 23,354 | 10.1 ms | 12.8 ms | 39 MB | 40 MB |
-| json | **30,191** (1.10x) | 27,331 | 10.9 ms | 11.8 ms | 39 MB | 41 MB |
-| merge | **17,175** (1.08x) | 15,900 | 15.4 ms | 16.5 ms | 45 MB | 44 MB |
-| plugin-modifier | **30,371** (1.09x) | 27,953 | 11.3 ms | 11.7 ms | 48 MB | 46 MB |
-| plugin-server | **30,044** (1.12x) | 26,891 | 11.3 ms | 12.0 ms | 48 MB | 44 MB |
-| plugin-client | **20,926** (1.04x) | 20,034 | 14.2 ms | 15.1 ms | 44 MB | 45 MB |
+| Scenario | inkgate req/s (range) | KrakenD CE req/s (range) | inkgate vs KrakenD CE | inkgate p99 | KrakenD CE p99 | inkgate memory | KrakenD CE memory |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| passthrough | **32,469** (32,310 to 32,536) | 23,402 (23,300 to 23,551) | 1.39x | 10.2 ms | 12.7 ms | 39 MB | 40 MB |
+| json | **30,390** (30,132 to 30,668) | 27,496 (27,454 to 27,611) | 1.11x | 10.8 ms | 11.8 ms | 38 MB | 43 MB |
+| merge | **17,242** (17,219 to 17,349) | 15,897 (15,867 to 16,125) | 1.08x | 15.3 ms | 16.6 ms | 45 MB | 45 MB |
+| routes | **24,712** (24,474 to 24,923) | 26,897 (26,664 to 27,124) | 0.92x | 13.5 ms | 12.1 ms | 48 MB | 43 MB |
+| plugin-modifier | **30,151** (29,861 to 30,193) | 28,074 (27,766 to 28,324) | 1.07x | 11.1 ms | 11.5 ms | 44 MB | 42 MB |
+| plugin-server | **29,880** (29,832 to 30,079) | 27,117 (26,288 to 27,304) | 1.10x | 11.1 ms | 11.9 ms | 44 MB | 42 MB |
+| plugin-client | **21,025** (20,998 to 21,226) | 19,998 (19,943 to 20,165) | 1.05x | 14.2 ms | 14.9 ms | 45 MB | 42 MB |
+
+Go: inkgate 1.27.4, KrakenD CE 1.26.8. They are different, so the comparison includes the Go toolchain and runtime, not only the gateway code.
 
 ![requests per second](benchmark/results/rps.svg)
 
