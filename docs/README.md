@@ -21,6 +21,7 @@ Diagrams are [Mermaid](https://mermaid.js.org); they render on GitHub, GitLab an
 | planning the next work | [milestones/](milestones/README.md) |
 | benchmarking against KrakenD CE | [guides/benchmarking.md](guides/benchmarking.md) |
 | getting ready for production | [production-readiness.md](production-readiness.md) |
+| following Lura and KrakenD: fork baseline, security fixes, removal candidates | [upstream.md](upstream.md) |
 | looking for performance and resource risks | [performance-review.md](performance-review.md) |
 
 ## Map
@@ -43,6 +44,7 @@ docs/
 ├── milestones/          what to fix, speed up and add next, with the evidence for each item
 │   ├── README.md  m1-confirmed-bugs.md  m2-request-cost.md  m3-streaming.md  m4-traffic-resilience.md  m5-operability.md
 ├── production-readiness.md  checklist before serving production traffic
+├── upstream.md          what inkgate was forked from and how to follow it
 ├── performance-review.md    request-path review: findings, status and order of work
 ├── design/              proposals under review (json-passthrough.md)
 └── known-issues.md      unit tests that fail and why

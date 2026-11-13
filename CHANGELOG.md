@@ -22,6 +22,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
   `Connection: close`) as soon as the shutdown starts, so a load balancer takes the instance out of rotation before its
   connections drain. It does not look at the backends. Before the server listens a probe gets "connection refused".
   `/__ready` is reserved: an endpoint cannot use it. It is skipped by OpenTelemetry like `/__health`.
+- `docs/upstream.md`: the Lura and KrakenD CE versions inkgate was forked from (reconstructed by comparing the code, with
+  how sure each one is), how far each package has moved, what to watch for security fixes and how often, the gap to
+  upstream today, and the removal candidates. The plugins guide now says why plugins must be rebuilt for every inkgate
+  release, and that a plugin that fails to load is only logged at `DEBUG`.
 
 ### Removed (breaking for configs)
 - The anonymous usage reporter (`feature/telemetry/usage`) and the `INKGATE_USAGE_URL` variable. It was off unless the

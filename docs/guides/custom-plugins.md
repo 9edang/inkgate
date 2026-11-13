@@ -25,6 +25,33 @@ One `.so` can export several symbols, so one file can hold a client and a modifi
 - Build with `CGO_ENABLED=1` (the default when a C compiler is installed). Go plugins work on Linux and macOS only.
 - Export a **variable** (`var ClientRegisterer = ...`), not a function. The loader looks the symbol up by name.
 
+### Rebuild your plugins for every inkgate release
+
+A `.so` built for one inkgate release does not load into the next one, even a patch release. This is how Go plugins
+work, not a choice of inkgate: when it loads a plugin, the Go runtime compares, for every package that the plugin and
+the binary both contain, a hash of the exact build (the source of the package, the Go version, the build flags and
+the packages it imports). One difference and the load fails with `plugin was built with a different version of
+package X`. There is no compatibility range and no semantic versioning: it is equal or it is refused.
+
+Your plugin imports `github.com/9edang/inkgate/context`, so it shares with the binary every package that one imports,
+and what they import in turn. Any release that changes the source of one of them, or the version of a library they
+use (a bumped `go-jose`, AWS SDK or `x/net`, for example), changes a hash. A release can also change the Go version
+(the minimum is in `go.mod`) or the glibc of the Docker image (see `check-plugin -l`).
+
+So, for each inkgate version you deploy:
+
+1. Build the plugins against that exact release (`replace github.com/9edang/inkgate => ...` at its tag), with its Go
+   version, and `go mod tidy` so the dependency versions are the release's.
+2. Build them in the same environment as the binary, ideally in the same Dockerfile stage, so the glibc is the same.
+3. Run `inkgate check-plugin` and `inkgate test-plugin` on the result before rolling it out.
+4. Roll the plugin and the binary out together. **A plugin that fails to load does not stop the gateway**: the
+   error is logged at `DEBUG` only, and the gateway starts without it. At the default log level the only sign is that
+   the `Total plugins loaded: N` line (INFO) is missing or lower, and the feature the plugin provided is simply off.
+   Check that line after every deploy, or run `inkgate test-plugin` on each file in the image.
+
+The same holds the other way round: upgrading a library in your plugin that inkgate also uses breaks the load. Keep your
+`go.mod` on the versions of the inkgate release you build against.
+
 ## 3. Project layout
 
 ```
